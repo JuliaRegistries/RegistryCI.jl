@@ -6,6 +6,14 @@ using Pkg.Types: VersionRange
 using Pkg.Operations: load_package_data_raw
 import Pkg.TOML
 
+function gather_stdlib_uuids()
+    if VERSION < v"1.1"
+        return Set{UUID}(x for x in keys(Pkg.Types.gather_stdlib_uuids()))
+    else
+        return Set{UUID}(x for x in keys(Pkg.Types.stdlib()))
+    end
+end
+
 #########################
 # Testing of registries #
 #########################
@@ -22,7 +30,7 @@ function test(path=pwd())
     @testset "(Registry|Package|Versions|Deps|Compat).toml" begin; cd(path) do
         reg = TOML.parsefile("Registry.toml")
         reguuids = Set{UUID}(UUID(x) for x in keys(reg["packages"]))
-        stdlibuuids = Set{UUID}(x for x in keys(Pkg.Types.gather_stdlib_uuids()))
+        stdlibuuids = gather_stdlib_uuids()
         alluuids = reguuids ∪ stdlibuuids
 
         # Test that each entry in Registry.toml has a corresponding Package.toml
