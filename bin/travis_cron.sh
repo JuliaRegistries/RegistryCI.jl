@@ -3,7 +3,8 @@
 ### Step 1: Make sure that you have curl installed
 ### Step 2: Install the Travis CLI client: https://github.com/travis-ci/travis.rb
 ### Step 3: travis login --org
-### Step 4: ./cron.sh
+### Step 4: export TRAVIS_TOKEN=$(travis token --org)
+### Step 5: ./cron.sh
 
 body='{
 "request": {
@@ -14,6 +15,6 @@ curl -s -X POST \
    -H "Content-Type: application/json" \
    -H "Accept: application/json" \
    -H "Travis-API-Version: 3" \
-   -H "Authorization: token $(travis token --org)" \
+   -H "Authorization: token $TRAVIS_TOKEN" \
    -d "$body" \
    https://api.travis-ci.org/repo/JuliaRegistries%2FGeneral/requests
