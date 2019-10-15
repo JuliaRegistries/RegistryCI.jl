@@ -6,6 +6,8 @@ using Pkg.Types: VersionRange
 using Pkg.Operations: load_package_data_raw
 import Pkg.TOML
 
+include("AutoMerge/AutoMerge.jl")
+
 function gather_stdlib_uuids()
     if VERSION < v"1.1"
         return Set{UUID}(x for x in keys(Pkg.Types.gather_stdlib_uuids()))
