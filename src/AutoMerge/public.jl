@@ -19,7 +19,7 @@ function travis(env = ENV;
     is_cron = TRAVIS_BRANCH == master_branch && TRAVIS_EVENT_TYPE == "cron" && enable_travis_cron_builds
     is_api = TRAVIS_BRANCH == master_branch && TRAVIS_EVENT_TYPE == "api" && enable_travis_api_builds
     if is_pull_request || is_cron || is_api
-        auth = my_retry(() -> GitHub.authenticate(env["GITHUB_AUTOMERGE_TOKEN"]))
+        auth = my_retry(() -> GitHub.authenticate(env["AUTOMERGE_GITHUB_TOKEN"]))
         whoami = my_retry(() -> username(auth))
         @info("Authenticated to GitHub as \"$(whoami)\"")
         registry_repo = my_retry(() -> GitHub.repo(registry; auth=auth))
