@@ -28,9 +28,9 @@ function pr_has_no_blocking_comments(registry::GitHub.Repo,
 end
 
 function pr_is_old_enough(pr_type::Symbol,
-                          pr_age::Dates.TimePeriod;
-                          new_package_waiting_period::Dates.TimePeriod,
-                          new_version_waiting_period::Dates.TimePeriod)
+                          pr_age::Dates.Period;
+                          new_package_waiting_period::Dates.Period,
+                          new_version_waiting_period::Dates.Period)
     if pr_type == :NewPackage
         return pr_age > new_package_waiting_period
     elseif pr_type == :NewVersion
