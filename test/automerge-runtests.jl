@@ -1,8 +1,8 @@
-using GeneralRegistryCI
+using RegistryCI
 using Pkg
 using Test
 
-const AutoMerge = GeneralRegistryCI.AutoMerge
+const AutoMerge = RegistryCI.AutoMerge
 
 @testset "AutoMerge.jl" begin
     @testset "Unit tests" begin

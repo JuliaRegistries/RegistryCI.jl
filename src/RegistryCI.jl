@@ -1,4 +1,4 @@
-module GeneralRegistryCI
+module RegistryCI
 
 using Test, Pkg
 using Base: UUID
