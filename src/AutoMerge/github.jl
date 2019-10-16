@@ -147,9 +147,9 @@ function merge!(registry_repo::GitHub.Repo,
                 auth::GitHub.Authorization)
     pr_number = number(pr)
     _approved_pr_head_sha = convert(String, approved_pr_head_sha)::String
-    @info("Attempting to merge pull request #$(pr_number)")
+    @info("Attempting to squash-merge pull request #$(pr_number)")
     try
-        params = Dict("sha" => _approved_pr_head_sha)
+        params = Dict("sha" => _approved_pr_head_sha, "merge_method" => "squash")
         GitHub.merge_pull_request(registry_repo,
                                   pr_number;
                                   auth=auth,
