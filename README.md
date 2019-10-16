@@ -1,3 +1,7 @@
 # RegistryCI.jl
 
-CI tools for Julia's [General](https://github.com/JuliaRegistries/General) package registry.
+RegistryCI provides continuous integration (CI) tools for Julia package registries.
+
+The [General](https://github.com/JuliaRegistries/General) registry uses RegistryCI.
+
+However, you can also use RegistryCI for your own package registry.
