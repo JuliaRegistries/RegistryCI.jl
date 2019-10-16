@@ -1,4 +1,4 @@
-import GeneralRegistryCI
+import RegistryCI
 const path = joinpath(DEPOT_PATH[1], "registries", "General")
-GeneralRegistryCI.test(path)
+RegistryCI.test(path)
 include("automerge-runtests.jl")
