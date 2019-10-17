@@ -59,6 +59,7 @@ function delete_merged_branch!(repo::GitHub.Repo, pr::GitHub.PullRequest; auth::
 end
 
 function delete_pr_review!(repo::GitHub.Repo, pr::GitHub.PullRequest, r::GitHub.Review; auth::GitHub.Authorization)
+    return nothing
     repo_full_name = full_name(repo)
     pr_number = number(pr)
     review_id = r.id
