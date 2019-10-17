@@ -35,7 +35,7 @@ function delete_all_of_my_reviews!(repo::GitHub.Repo,
     all_pr_reviews = get_all_pull_request_reviews(repo, pr; auth = auth)
     for rev in all_pr_reviews
         if reviewer_login(rev) == whoami
-            delete_pr_review!(repo, pr, rev)
+            delete_pr_review!(repo, pr, rev; auth = auth)
         end
     end
     return nothing
@@ -58,7 +58,7 @@ function delete_merged_branch!(repo::GitHub.Repo, pr::GitHub.PullRequest; auth::
     return nothing
 end
 
-function delete_pr_review!(repo::GitHub.Repo, pr::GitHub.PullRequest, r::GitHub.Review)
+function delete_pr_review!(repo::GitHub.Repo, pr::GitHub.PullRequest, r::GitHub.Review; auth::GitHub.Authorization)
     repo_full_name = full_name(repo)
     pr_number = number(pr)
     review_id = r.id
