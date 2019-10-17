@@ -62,7 +62,7 @@ function range_did_not_narrow(v1::Vector{Pkg.Types.VersionRange}, v2::Vector{Pkg
         results = falses(n_1, n_2) # v1 along the rows, v2 along the columns
         for i = 1:n_1
             for j = 1:n_2
-                results[i, j] = range_did_not_narrow(v1[i], v1[j])
+                results[i, j] = range_did_not_narrow(v1[i], v2[j])
             end
         end
         return all(results)
