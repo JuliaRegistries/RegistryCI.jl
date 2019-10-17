@@ -201,7 +201,7 @@ function travis_cron_or_api_build(pr::GitHub.PullRequest,
                                 @info(string("Pull request: $(pr_number). ",
                                              "Type: $(pr_type). ",
                                              "Decision: merge now."))
-                                my_retry(() -> post_comment!(registry, pr, my_comment; auth = auth))
+                                # my_retry(() -> post_comment!(registry, pr, my_comment; auth = auth))
                                 my_retry(() -> merge!(registry, pr, approved_pr_head_sha; auth = auth))
                             else
                                 @info(string("Pull request: $(pr_number). ",
