@@ -60,8 +60,8 @@ end
 
 function delete_pr_review!(repo::GitHub.Repo, pr::GitHub.PullRequest, r::GitHub.Review)
     repo_full_name = full_name(repo)
-    pr_number = number(pull_request)
-    review_id = IHAVENOIDEA
+    pr_number = number(pr)
+    review_id = r.id
     endpoint = "/repos/$(repo_full_name)/pulls/$(pr_number)/reviews/$(review_id)"
     GitHub.gh_delete_json(GitHub.DEFAULT_API,
                           endpoint;
