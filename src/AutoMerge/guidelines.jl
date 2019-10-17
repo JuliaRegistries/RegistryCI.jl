@@ -54,6 +54,7 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
                 push!(bad_dependencies, name)
             end
         end
+        sort!(bad_dependencies)
         message = string("The following dependencies do not have a compat entry that has an upper bound: ", join(bad_dependencies, ", "))
         return false, message
     end
