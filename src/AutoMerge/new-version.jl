@@ -23,7 +23,7 @@ function travis_pull_request_build(::NewVersion,
     if is_open(pr)
         if pr_author_login in authorized_authors
             my_retry(() -> delete_all_of_my_reviews!(registry, pr; auth = auth, whoami = whoami))
-            my_retry(() -> GitHub.create_status(repo, current_pr_head_commit_sha; auth=auth, params=Dict("state" => "pending", "context" => "automerge/new-version")))
+            my_retry(() -> GitHub.create_status(registry, current_pr_head_commit_sha; auth=auth, params=Dict("state" => "pending", "context" => "automerge/new-version")))
             g0, m0 = pr_only_changes_allowed_files(NewVersion(), registry, pr, pkg; auth = auth)
             newv_g1, newv_m1, release_type = meets_sequential_version_number(pkg,
                                                                              version;
