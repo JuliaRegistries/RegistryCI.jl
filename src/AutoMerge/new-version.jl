@@ -10,7 +10,7 @@ function travis_pull_request_build(::NewVersion,
                                    whoami::String)
     # first check if authorized author - if not, then quit
     # then check rules 1-3. if fail, post comment.
-    # then check rules 4-5. if fail, post commnet.
+    # then check rules 4-5. if fail, post comment.
     # if everything passed, merge the pull request now
     # 1. Sequential version number - if the last version was 1.2.3 then the next can be 1.2.4, 1.3.0 or 2.0.0
     # 2. Compat for all dependencies - all [deps] should also have [compat] entries (and Julia itself) - [compat] entries should have upper bounds
