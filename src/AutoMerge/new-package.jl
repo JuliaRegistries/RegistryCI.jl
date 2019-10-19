@@ -26,6 +26,7 @@ function travis_pull_request_build(::NewPackage,
     if is_open(pr)
         if pr_author_login in authorized_authors
             my_retry(() -> delete_all_of_my_reviews!(registry, pr; auth = auth, whoami = whoami))
+            my_retry(() -> GitHub.create_status(repo, current_pr_head_commit_sha; auth=auth, params=Dict("state" => "pending", "context" => "automerge/new-package")))
             g0, m0 = pr_only_changes_allowed_files(NewPackage(), registry, pr, pkg; auth = auth)
             newp_g1, newp_m1 = meets_normal_capitalization(pkg)
             newp_g2, newp_m2 = meets_name_length(pkg)
@@ -53,6 +54,7 @@ function travis_pull_request_build(::NewPackage,
                                                              version)
                     my_retry(() -> delete_all_of_my_reviews!(registry, pr; auth = auth, whoami = whoami))
                     my_retry(() -> approve!(registry, pr, current_pr_head_commit_sha; auth = auth))
+                    my_retry(() -> GitHub.create_status(repo, current_pr_head_commit_sha; auth=auth, params=Dict("state" => "success", "context" => "automerge/new-package")))
                     my_retry(() -> post_comment!(registry, pr, newp_commenttextpass; auth = auth))
                     return nothing
                 else
@@ -61,6 +63,7 @@ function travis_pull_request_build(::NewPackage,
                                                               suggest_onepointzero,
                                                               version)
                     my_retry(() -> post_comment!(registry, pr, newp_commenttext6and7; auth = auth))
+                    my_retry(() -> GitHub.create_status(repo, current_pr_head_commit_sha; auth=auth, params=Dict("state" => "failure", "context" => "automerge/new-package")))
                     return nothing
                 end
             else
@@ -71,6 +74,7 @@ function travis_pull_request_build(::NewPackage,
                                                               suggest_onepointzero,
                                                               version)
                 my_retry(() -> post_comment!(registry, pr, newp_commenttext0through5; auth = auth))
+                my_retry(() -> GitHub.create_status(repo, current_pr_head_commit_sha; auth=auth, params=Dict("state" => "failure", "context" => "automerge/new-package")))
                 return nothing
             end
         else
