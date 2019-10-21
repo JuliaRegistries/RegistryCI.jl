@@ -32,18 +32,24 @@ function _comment_disclaimer()
     return result
 end
 
+function _comment_noblock()
+    result = string("\n\n",
+                    "If you want to prevent this pull request from ",
+                    "being auto-merged, simply leave a comment.\n\n",
+                    "(If you want to post a comment without blocking ",
+                    "auto-merging, you must include the text ",
+                    "`[noblock]` in your comment.)")
+    return result
+end
+
 function comment_text_pass(::NewVersion,
                            suggest_onepointzero::Bool,
                            version::VersionNumber)
     result = string("Your `new version` pull request met all of the ",
                     "guidelines for automatic merging.\n\n",
                     "I will automatically merge this pull request during ",
-                    "the next `cron` job.\n\n",
-                    "If you want to prevent this pull request from ",
-                    "being auto-merged, simply leave a comment.\n\n",
-                    "(If you want to post a comment without blocking ",
-                    "auto-merging, you must include the text ",
-                    "`[noblock]` in your comment.)",
+                    "the next `cron` job.",
+                    _comment_noblock(),
                     _onepointzero_suggestion(suggest_onepointzero, version),
                     "\n\n---\n[noblock]")
     return result
@@ -55,12 +61,8 @@ function comment_text_pass(::NewPackage,
     result = string("Your `new package` pull request met all of the ",
                     "guidelines for automatic merging.\n\n",
                     "I will automatically merge this pull request after ",
-                    "the mandatory waiting period has elapsed.\n\n",
-                    "If you want to prevent this pull request from ",
-                    "being auto-merged, simply leave a comment.\n\n",
-                    "(If you want to post a comment without blocking ",
-                    "auto-merging, you must include the text ",
-                    "`[noblock]` in your comment.)",
+                    "the mandatory waiting period has elapsed.",
+                    _comment_noblock(),
                     _onepointzero_suggestion(suggest_onepointzero, version),
                     "\n\n---\n[noblock]")
     return result
@@ -77,6 +79,7 @@ function comment_text_fail(::NewPackage,
                     "Specifically, your pull request does not ",
                     "meet the following guidelines:\n\n",
                     reasons_formatted,
+                    _comment_noblock(),
                     _comment_disclaimer(),
                     _onepointzero_suggestion(suggest_onepointzero, version),
                     "\n\n---\n[noblock]")
@@ -94,6 +97,7 @@ function comment_text_fail(::NewVersion,
                     "Specifically, your pull request does not ",
                     "meet the following guidelines:\n\n",
                     reasons_formatted,
+                    _comment_noblock(),
                     _comment_disclaimer(),
                     _onepointzero_suggestion(suggest_onepointzero, version),
                     "\n\n---\n[noblock]")
