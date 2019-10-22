@@ -1,5 +1,6 @@
 name = "RegistryCI"
 uuid = "0c95cc5f-2f7e-43fe-82dd-79dbcba86b32"
+authors = ["Dilum Aluthge <dilum@aluthge.com>", "Fredrik Ekre <ekrefredrik@gmail.com>"]
 version = "0.1.1-DEV"
 
 [deps]
@@ -18,8 +19,10 @@ TimeZones = "^0.10.0"
 julia = "^1.0.0"
 
 [extras]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+GitHub = "bc5e4493-9b4d-5f90-b8aa-2b2bcaad7a26"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Pkg", "Test"]
+test = ["Dates", "GitHub", "Pkg", "Test"]
