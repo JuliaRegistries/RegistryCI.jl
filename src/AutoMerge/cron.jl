@@ -17,7 +17,7 @@ function pr_has_no_blocking_comments(registry::GitHub.Repo,
         num_comments = length(all_pr_comments)
         comment_is_blocking = BitVector(undef, num_comments)
         for i = 1:num_comments
-            comment_is_blocking = pr_comment_is_blocking(all_pr_comments[i])
+            comment_is_blocking[i] = pr_comment_is_blocking(all_pr_comments[i])
         end
         if any(comment_is_blocking)
             return false
