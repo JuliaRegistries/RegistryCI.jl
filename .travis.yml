@@ -34,6 +34,8 @@ jobs:
     - stage: AutoMerge Integration Tests
       language: julia
       os: linux
+      env:
+        - AUTOMERGE_RUN_INTEGRATION_TESTS="true"
       julia: "1.2" # current stable release
       script: julia --code-coverage -e 'using Pkg; Pkg.build(); Pkg.test(coverage=true)'
       after_success: julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
