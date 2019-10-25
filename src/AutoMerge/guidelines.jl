@@ -159,6 +159,7 @@ function meets_version_can_be_loaded(working_directory::String,
         """
     cmd = Cmd(`$(Base.julia_cmd()) -e $(code)`;
               env = Dict("PATH" => ENV["PATH"],
+                         "PYTHON" => "",
                          "JULIA_DEPOT_PATH" => tmp_dir))
     @info("Attempting to install the package")
     cmd_ran_successfully = success(pipeline(cmd, stdout=stdout, stderr=stderr))
