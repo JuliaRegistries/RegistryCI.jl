@@ -7,4 +7,4 @@ RegistryCI provides continuous integration (CI) tools for Julia package registri
 
 The [General](https://github.com/JuliaRegistries/General) registry uses RegistryCI.
 
-However, you can also use RegistryCI for your own package registry.
+You can also use RegistryCI for your own package registry.
