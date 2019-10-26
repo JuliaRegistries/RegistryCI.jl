@@ -39,11 +39,11 @@ jobs:
         - AUTOMERGE_RUN_INTEGRATION_TESTS="true"
         - AUTOMERGE_INTEGRATION_TEST_REPO="bcbi-test/automerge-integration-test-repo"
       julia: "1.2" # current stable release
-      before_script:
+      script:
+        - set -e
         - sudo apt-get update
-        - sudo apt-get install -y haveged
+        - sudo apt-get install -y haveged rng-tools
         - sudo service haveged start
-        - sudo apt-get install rng-tools
         - cat /dev/random | rngtest -c 1000
-      script: julia --code-coverage -e 'using Pkg; Pkg.build(); Pkg.test(coverage=true)'
+        - julia --code-coverage -e 'using Pkg; Pkg.build(); Pkg.test(coverage=true)'
       after_success: julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
