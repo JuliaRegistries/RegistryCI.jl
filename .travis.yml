@@ -43,6 +43,5 @@ jobs:
         - sudo apt-get update
         - sudo apt-get install -y haveged rng-tools
         - sudo service haveged start
-        - cat /dev/random | rngtest -c 1000
       script: julia --code-coverage -e 'using Pkg; Pkg.build(); Pkg.test(coverage=true)'
       after_success: julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
