@@ -34,9 +34,14 @@ jobs:
     - stage: AutoMerge Integration Tests
       language: julia
       os: linux
+      sudo: required
       env:
         - AUTOMERGE_RUN_INTEGRATION_TESTS="true"
         - AUTOMERGE_INTEGRATION_TEST_REPO="bcbi-test/automerge-integration-test-repo"
       julia: "1.2" # current stable release
+      before_script:
+        - sudo apt-get update
+        - sudo apt-get install -y haveged rng-tools
+        - sudo service haveged start
       script: julia --code-coverage -e 'using Pkg; Pkg.build(); Pkg.test(coverage=true)'
       after_success: julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
