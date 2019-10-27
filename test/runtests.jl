@@ -1,7 +1,9 @@
 using GitHub
 using Pkg
+using Printf
 using RegistryCI
 using Test
+using TimeZones
 
 const AutoMerge = RegistryCI.AutoMerge
 
