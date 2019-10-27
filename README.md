@@ -3,11 +3,11 @@
 [![Build Status](https://travis-ci.com/JuliaRegistries/RegistryCI.jl.svg?branch=master)](https://travis-ci.com/JuliaRegistries/RegistryCI.jl/branches)
 [![Codecov](https://codecov.io/gh/JuliaRegistries/RegistryCI.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaRegistries/RegistryCI.jl)
 
-RegistryCI provides tools for testing, continuous integration (CI) and automatic merging (AutoMerge) for Julia package registries.
+RegistryCI provides continuous integration (CI) tools, including automated testing and automatic merging (automerge).
 
 The [General](https://github.com/JuliaRegistries/General) registry uses RegistryCI.
 
-You can also use RegistryCI for your own package registry.
+You can also use RegistryCI for your own Julia package registry.
 
 ## Acknowledgements
 
