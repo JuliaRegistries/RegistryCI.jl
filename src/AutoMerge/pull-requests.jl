@@ -29,6 +29,8 @@ function travis_pull_request_build(pr_number::Integer,
                                    whoami::String,
                                    auth::GitHub.Authorization,
                                    authorized_authors::Vector{String},
+                                   master_branch::String,
+                                   master_branch_is_default_branch::Bool,
                                    suggest_onepointzero::Bool)
     pr = my_retry(() -> GitHub.pull_request(registry, pr_number; auth=auth))
     _github_api_pr_head_commit_sha = pull_request_head_sha(pr)
@@ -41,6 +43,8 @@ function travis_pull_request_build(pr_number::Integer,
                                        registry_head;
                                        auth=auth,
                                        authorized_authors=authorized_authors,
+                                       master_branch=master_branch,
+                                       master_branch_is_default_branch=master_branch_is_default_branch,
                                        suggest_onepointzero=suggest_onepointzero,
                                        whoami=whoami)
     return result
@@ -52,10 +56,15 @@ function travis_pull_request_build(pr::GitHub.PullRequest,
                                    registry_head::String;
                                    auth::GitHub.Authorization,
                                    authorized_authors::Vector{String},
+                                   master_branch::String,
+                                   master_branch_is_default_branch::Bool,
                                    suggest_onepointzero::Bool,
                                    whoami::String)
     if is_new_package(pr)
         registry_master = clone_repo(registry)
+        if !master_branch_is_default_branch
+            checkout_branch(registry_master, master_branch)
+        end
         travis_pull_request_build(NewPackage(),
                                   pr,
                                   current_pr_head_commit_sha,
@@ -69,6 +78,9 @@ function travis_pull_request_build(pr::GitHub.PullRequest,
         rm(registry_master; force = true, recursive = true)
     elseif is_new_version(pr)
         registry_master = clone_repo(registry)
+        if !master_branch_is_default_branch
+            checkout_branch(registry_master, master_branch)
+        end
         travis_pull_request_build(NewVersion(),
                                   pr,
                                   current_pr_head_commit_sha,

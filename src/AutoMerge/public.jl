@@ -9,6 +9,7 @@ function travis(env = ENV;
                 enable_travis_api_builds::Bool = true,
                 enable_travis_cron_builds::Bool = true,
                 master_branch::String = "master",
+                master_branch_is_default_branch::Bool = true,
                 suggest_onepointzero::Bool = true)
     registry_head = env["TRAVIS_BUILD_DIR"]::String
     RegistryCI.test(registry_head)
@@ -34,6 +35,8 @@ function travis(env = ENV;
                                   registry_head;
                                   auth = auth,
                                   authorized_authors = authorized_authors,
+                                  master_branch = master_branch,
+                                  master_branch_is_default_branch = master_branch_is_default_branch,
                                   suggest_onepointzero = suggest_onepointzero,
                                   whoami = whoami)
         return nothing
