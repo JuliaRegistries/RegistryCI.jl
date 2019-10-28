@@ -109,10 +109,6 @@ function delete_stale_branches(AUTOMERGE_INTEGRATION_TEST_REPO; GIT)
                     run(`$(GIT) push origin --delete $(b)`)
                 catch
                 end
-                try
-                    run(`$(GIT) push origin :$(b)`)
-                catch
-                end
             end
         end
     end
