@@ -1,7 +1,8 @@
 # RegistryCI.jl
 
 [![Build Status](https://travis-ci.com/JuliaRegistries/RegistryCI.jl.svg?branch=master)](https://travis-ci.com/JuliaRegistries/RegistryCI.jl/branches)
-[![Codecov](https://codecov.io/gh/JuliaRegistries/RegistryCI.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaRegistries/RegistryCI.jl)
+[![Codecov](https://codecov.io/gh/JuliaRegistries/RegistryCI.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaRegistries/RegistryCI.jl/branch/master)
+[![Coveralls](https://coveralls.io/repos/github/JuliaRegistries/RegistryCI.jl/badge.svg?branch=master)](https://coveralls.io/github/JuliaRegistries/RegistryCI.jl?branch=master)
 
 RegistryCI provides continuous integration (CI) tools, including automated testing and automatic merging (automerge) of pull requests.
 
