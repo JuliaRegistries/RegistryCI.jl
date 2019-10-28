@@ -2,18 +2,22 @@ function approve!(repo::GitHub.Repo,
                   pr::GitHub.PullRequest,
                   pr_head_commit_sha_to_approve::String;
                   auth::GitHub.Authorization)
-    repo_full_name = full_name(repo)
-    pr_number = number(pr)
-    endpoint = "/repos/$(repo_full_name)/pulls/$(pr_number)/reviews"
-    approving_review_body = string("<!---",
-                                   "approved_pr_head_commit_sha=\"$(pr_head_commit_sha_to_approve)\"",
-                                   "--->")
-    myparams = Dict("event" => "APPROVE",
-                    "body" => approving_review_body)
-    GitHub.gh_post_json(GitHub.DEFAULT_API,
-                        endpoint;
-                        auth=auth,
-                        params = myparams)
+    whoami = username(auth)
+    if pr.user.login == whoami
+    else
+        repo_full_name = full_name(repo)
+        pr_number = number(pr)
+        endpoint = "/repos/$(repo_full_name)/pulls/$(pr_number)/reviews"
+        approving_review_body = string("<!---",
+                                       "approved_pr_head_commit_sha=\"$(pr_head_commit_sha_to_approve)\"",
+                                       "--->")
+        myparams = Dict("event" => "APPROVE",
+                        "body" => approving_review_body)
+        GitHub.gh_post_json(GitHub.DEFAULT_API,
+                            endpoint;
+                            auth=auth,
+                            params = myparams)
+    end
     return nothing
 end
 

@@ -54,7 +54,7 @@ function travis_pull_request_build(::NewPackage,
                                                              version)
                     my_retry(() -> delete_all_of_my_reviews!(registry, pr; auth = auth, whoami = whoami))
                     my_retry(() -> approve!(registry, pr, current_pr_head_commit_sha; auth = auth))
-                    my_retry(() -> GitHub.create_status(registry, current_pr_head_commit_sha; auth=auth, params=Dict("state" => "success", "context" => "automerge/new-package")))
+                    my_retry(() -> GitHub.create_status(registry, current_pr_head_commit_sha; auth=auth, params=Dict("state" => "success", "context" => "automerge/new-package", "description" => "$(current_pr_head_commit_sha)")))
                     my_retry(() -> post_comment!(registry, pr, newp_commenttextpass; auth = auth))
                     return nothing
                 else

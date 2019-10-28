@@ -29,6 +29,11 @@ script: julia --code-coverage -e 'using Pkg; Pkg.build(); Pkg.test(coverage=true
 
 after_success: julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
 
+## Important note:
+## If you want to run the integration tests, make sure that you go into the
+## Travis settings for your repository, enable the "Limit concurrent jobs"
+## option, and set the number of concurrent jobs to one (1).
+
 jobs:
   include:
     - stage: AutoMerge Integration Tests
