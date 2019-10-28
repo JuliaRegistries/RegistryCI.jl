@@ -10,8 +10,10 @@ function travis(env = ENV;
                 enable_travis_cron_builds::Bool = true,
                 master_branch::String = "master",
                 suggest_onepointzero::Bool = true)
-    TRAVIS_BRANCH = env["TRAVIS_BRANCH"]::String
     registry_head = env["TRAVIS_BUILD_DIR"]::String
+    RegistryCI.test(registry_head)
+
+    TRAVIS_BRANCH = env["TRAVIS_BRANCH"]::String
     TRAVIS_EVENT_TYPE = env["TRAVIS_EVENT_TYPE"]::String
     TRAVIS_PULL_REQUEST = env["TRAVIS_PULL_REQUEST"]::String
     current_pr_head_commit_sha = env["TRAVIS_PULL_REQUEST_SHA"]::String

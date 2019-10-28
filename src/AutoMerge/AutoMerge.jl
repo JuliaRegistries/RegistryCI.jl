@@ -7,6 +7,8 @@ import LibGit2
 import Pkg
 import TimeZones
 
+import ..RegistryCI
+
 include("types.jl")
 
 include("public.jl")
