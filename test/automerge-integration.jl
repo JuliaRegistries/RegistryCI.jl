@@ -30,10 +30,23 @@ with_master_branch(templates("master_1"), "master"; GIT = GIT, repo_url = repo_u
                       "head" => feature_1,
                       "base" => master_1)
         pr_1_1 = GitHub.create_pull_request(repo; auth = auth, params = params)
-        pr_1_1 = wait_pr_compute_mergeability(repo, wait_pr_compute_mergeability; auth = auth)
+        pr_1_1 = wait_pr_compute_mergeability(repo, pr_1_1; auth = auth)
+        @test pr_1_1.mergeable
         with_pr_merge_commit(pr_1_1, repo_url_without_auth; GIT = GIT) do build_dir
-            withenv() do
-                AutoMerge.travis()
+            withenv("AUTOMERGE_GITHUB_TOKEN" => TEST_USER_GITHUB_TOKEN,
+                    "TRAVIS_BRANCH" => master_1,
+                    "TRAVIS_BUILD_DIR" => build_dir,
+                    "TRAVIS_EVENT_TYPE" => "pull_request",
+                    "TRAVIS_PULL_REQUEST" => string(pr_1_1.number),
+                    "TRAVIS_PULL_REQUEST_SHA" => string(AutoMerge.pull_request_head_sha(pr_1_1))) do
+                AutoMerge.travis(;
+                                 merge_new_packages = false,
+                                 merge_new_versions = false,
+                                 new_package_waiting_period = Minute(typemax(Int32)),
+                                 new_version_waiting_period = Minute(typemax(Int32)),
+                                 registry = AUTOMERGE_INTEGRATION_TEST_REPO,
+                                 authorized_authors = String[whoami])
+
             end
         end
     end

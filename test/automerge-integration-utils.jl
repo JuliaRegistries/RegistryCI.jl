@@ -168,16 +168,27 @@ function with_cloned_repo(f, repo_url; GIT)
     return result
 end
 
+function get_git_current_head(dir)
+    original_working_directory = pwd()
+    cd(dir)
+    result = convert(String, strip(read(`git rev-parse HEAD`, String)))::String
+    cd(original_working_directory)
+    return result
+end
+
 function with_pr_merge_commit(f::Function,
                               pr::GitHub.PullRequest,
                               repo_url::AbstractString;
                               GIT)
     original_working_directory = pwd()
-
     result = with_cloned_repo(repo_url; GIT = GIT) do git_repo_dir
         cd(git_repo_dir)
-        println(pr)
-        run(`$(GIT) checkout $(pr.merge_commit_sha)`)
+        number = pr.number
+        run(`$(GIT) fetch origin +refs/pull/$(number)/merge`)
+        run(`$(GIT) checkout -qf FETCH_HEAD`)
+        head = get_git_current_head(git_repo_dir)
+        merge_commit_sha = pr.merge_commit_sha
+        @test strip(head) == strip(merge_commit_sha)
         return f(git_repo_dir)
     end
     cd(original_working_directory)

@@ -5,3 +5,4 @@ repo = ""
 description = "This is a test registry for the AutoMerge integration tests."
 
 [packages]
+ae029012-a4dd-5104-9daa-d747884805df = { name = "Requires", path = "R/Requires" }
