@@ -1,3 +1,13 @@
+using Dates
+using GitHub
+using Pkg
+using Printf
+using RegistryCI
+using Test
+using TimeZones
+
+const AutoMerge = RegistryCI.AutoMerge
+
 include("automerge-integration-utils.jl")
 
 AUTOMERGE_INTEGRATION_TEST_REPO = ENV["AUTOMERGE_INTEGRATION_TEST_REPO"]::String
@@ -19,10 +29,15 @@ with_master_branch(templates("master_1"), "master"; GIT = GIT, repo_url = repo_u
         params = Dict("title" => "New package: Requires v1.0.0",
                       "head" => feature_1,
                       "base" => master_1)
-        pr = GitHub.create_pull_request(repo; auth = auth, params = params)
-        println(typeof(pr))
+        pr_1_1 = GitHub.create_pull_request(repo; auth = auth, params = params)
+        pr_1_1 = wait_pr_compute_mergeability(repo, wait_pr_compute_mergeability; auth = auth)
+        with_pr_merge_commit(pr_1_1, repo_url_without_auth; GIT = GIT) do build_dir
+            withenv() do
+                AutoMerge.travis()
+            end
+        end
     end
 end
 
-close_all_pull_requests(repo; auth = auth, state = "open")
-delete_stale_branches(repo_url_with_auth; GIT = GIT)
+# close_all_pull_requests(repo; auth = auth, state = "open")
+# delete_stale_branches(repo_url_with_auth; GIT = GIT)

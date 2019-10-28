@@ -1,3 +1,13 @@
+using Dates
+using GitHub
+using Pkg
+using Printf
+using RegistryCI
+using Test
+using TimeZones
+
+const AutoMerge = RegistryCI.AutoMerge
+
 @testset "Guidelines for new packages" begin
     @testset "Normal capitalization" begin
         @test AutoMerge.meets_normal_capitalization("Zygote")[1]

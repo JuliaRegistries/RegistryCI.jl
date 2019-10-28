@@ -1,9 +1,22 @@
 using Dates
 using GitHub
+using Pkg
 using Printf
+using RegistryCI
+using Test
 using TimeZones
 
+const AutoMerge = RegistryCI.AutoMerge
+
 const timestamp_regex = r"integration\/(\d\d\d\d-\d\d-\d\d-\d\d-\d\d-\d\d-\d\d\d)\/"
+
+function wait_pr_compute_mergeability(repo::GitHub.Repo, pr::GitHub.PullRequest; auth::GitHub.Authorization)
+    while !(pr.mergeable isa Bool)
+        sleep(5)
+        pr = GitHub.pull_request(repo, pr.number; auth = auth)
+    end
+    return pr
+end
 
 function close_all_pull_requests(repo::GitHub.Repo;
                                  auth::GitHub.Authorization,
@@ -140,7 +153,8 @@ function with_temp_dir(f)
 end
 
 function with_cloned_repo(f, repo_url; GIT)
-    with_temp_dir() do dir
+    original_working_directory = pwd()
+    result = with_temp_dir() do dir
         git_repo_dir = joinpath(dir, "REPO")
         cd(dir)
         try
@@ -148,9 +162,26 @@ function with_cloned_repo(f, repo_url; GIT)
         catch
         end
         cd(git_repo_dir)
-        f(git_repo_dir)
+        return f(git_repo_dir)
     end
-    return nothing
+    cd(original_working_directory)
+    return result
+end
+
+function with_pr_merge_commit(f::Function,
+                              pr::GitHub.PullRequest,
+                              repo_url::AbstractString;
+                              GIT)
+    original_working_directory = pwd()
+
+    result = with_cloned_repo(repo_url; GIT = GIT) do git_repo_dir
+        cd(git_repo_dir)
+        println(pr)
+        run(`$(GIT) checkout $(pr.merge_commit_sha)`)
+        return f(git_repo_dir)
+    end
+    cd(original_working_directory)
+    return result
 end
 
 function _generate_branch_name(name::AbstractString)
