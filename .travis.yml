@@ -40,6 +40,7 @@ after_success:
 ## If you want to run the integration tests, make sure that you go into the
 ## Travis settings for your repository, enable the "Limit concurrent jobs"
 ## option, and set the number of concurrent jobs to one (1).
+## For more details, see https://docs.travis-ci.com/user/customizing-the-build/#limiting-concurrent-jobs
 
 jobs:
   include:
