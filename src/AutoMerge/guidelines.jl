@@ -157,6 +157,19 @@ function meets_version_can_be_loaded(working_directory::String,
         import $(pkg);
         @info("Successfully imported package");
         """
+    # We need to be careful with what environment variables we pass to the child
+    # process. For example, we don't want to pass an environment variable containing
+    # our GitHub token to the child process. Because if the Julia package that we are
+    # testing has malicious code in its __init__() function, it could try to steal
+    # our token. So we only pass three environment variables:
+    # 1. PATH. If we don't pass PATH, things break. And PATH should not contain any
+    #    sensitive information.
+    # 2. PYTHON. We set PYTHON to the empty string. This forces any packages that use
+    #    PyCall to install their own version of Python instead of using the system
+    #    Python.
+    # 3. JULIA_DEPOT_PATH. We set JULIA_DEPOT_PATH to the temporary directory that
+    #    we created. This is because we don't want the child process using our
+    #    real Julia depot. So we set up a fake depot for the child process to use.
     cmd = Cmd(`$(Base.julia_cmd()) -e $(code)`;
               env = Dict("PATH" => ENV["PATH"],
                          "PYTHON" => "",
