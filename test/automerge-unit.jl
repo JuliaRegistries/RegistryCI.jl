@@ -88,7 +88,7 @@ end
 
 @testset "Unit tests" begin
     @testset "assert.jl" begin
-        @test nothing == @test_nowarn AutoMerge.@always_assert 1 == 1
-        @test_throws AutoMerge.AlwaysAssertionError AutoMerge.@always_assert 1 == 2
+        @test nothing == @test_nowarn AutoMerge.always_assert(1 == 1)
+        @test_throws AutoMerge.AlwaysAssertionError AutoMerge.always_assert(1 == 2)
     end
 end
