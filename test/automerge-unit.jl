@@ -85,3 +85,10 @@ end
         @test !AutoMerge.range_did_not_narrow(r3, r2)[1]
     end
 end
+
+@testset "Unit tests" begin
+    @testset "assert.jl" begin
+        @test nothing == @test_nowarn AutoMerge.always_assert(1 == 1)
+        @test_throws AutoMerge.AlwaysAssertionError AutoMerge.always_assert(1 == 2)
+    end
+end

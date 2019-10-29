@@ -9,6 +9,8 @@ import TimeZones
 
 import ..RegistryCI
 
+include("assert.jl")
+
 include("types.jl")
 
 include("public.jl")
