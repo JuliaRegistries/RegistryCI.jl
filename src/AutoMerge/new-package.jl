@@ -1,13 +1,13 @@
-function travis_pull_request_build(::NewPackage,
-                                   pr::GitHub.PullRequest,
-                                   current_pr_head_commit_sha::String,
-                                   registry::GitHub.Repo;
-                                   auth::GitHub.Authorization,
-                                   authorized_authors::Vector{String},
-                                   registry_head::String,
-                                   registry_master::String,
-                                   suggest_onepointzero::Bool,
-                                   whoami::String)
+function pull_request_build(::NewPackage,
+                            pr::GitHub.PullRequest,
+                            current_pr_head_commit_sha::String,
+                            registry::GitHub.Repo;
+                            auth::GitHub.Authorization,
+                            authorized_authors::Vector{String},
+                            registry_head::String,
+                            registry_master::String,
+                            suggest_onepointzero::Bool,
+                            whoami::String)
     # first check if the PR is open, and the author is authorized - if not, then quit
     # then, delete ALL reviews by me
     # then check rules 1-5. if fail, post comment.

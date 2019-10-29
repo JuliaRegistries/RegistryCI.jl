@@ -3,7 +3,7 @@ function checkout_branch(dir::AbstractString,
                          git_command::AbstractString = "git")
     original_working_directory = pwd()
     cd(dir)
-    run(`$(git_command) checkout $(branch)`)
+    Base.run(`$(git_command) checkout $(branch)`)
     cd(original_working_directory)
 end
 

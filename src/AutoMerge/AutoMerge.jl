@@ -13,6 +13,7 @@ include("assert.jl")
 
 include("types.jl")
 
+include("ciservice.jl")
 include("public.jl")
 
 include("api_rate_limiting.jl")
