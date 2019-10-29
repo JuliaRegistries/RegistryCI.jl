@@ -84,14 +84,14 @@ function pr_was_approved_by_me(repo::GitHub.Repo,
     end
 end
 
-function travis_cron_or_api_build(registry::GitHub.Repo;
-                                  auth::GitHub.Authorization,
-                                  authorized_authors::Vector{String},
-                                  merge_new_packages::Bool,
-                                  merge_new_versions::Bool,
-                                  new_package_waiting_period,
-                                  new_version_waiting_period,
-                                  whoami::String)
+function cron_or_api_build(registry::GitHub.Repo;
+                           auth::GitHub.Authorization,
+                           authorized_authors::Vector{String},
+                           merge_new_packages::Bool,
+                           merge_new_versions::Bool,
+                           new_package_waiting_period,
+                           new_version_waiting_period,
+                           whoami::String)
     # first, get a list of ALL open pull requests on this repository
     # then, loop through each of them.
     all_currently_open_pull_requests = my_retry(() -> get_all_pull_requests(registry, "open"; auth=auth))
@@ -102,15 +102,15 @@ function travis_cron_or_api_build(registry::GitHub.Repo;
     else
         for pr in all_currently_open_pull_requests
             try
-                my_retry(() -> travis_cron_or_api_build(pr,
-                                                        registry::GitHub.Repo;
-                                                        auth = auth,
-                                                        authorized_authors = authorized_authors,
-                                                        merge_new_packages = merge_new_packages,
-                                                        merge_new_versions = merge_new_versions,
-                                                        new_package_waiting_period = new_package_waiting_period,
-                                                        new_version_waiting_period = new_version_waiting_period,
-                                                        whoami = whoami),
+                my_retry(() -> cron_or_api_build(pr,
+                                                 registry::GitHub.Repo;
+                                                 auth = auth,
+                                                 authorized_authors = authorized_authors,
+                                                 merge_new_packages = merge_new_packages,
+                                                 merge_new_versions = merge_new_versions,
+                                                 new_package_waiting_period = new_package_waiting_period,
+                                                 new_version_waiting_period = new_version_waiting_period,
+                                                 whoami = whoami),
                          num_retries)
             catch ex
                 at_least_one_exception_was_thrown = true
@@ -126,15 +126,15 @@ function travis_cron_or_api_build(registry::GitHub.Repo;
     return nothing
 end
 
-function travis_cron_or_api_build(pr::GitHub.PullRequest,
-                                  registry::GitHub.Repo;
-                                  auth::GitHub.Authorization,
-                                  authorized_authors::Vector{String},
-                                  merge_new_packages::Bool,
-                                  merge_new_versions::Bool,
-                                  new_package_waiting_period,
-                                  new_version_waiting_period,
-                                  whoami::String)
+function cron_or_api_build(pr::GitHub.PullRequest,
+                           registry::GitHub.Repo;
+                           auth::GitHub.Authorization,
+                           authorized_authors::Vector{String},
+                           merge_new_packages::Bool,
+                           merge_new_versions::Bool,
+                           new_package_waiting_period,
+                           new_version_waiting_period,
+                           whoami::String)
     #       first, see if the author is an approved author. if not, then skip.
     #       next, see if the title matches either the "New Version" regex or
     #               the "New Package regex". if it is not either a new

@@ -1,13 +1,13 @@
-function travis_pull_request_build(::NewVersion,
-                                   pr::GitHub.PullRequest,
-                                   current_pr_head_commit_sha::String,
-                                   registry::GitHub.Repo;
-                                   auth::GitHub.Authorization,
-                                   authorized_authors::Vector{String},
-                                   registry_head::String,
-                                   registry_master::String,
-                                   suggest_onepointzero::Bool,
-                                   whoami::String)
+function pull_request_build(::NewVersion,
+                            pr::GitHub.PullRequest,
+                            current_pr_head_commit_sha::String,
+                            registry::GitHub.Repo;
+                            auth::GitHub.Authorization,
+                            authorized_authors::Vector{String},
+                            registry_head::String,
+                            registry_master::String,
+                            suggest_onepointzero::Bool,
+                            whoami::String)
     # first check if authorized author - if not, then quit
     # then check rules 1-3. if fail, post comment.
     # then check rules 4-5. if fail, post comment.

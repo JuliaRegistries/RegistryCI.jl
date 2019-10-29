@@ -92,3 +92,106 @@ end
         @test_throws AutoMerge.AlwaysAssertionError AutoMerge.always_assert(1 == 2)
     end
 end
+
+@testset "CIService unit testing" begin
+    @testset "Travis CI" begin
+        # pull request build
+        withenv("TRAVIS_BRANCH" => "master",
+                "TRAVIS_EVENT_TYPE" => "pull_request",
+                "TRAVIS_PULL_REQUEST" => "42",
+                "TRAVIS_PULL_REQUEST_SHA" => "abc123",
+                "TRAVIS_BUILD_DIR" => "/tmp/clone") do
+            cfg = AutoMerge.TravisCI()
+            @test AutoMerge.conditions_met_for_pr_build(cfg; master_branch="master")
+            @test !AutoMerge.conditions_met_for_pr_build(cfg; master_branch="retsam")
+            @test !AutoMerge.conditions_met_for_merge_build(cfg; master_branch="master")
+            @test AutoMerge.pull_request_number(cfg) == 42
+            @test AutoMerge.current_pr_head_commit_sha(cfg) == "abc123"
+            @test AutoMerge.directory_of_cloned_registry(cfg) == "/tmp/clone"
+        end
+        # merge build with cron
+        withenv("TRAVIS_BRANCH" => "master",
+                "TRAVIS_EVENT_TYPE" => "cron",
+                "TRAVIS_PULL_REQUEST" => "false",
+                "TRAVIS_PULL_REQUEST_SHA" => "abc123",
+                "TRAVIS_BUILD_DIR" => "/tmp/clone") do
+            cfg = AutoMerge.TravisCI()
+            @test !AutoMerge.conditions_met_for_pr_build(cfg; master_branch="master")
+            @test AutoMerge.conditions_met_for_merge_build(cfg; master_branch="master")
+            @test !AutoMerge.conditions_met_for_merge_build(cfg; master_branch="retsam")
+            @test !AutoMerge.conditions_met_for_merge_build(AutoMerge.TravisCI(enable_cron_builds=false); master_branch="master")
+            @test AutoMerge.current_pr_head_commit_sha(cfg) == "abc123"
+            @test AutoMerge.directory_of_cloned_registry(cfg) == "/tmp/clone"
+        end
+        # merge build with api
+        withenv("TRAVIS_BRANCH" => "master",
+                "TRAVIS_EVENT_TYPE" => "api",
+                "TRAVIS_PULL_REQUEST" => "false",
+                "TRAVIS_PULL_REQUEST_SHA" => "abc123",
+                "TRAVIS_BUILD_DIR" => "/tmp/clone") do
+            cfg = AutoMerge.TravisCI()
+            @test !AutoMerge.conditions_met_for_pr_build(cfg; master_branch="master")
+            @test AutoMerge.conditions_met_for_merge_build(cfg; master_branch="master")
+            @test !AutoMerge.conditions_met_for_merge_build(cfg; master_branch="retsam")
+            @test !AutoMerge.conditions_met_for_merge_build(AutoMerge.TravisCI(enable_api_builds=false); master_branch="master")
+            @test AutoMerge.current_pr_head_commit_sha(cfg) == "abc123"
+            @test AutoMerge.directory_of_cloned_registry(cfg) == "/tmp/clone"
+        end
+        # neither pull request nor merge build
+        withenv("TRAVIS_BRANCH" => nothing,
+                "TRAVIS_EVENT_TYPE" => nothing) do
+            cfg = AutoMerge.TravisCI()
+            @test !AutoMerge.conditions_met_for_pr_build(cfg; master_branch="master")
+            @test !AutoMerge.conditions_met_for_merge_build(cfg; master_branch="master")
+        end
+    end
+
+    @testset "GitHub Actions" begin
+        # pull request build
+        withenv("GITHUB_REF" => "refs/pull/42/merge",
+                "GITHUB_EVENT_NAME" => "pull_request",
+                "GITHUB_SHA" => "abc123",
+                "GITHUB_WORKSPACE" => "/tmp/clone") do
+            cfg = AutoMerge.GitHubActions()
+            @test AutoMerge.conditions_met_for_pr_build(cfg; master_branch="master")
+            @test_broken !AutoMerge.conditions_met_for_pr_build(cfg; master_branch="retsam")
+            @test !AutoMerge.conditions_met_for_merge_build(cfg; master_branch="master")
+            @test AutoMerge.pull_request_number(cfg) == 42
+            @test AutoMerge.current_pr_head_commit_sha(cfg) == "abc123"
+            @test AutoMerge.directory_of_cloned_registry(cfg) == "/tmp/clone"
+        end
+        # merge build with cron
+        withenv("GITHUB_REF" => "refs/heads/master",
+                "GITHUB_EVENT_NAME" => "cron",
+                "GITHUB_SHA" => "abc123",
+                "GITHUB_WORKSPACE" => "/tmp/clone") do
+            cfg = AutoMerge.GitHubActions()
+            @test !AutoMerge.conditions_met_for_pr_build(cfg; master_branch="master")
+            @test AutoMerge.conditions_met_for_merge_build(cfg; master_branch="master")
+            @test !AutoMerge.conditions_met_for_merge_build(cfg; master_branch="retsam")
+            @test !AutoMerge.conditions_met_for_merge_build(AutoMerge.GitHubActions(enable_cron_builds=false); master_branch="master")
+            @test AutoMerge.current_pr_head_commit_sha(cfg) == "abc123"
+            @test AutoMerge.directory_of_cloned_registry(cfg) == "/tmp/clone"
+        end
+        # neither pull request nor merge build
+        withenv("GITHUB_REF" => nothing,
+                "GITHUB_EVENT_NAME" => nothing) do
+            cfg = AutoMerge.GitHubActions()
+            @test !AutoMerge.conditions_met_for_pr_build(cfg; master_branch="master")
+            @test !AutoMerge.conditions_met_for_merge_build(cfg; master_branch="master")
+        end
+    end
+
+    @testset "auto detection" begin
+        withenv("TRAVIS_REPO_SLUG" => "JuliaRegistries/General",
+                "GITHUB_REPOSITORY" => nothing) do
+            @test AutoMerge.auto_detect_ci_service() == AutoMerge.TravisCI()
+            @test AutoMerge.auto_detect_ci_service(env=ENV) == AutoMerge.TravisCI()
+        end
+        withenv("TRAVIS_REPO_SLUG" => nothing,
+                "GITHUB_REPOSITORY" => "JuliaRegistries/General") do
+            @test AutoMerge.auto_detect_ci_service() == AutoMerge.GitHubActions()
+            @test AutoMerge.auto_detect_ci_service(env=ENV) == AutoMerge.GitHubActions()
+        end
+    end
+end
