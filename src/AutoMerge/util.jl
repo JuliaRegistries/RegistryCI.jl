@@ -27,27 +27,21 @@ function _clone_repo_into_dir(url::AbstractString, repo_dir)
 end
 
 function _comment_disclaimer()
-    result = string("\n\n---\n",
-                    "It is important to note that if your pull request ",
-                    "does not meet the guidelines for automatic merging, ",
-                    "this does not mean that your pull request will never ",
-                    "be merged. It just means that your pull request will ",
-                    "require manual review by a human.\n\n",
-                    "> These guidelines are intended not as requirements ",
-                    "for packages but as very conservative guidelines, ",
-                    "which, if your new package or new version of ",
-                    "a package meets them, it may be ",
-                    "automatically merged.")
+    result = string("\n\n",
+                    "Note that the guidelines are only required for the pull request ",
+                    "to be merged automatically. However, it is **strongly recommended** ",
+                    "to follow them, since otherwise the pull request needs to be ",
+                    "manually reviewed and merged by a human.")
     return result
 end
 
 function _comment_noblock()
-    result = string("\n\n",
+    result = string("\n\n---\n",
                     "If you want to prevent this pull request from ",
-                    "being auto-merged, simply leave a comment.\n\n",
-                    "(If you want to post a comment without blocking ",
+                    "being auto-merged, simply leave a comment. ",
+                    "If you want to post a comment without blocking ",
                     "auto-merging, you must include the text ",
-                    "`[noblock]` in your comment.)")
+                    "`[noblock]` in your comment.")
     return result
 end
 
@@ -55,12 +49,11 @@ function comment_text_pass(::NewVersion,
                            suggest_onepointzero::Bool,
                            version::VersionNumber)
     result = string("Your `new version` pull request met all of the ",
-                    "guidelines for automatic merging.\n\n",
-                    "I will automatically merge this pull request during ",
-                    "the next `cron` job.",
+                    "guidelines for auto-merging and is scheduled to ",
+                    "be merged in the next round.",
                     _comment_noblock(),
                     _onepointzero_suggestion(suggest_onepointzero, version),
-                    "\n\n---\n[noblock]")
+                    "\n<!-- [noblock] -->")
     return result
 end
 
@@ -68,12 +61,11 @@ function comment_text_pass(::NewPackage,
                            suggest_onepointzero::Bool,
                            version::VersionNumber)
     result = string("Your `new package` pull request met all of the ",
-                    "guidelines for automatic merging.\n\n",
-                    "I will automatically merge this pull request after ",
-                    "the mandatory waiting period has elapsed.",
+                    "guidelines for auto-merging and is scheduled to ",
+                    "be merged when the mandatory waiting period has elapsed.",
                     _comment_noblock(),
                     _onepointzero_suggestion(suggest_onepointzero, version),
-                    "\n\n---\n[noblock]")
+                    "\n<!-- [noblock] -->")
     return result
 end
 
@@ -83,15 +75,12 @@ function comment_text_fail(::NewPackage,
                            version::VersionNumber)
     reasons_formatted = join(string.("- ", reasons), "\n")
     result = string("Your `new package` pull request does not meet ",
-                    "all of the ",
-                    "guidelines for automatic merging.\n\n",
-                    "Specifically, your pull request does not ",
-                    "meet the following guidelines:\n\n",
+                    "the following guidelines for auto-merging:\n\n",
                     reasons_formatted,
-                    _comment_noblock(),
                     _comment_disclaimer(),
+                    _comment_noblock(),
                     _onepointzero_suggestion(suggest_onepointzero, version),
-                    "\n\n---\n[noblock]")
+                    "\n<!-- [noblock] -->")
     return result
 end
 
@@ -101,15 +90,12 @@ function comment_text_fail(::NewVersion,
                            version::VersionNumber)
     reasons_formatted = join(string.("- ", reasons), "\n")
     result = string("Your `new version` pull request does not meet ",
-                    "all of the ",
-                    "guidelines for automatic merging.\n\n",
-                    "Specifically, your pull request does not ",
-                    "meet the following guidelines:\n\n",
+                    "the following guidelines for auto-merging:\n\n",
                     reasons_formatted,
-                    _comment_noblock(),
                     _comment_disclaimer(),
+                    _comment_noblock(),
                     _onepointzero_suggestion(suggest_onepointzero, version),
-                    "\n\n---\n[noblock]")
+                    "\n<!-- [noblock] -->")
     return result
 end
 
@@ -117,7 +103,7 @@ function comment_text_merge_now()
     result = string("The mandatory waiting period has elapsed.\n\n",
                     "Your pull request is ready to merge.\n\n",
                     "I will now merge this pull request.",
-                    "\n\n---\n[noblock]")
+                    "\n<!-- [noblock] -->")
     return result
 end
 
