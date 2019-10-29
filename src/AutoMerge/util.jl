@@ -1,3 +1,5 @@
+const NOBLOCK_FOOTER = "\n\n<!-- [noblock] -->"
+
 function checkout_branch(dir::AbstractString,
                          branch::AbstractString;
                          git_command::AbstractString = "git")
@@ -60,7 +62,7 @@ function comment_text_pass(::NewVersion,
                     "the next `cron` job.",
                     _comment_noblock(),
                     _onepointzero_suggestion(suggest_onepointzero, version),
-                    "\n\n---\n[noblock]")
+                    NOBLOCK_FOOTER)
     return result
 end
 
@@ -73,7 +75,7 @@ function comment_text_pass(::NewPackage,
                     "the mandatory waiting period has elapsed.",
                     _comment_noblock(),
                     _onepointzero_suggestion(suggest_onepointzero, version),
-                    "\n\n---\n[noblock]")
+                    NOBLOCK_FOOTER)
     return result
 end
 
@@ -91,7 +93,7 @@ function comment_text_fail(::NewPackage,
                     _comment_noblock(),
                     _comment_disclaimer(),
                     _onepointzero_suggestion(suggest_onepointzero, version),
-                    "\n\n---\n[noblock]")
+                    NOBLOCK_FOOTER)
     return result
 end
 
@@ -109,7 +111,7 @@ function comment_text_fail(::NewVersion,
                     _comment_noblock(),
                     _comment_disclaimer(),
                     _onepointzero_suggestion(suggest_onepointzero, version),
-                    "\n\n---\n[noblock]")
+                    NOBLOCK_FOOTER)
     return result
 end
 
@@ -117,7 +119,7 @@ function comment_text_merge_now()
     result = string("The mandatory waiting period has elapsed.\n\n",
                     "Your pull request is ready to merge.\n\n",
                     "I will now merge this pull request.",
-                    "\n\n---\n[noblock]")
+                    NOBLOCK_FOOTER)
     return result
 end
 
