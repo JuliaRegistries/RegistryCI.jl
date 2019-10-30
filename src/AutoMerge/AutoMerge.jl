@@ -6,6 +6,7 @@ import HTTP
 import LibGit2
 import Pkg
 import TimeZones
+import JSON
 
 import ..RegistryCI
 

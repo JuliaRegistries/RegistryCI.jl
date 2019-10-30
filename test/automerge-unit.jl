@@ -5,6 +5,7 @@ using Printf
 using RegistryCI
 using Test
 using TimeZones
+import JSON
 
 const AutoMerge = RegistryCI.AutoMerge
 
@@ -146,11 +147,16 @@ end
         end
     end
 
-    @testset "GitHub Actions" begin
+    @testset "GitHub Actions" begin; mktemp() do file, io
+        # mimic the workflow file for GitHub Actions
+        workflow = Dict("pull_request" => Dict("head" => Dict("sha" => "abc123")))
+        JSON.print(io, workflow); close(io)
+
         # pull request build
         withenv("GITHUB_REF" => "refs/pull/42/merge",
                 "GITHUB_EVENT_NAME" => "pull_request",
-                "GITHUB_SHA" => "abc123",
+                "GITHUB_SHA" => "123abc", # "wrong", should be taken from workflow file
+                "GITHUB_EVENT_PATH" => file,
                 "GITHUB_WORKSPACE" => "/tmp/clone") do
             cfg = AutoMerge.GitHubActions()
             @test AutoMerge.conditions_met_for_pr_build(cfg; master_branch="master")
@@ -163,14 +169,13 @@ end
         # merge build with cron
         withenv("GITHUB_REF" => "refs/heads/master",
                 "GITHUB_EVENT_NAME" => "cron",
-                "GITHUB_SHA" => "abc123",
+                "GITHUB_SHA" => "123abc",
                 "GITHUB_WORKSPACE" => "/tmp/clone") do
             cfg = AutoMerge.GitHubActions()
             @test !AutoMerge.conditions_met_for_pr_build(cfg; master_branch="master")
             @test AutoMerge.conditions_met_for_merge_build(cfg; master_branch="master")
             @test !AutoMerge.conditions_met_for_merge_build(cfg; master_branch="retsam")
             @test !AutoMerge.conditions_met_for_merge_build(AutoMerge.GitHubActions(enable_cron_builds=false); master_branch="master")
-            @test AutoMerge.current_pr_head_commit_sha(cfg) == "abc123"
             @test AutoMerge.directory_of_cloned_registry(cfg) == "/tmp/clone"
         end
         # neither pull request nor merge build
@@ -180,7 +185,7 @@ end
             @test !AutoMerge.conditions_met_for_pr_build(cfg; master_branch="master")
             @test !AutoMerge.conditions_met_for_merge_build(cfg; master_branch="master")
         end
-    end
+    end end
 
     @testset "auto detection" begin
         withenv("TRAVIS_REPO_SLUG" => "JuliaRegistries/General",
