@@ -154,12 +154,14 @@ function merge!(registry_repo::GitHub.Repo,
                 pr::GitHub.PullRequest,
                 approved_pr_head_sha::AbstractString;
                 auth::GitHub.Authorization)
+    pr = wait_pr_compute_mergeability(registry_repo, pr; auth = auth)
+    _approved_pr_head_sha = convert(String, strip(approved_pr_head_sha))::String
     pr_number = number(pr)
-    _approved_pr_head_sha = convert(String, approved_pr_head_sha)::String
     @info("Attempting to squash-merge pull request #$(pr_number)")
     @debug("sha = $(_approved_pr_head_sha)")
+    @debug("pr.mergeable = $(pr.mergeable)")
+    params = Dict("sha" => _approved_pr_head_sha, "merge_method" => "squash")
     try
-        params = Dict("sha" => _approved_pr_head_sha, "merge_method" => "squash")
         GitHub.merge_pull_request(registry_repo,
                                   pr_number;
                                   auth=auth,
@@ -174,6 +176,21 @@ function merge!(registry_repo::GitHub.Repo,
     catch
     end
     return nothing
+end
+
+function wait_pr_compute_mergeability(repo::GitHub.Repo,
+                                      pr::GitHub.PullRequest;
+                                      auth::GitHub.Authorization)
+    sleep(5)
+    max_tries = 10
+    num_tries = 0
+    pr = GitHub.pull_request(repo, pr.number; auth = auth)
+    while !(pr.mergeable isa Bool) && num_tries <= max_tries
+        num_tries = num_tries + 1
+        sleep(5)
+        pr = GitHub.pull_request(repo, pr.number; auth = auth)
+    end
+    return pr
 end
 
 num_changed_files(pull_request::GitHub.PullRequest) = pull_request.changed_files
