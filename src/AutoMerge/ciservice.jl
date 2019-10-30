@@ -65,7 +65,11 @@ function pull_request_number(cfg::GitHubActions; env=ENV, kwargs...)
     return parse(Int, m.captures[1])
 end
 function current_pr_head_commit_sha(cfg::GitHubActions; env=ENV, kwargs...)
-    return get(env, "GITHUB_SHA", nothing)
+    always_assert(get(env, "GITHUB_EVENT_NAME", nothing) == "pull_request")
+    file = get(env, "GITHUB_EVENT_PATH", nothing)
+    file === nothing && return nothing
+    content = JSON.parsefile(file)
+    return content["pull_request"]["head"]["sha"]
 end
 function directory_of_cloned_registry(cfg::GitHubActions; env=ENV, kwargs...)
     return get(env, "GITHUB_WORKSPACE", nothing)
