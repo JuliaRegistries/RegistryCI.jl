@@ -32,6 +32,9 @@ end
 function directory_of_cloned_registry(cfg::TravisCI; env=ENV, kwargs...)
     return env["TRAVIS_BUILD_DIR"]
 end
+function username(cfg::TravisCI; auth)
+    return username(auth) # use /user endpoint
+end
 
 ####################
 ## GitHub Actions ##
@@ -66,6 +69,11 @@ function current_pr_head_commit_sha(cfg::GitHubActions; env=ENV, kwargs...)
 end
 function directory_of_cloned_registry(cfg::GitHubActions; env=ENV, kwargs...)
     return get(env, "GITHUB_WORKSPACE", nothing)
+end
+function username(cfg::GitHubActions; auth)
+    # /user endpoint of GitHub API not available
+    # with the GITHUB_TOKEN authentication
+    return "github-actions[bot]"
 end
 
 ####################

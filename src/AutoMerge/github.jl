@@ -2,8 +2,8 @@ function approve!(repo::GitHub.Repo,
                   pr::GitHub.PullRequest,
                   pr_head_commit_sha_to_approve::String;
                   auth::GitHub.Authorization,
-                  body::String="")
-    whoami = username(auth)
+                  body::String="",
+                  whoami)
     if pr.user.login == whoami
     else
         repo_full_name = full_name(repo)
