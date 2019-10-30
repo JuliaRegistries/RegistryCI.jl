@@ -27,7 +27,7 @@ function run(env = ENV,
 
     # Authentication
     auth = my_retry(() -> GitHub.authenticate(env["AUTOMERGE_GITHUB_TOKEN"]))
-    whoami = my_retry(() -> username(auth))
+    whoami = my_retry(() -> username(cicfg; auth=auth))
     @info("Authenticated to GitHub as \"$(whoami)\"")
     registry_repo = my_retry(() -> GitHub.repo(registry; auth=auth))
 
