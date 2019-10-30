@@ -166,9 +166,9 @@ end
             @test AutoMerge.current_pr_head_commit_sha(cfg) == "abc123"
             @test AutoMerge.directory_of_cloned_registry(cfg) == "/tmp/clone"
         end
-        # merge build with cron
+        # merge build with schedule: cron
         withenv("GITHUB_REF" => "refs/heads/master",
-                "GITHUB_EVENT_NAME" => "cron",
+                "GITHUB_EVENT_NAME" => "schedule",
                 "GITHUB_SHA" => "123abc",
                 "GITHUB_WORKSPACE" => "/tmp/clone") do
             cfg = AutoMerge.GitHubActions()
