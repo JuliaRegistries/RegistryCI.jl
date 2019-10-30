@@ -158,17 +158,13 @@ function merge!(registry_repo::GitHub.Repo,
     _approved_pr_head_sha = convert(String, approved_pr_head_sha)::String
     @info("Attempting to squash-merge pull request #$(pr_number)")
     @debug("sha = $(_approved_pr_head_sha)")
-    try
-        params = Dict("sha" => _approved_pr_head_sha, "merge_method" => "squash")
-        GitHub.merge_pull_request(registry_repo,
-                                  pr_number;
-                                  auth=auth,
-                                  params=params)
-    catch ex
-        showerror(stderr, ex)
-        Base.show_backtrace(stderr, catch_backtrace())
-        println(stderr)
-    end
+
+    params = Dict("sha" => _approved_pr_head_sha, "merge_method" => "squash")
+    GitHub.merge_pull_request(registry_repo,
+                              pr_number;
+                              auth=auth,
+                              params=params)
+
 #     try
 #         delete_merged_branch!(registry_repo, pr; auth=auth)
 #     catch ex

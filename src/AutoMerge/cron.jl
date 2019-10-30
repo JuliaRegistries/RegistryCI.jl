@@ -110,8 +110,8 @@ function cron_or_api_build(registry::GitHub.Repo;
                                                  merge_new_versions = merge_new_versions,
                                                  new_package_waiting_period = new_package_waiting_period,
                                                  new_version_waiting_period = new_version_waiting_period,
-                                                 whoami = whoami),
-                         num_retries)
+                                                 whoami = whoami);
+                         n = num_retries)
             catch ex
                 at_least_one_exception_was_thrown = true
                 showerror(stderr, ex)
@@ -180,7 +180,7 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                                              "Type: $(pr_type). ",
                                              "Decision: merge now."))
                                 # my_retry(() -> post_comment!(registry, pr, my_comment; auth = auth))
-                                my_retry(() -> merge!(registry, pr, approved_pr_head_sha; auth = auth))
+                                my_retry_suppress_exceptions(() -> merge!(registry, pr, approved_pr_head_sha; auth = auth))
                             else
                                 @info(string("Pull request: $(pr_number). ",
                                              "Type: $(pr_type). ",
@@ -202,7 +202,7 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                                              "Type: $(pr_type). ",
                                              "Decision: merge now."))
                                 # my_retry(() -> post_comment!(registry, pr, my_comment; auth = auth))
-                                my_retry(() -> merge!(registry, pr, approved_pr_head_sha; auth = auth))
+                                my_retry_suppress_exceptions(() -> merge!(registry, pr, approved_pr_head_sha; auth = auth))
                             else
                                 @info(string("Pull request: $(pr_number). ",
                                              "Type: $(pr_type). ",
