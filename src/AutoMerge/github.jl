@@ -169,13 +169,10 @@ function merge!(registry_repo::GitHub.Repo,
         Base.show_backtrace(stderr, catch_backtrace())
         println(stderr)
     end
-#     try
-#         delete_merged_branch!(registry_repo, pr; auth=auth)
-#     catch ex
-#         showerror(stderr, ex)
-#         Base.show_backtrace(stderr, catch_backtrace())
-#         println(stderr)
-#     end
+    try
+        delete_merged_branch!(registry_repo, pr; auth=auth)
+    catch
+    end
     return nothing
 end
 
