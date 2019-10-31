@@ -95,6 +95,7 @@ function cron_or_api_build(registry::GitHub.Repo;
     # first, get a list of ALL open pull requests on this repository
     # then, loop through each of them.
     all_currently_open_pull_requests = my_retry(() -> get_all_pull_requests(registry, "open"; auth=auth))
+    reverse!(all_currently_open_pull_requests)
     at_least_one_exception_was_thrown = false
     num_retries = 0
     if isempty(all_currently_open_pull_requests)
