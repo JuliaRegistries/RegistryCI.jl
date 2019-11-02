@@ -1,11 +1,11 @@
 using Dates
 using GitHub
+using JSON
 using Pkg
 using Printf
 using RegistryCI
 using Test
 using TimeZones
-import JSON
 
 const AutoMerge = RegistryCI.AutoMerge
 
