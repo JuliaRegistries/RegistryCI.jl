@@ -1,5 +1,5 @@
 struct AlwaysAssertionError <: Exception
-    msg::AbstractString
+    msg::String
 end
 AlwaysAssertionError() = AlwaysAssertionError("")
 
