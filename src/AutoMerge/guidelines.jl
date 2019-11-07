@@ -182,7 +182,7 @@ function meets_version_can_be_loaded(working_directory::String,
         return true, ""
     else
         @error("Was not able to successfully install the package")
-        return false, "I was not able to install and import the package. See the Travis logs for details. Please make sure to read all of the Travis logs for all jobs. In particular, make sure to look at the logs for all Julia versions."
+        return false, "I was not able to install and import the package. See the CI logs for details."
     end
 end
 
