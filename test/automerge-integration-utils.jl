@@ -26,7 +26,7 @@ function close_all_pull_requests(repo::GitHub.Repo;
                                                         auth = auth)
     for pr in all_pull_requests
         try
-            GitHub.close_pull_request(repo, pr)
+            GitHub.close_pull_request(repo, pr; auth = auth)
         catch
         end
     end
