@@ -10,6 +10,57 @@ function difference(x::VersionNumber, y::VersionNumber)
     end
 end
 
+function leftmost_nonzero(v::VersionNumber)::Symbol
+    if v.major != 0
+        return :major
+    elseif v.minor != 0
+        return :minor
+    elseif v.patch != 0
+        return :patch
+    else
+        throw(ArgumentError("there are no nonzero components"))
+    end
+end
+
+function is_breaking(a::VersionNumber, b::VersionNumber)::Bool
+    if a < b
+        a_leftmost_nonzero = leftmost_nonzero(a)
+        if a_leftmost_nonzero == :major
+            if a.major == b.major
+                return false
+            else
+                return true
+            end
+        elseif a_leftmost_nonzero == :minor
+            if a.major == b.major
+                if a.minor == b.minor
+                    return false
+                else
+                    return true
+                end
+            else
+                return true
+            end
+        else
+            always_assert(a_leftmost_nonzero == :patch)
+            if a.major == b.major
+                if a.minor == b.minor
+                    # this corresponds to 0.0.1 -> 0.0.2
+                    # set it to true if 0.0.1 -> 0.0.2 should be breaking
+                    # set it to false if 0.0.1 -> 0.0.2 should be non-breaking
+                    return true
+                else
+                    return true
+                end
+            else
+                return true
+            end
+        end
+    else
+        throw(ArgumentError("first argument must be strictly less than the second argument"))
+    end
+end
+
 function latest_version(pkg::String, registry_path::String)
     all_versions = VersionNumber.(keys(Pkg.TOML.parsefile(joinpath(registry_path, uppercase(pkg[1:1]), pkg, "Versions.toml"))))
     return maximum(all_versions)
