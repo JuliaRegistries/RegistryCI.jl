@@ -27,19 +27,19 @@ function is_breaking(a::VersionNumber, b::VersionNumber)::Bool
         a_leftmost_nonzero = leftmost_nonzero(a)
         if a_leftmost_nonzero == :major
             if a.major == b.major
-                return false
+                return false # major stayed the same nonzero value => nonbreaking
             else
-                return true
+                return true # major increased => breaking
             end
         elseif a_leftmost_nonzero == :minor
             if a.major == b.major
                 if a.minor == b.minor
-                    return false
+                    return false # major stayed 0, minor stayed the same nonzero value, patch increased => nonbreaking
                 else
-                    return true
+                    return true  # major stayed 0 and minor increased => breaking
                 end
             else
-                return true
+                return true # major increased => breaking
             end
         else
             always_assert(a_leftmost_nonzero == :patch)
@@ -48,12 +48,12 @@ function is_breaking(a::VersionNumber, b::VersionNumber)::Bool
                     # this corresponds to 0.0.1 -> 0.0.2
                     # set it to true if 0.0.1 -> 0.0.2 should be breaking
                     # set it to false if 0.0.1 -> 0.0.2 should be non-breaking
-                    return true
+                    return true # major stayed 0, minor stayed 0, patch increased
                 else
-                    return true
+                    return true # major stayed 0 and minor increased => breaking
                 end
             else
-                return true
+                return true # major increased => breaking
             end
         end
     else
