@@ -92,6 +92,47 @@ end
         @test nothing == @test_nowarn AutoMerge.always_assert(1 == 1)
         @test_throws AutoMerge.AlwaysAssertionError AutoMerge.always_assert(1 == 2)
     end
+    @testset "semver.jl" begin
+        @test AutoMerge.leftmost_nonzero(v"1.2.3") == :major
+        @test AutoMerge.leftmost_nonzero(v"0.2.3") == :minor
+        @test AutoMerge.leftmost_nonzero(v"0.0.3") == :patch
+        @test_throws ArgumentError AutoMerge.leftmost_nonzero(v"0")
+        @test_throws ArgumentError AutoMerge.leftmost_nonzero(v"0.0")
+        @test_throws ArgumentError AutoMerge.leftmost_nonzero(v"0.0.0")
+        @test_throws ArgumentError AutoMerge.is_breaking(v"1.2.3", v"1.2.0")
+        @test_throws ArgumentError AutoMerge.is_breaking(v"1.2.3", v"1.2.2")
+        @test_throws ArgumentError AutoMerge.is_breaking(v"1.2.3", v"1.2.3")
+        @test !AutoMerge.is_breaking(v"1.2.3", v"1.2.4")
+        @test !AutoMerge.is_breaking(v"1.2.3", v"1.2.5")
+        @test !AutoMerge.is_breaking(v"1.2.3", v"1.3.0")
+        @test !AutoMerge.is_breaking(v"1.2.3", v"1.4.0")
+        @test AutoMerge.is_breaking(v"1.2.3", v"2.0.0")
+        @test AutoMerge.is_breaking(v"1.2.3", v"2.1.0")
+        @test AutoMerge.is_breaking(v"1.2.3", v"2.2.0")
+        @test AutoMerge.is_breaking(v"1.2.3", v"3.0.0")
+        @test AutoMerge.is_breaking(v"1.2.3", v"3.1.0")
+        @test AutoMerge.is_breaking(v"1.2.3", v"3.2.0")
+        @test !AutoMerge.is_breaking(v"0.2.3", v"0.2.4")
+        @test !AutoMerge.is_breaking(v"0.2.3", v"0.2.5")
+        @test AutoMerge.is_breaking(v"0.2.3", v"0.3.0")
+        @test AutoMerge.is_breaking(v"0.2.3", v"0.4.0")
+        @test AutoMerge.is_breaking(v"0.2.3", v"1.0.0")
+        @test AutoMerge.is_breaking(v"0.2.3", v"1.1.0")
+        @test AutoMerge.is_breaking(v"0.2.3", v"1.2.0")
+        @test AutoMerge.is_breaking(v"0.2.3", v"2.0.0")
+        @test AutoMerge.is_breaking(v"0.2.3", v"2.1.0")
+        @test AutoMerge.is_breaking(v"0.2.3", v"2.2.0")
+        @test AutoMerge.is_breaking(v"0.0.3", v"0.0.4")
+        @test AutoMerge.is_breaking(v"0.0.3", v"0.0.5")
+        @test AutoMerge.is_breaking(v"0.0.3", v"0.1.0")
+        @test AutoMerge.is_breaking(v"0.0.3", v"0.2.0")
+        @test AutoMerge.is_breaking(v"0.0.3", v"1.0.0")
+        @test AutoMerge.is_breaking(v"0.0.3", v"1.1.0")
+        @test AutoMerge.is_breaking(v"0.0.3", v"1.2.0")
+        @test AutoMerge.is_breaking(v"0.0.3", v"2.0.0")
+        @test AutoMerge.is_breaking(v"0.0.3", v"2.1.0")
+        @test AutoMerge.is_breaking(v"0.0.3", v"2.2.0")
+    end
 end
 
 @testset "CIService unit testing" begin
