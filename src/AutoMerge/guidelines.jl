@@ -97,7 +97,7 @@ function meets_normal_capitalization(pkg)
 end
 
 function meets_repo_url_requirement(pkg::String; registry_head::String)
-    url = Pkg.TOML.parsefile(joinpath(registry_head, pkg[1:1], pkg, "Package.toml"))["repo"]
+    url = Pkg.TOML.parsefile(joinpath(registry_head, uppercase(pkg[1:1]), pkg, "Package.toml"))["repo"]
     meets_this_guideline = url_has_correct_ending(url, pkg)
     if meets_this_guideline
         return true, ""
