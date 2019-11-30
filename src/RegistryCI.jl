@@ -28,12 +28,14 @@ Checks for example that all files are parsable and
 understandable by Pkg and consistency between Registry.toml
 and each Package.toml.
 """
-function test(path=pwd())
+function test(path=pwd(); registry_deps::Vector{<:AbstractString}=AbstractString[])
     @testset "(Registry|Package|Versions|Deps|Compat).toml" begin; cd(path) do
         reg = TOML.parsefile("Registry.toml")
         reguuids = Set{UUID}(UUID(x) for x in keys(reg["packages"]))
         stdlibuuids = gather_stdlib_uuids()
-        alluuids = reguuids ∪ stdlibuuids
+        extrauuids = load_extra_uuids(registry_deps)
+
+        alluuids = reguuids ∪ stdlibuuids ∪ extrauuids
 
         # Test that each entry in Registry.toml has a corresponding Package.toml
         # at the expected path with the correct uuid and name
@@ -83,5 +85,24 @@ function test(path=pwd())
     end end
     return
 end
+
+function load_extra_uuids(registry_deps::Vector{<:AbstractString})
+    extrauuids = Set{UUID}()
+    for reg in registry_deps
+        extrauuids = extrauuids ∪ load_registry_uuids(reg)
+    end
+    extrauuids
+end
+
+function load_registry_uuids(registry::AbstractString)
+    mktempdir() do tmp
+        cd(tmp) do
+            run(`git clone $registry $(pwd())`)
+            reg = TOML.parsefile("Registry.toml")
+            return Set{UUID}(UUID(x) for x in keys(reg["packages"]))
+        end
+    end
+end
+
 
 end # module
