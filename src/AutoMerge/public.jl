@@ -9,12 +9,13 @@ function run(env = ENV,
              #
              master_branch::String = "master",
              master_branch_is_default_branch::Bool = true,
-             suggest_onepointzero::Bool = true)
+             suggest_onepointzero::Bool = true,
+             registry_deps::Vector{<:AbstractString}=AbstractString[])
 
     registry_head = directory_of_cloned_registry(cicfg; env=env)
 
     # Run tests on the registry (these are very quick)
-    RegistryCI.test(registry_head)
+    RegistryCI.test(registry_head, registry_deps=registry_deps)
 
     # Figure out what type of build this is
     run_pr_build = conditions_met_for_pr_build(cicfg; env=env, master_branch=master_branch)
