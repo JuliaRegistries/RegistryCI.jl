@@ -174,6 +174,10 @@ function meets_version_can_be_loaded(working_directory::String,
               env = Dict("PATH" => ENV["PATH"],
                          "PYTHON" => "",
                          "JULIA_DEPOT_PATH" => tmp_dir))
+    # GUI toolkits may need a display just to load the package
+    if (xvfb = Sys.which("xvfb-run")) !== nothing
+        pushfirst!(cmd.exec, xvfb)
+    end
     @info("Attempting to install the package")
     cmd_ran_successfully = success(pipeline(cmd, stdout=stdout, stderr=stderr))
     rm(tmp_dir; force = true, recursive = true)
