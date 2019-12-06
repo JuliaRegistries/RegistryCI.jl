@@ -175,7 +175,9 @@ function meets_version_can_be_loaded(working_directory::String,
                          "PYTHON" => "",
                          "JULIA_DEPOT_PATH" => tmp_dir))
     # GUI toolkits may need a display just to load the package
-    if (xvfb = Sys.which("xvfb-run")) !== nothing
+    xvfb = Sys.which("xvfb-run")
+    @debug("xvfb: ", xvfb)
+    if xvfb !== nothing
         pushfirst!(cmd.exec, xvfb)
     end
     @info("Attempting to install the package")
