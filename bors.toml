@@ -1,0 +1,12 @@
+block_labels = [ "DO NOT MERGE" ]
+
+delete_merged_branches = true
+
+status = [
+    # "codecov/patch",
+    # "codecov/project",
+    "Travis CI - Branch",
+    "VersionVigilante",
+]
+
+timeout_sec = 36000
