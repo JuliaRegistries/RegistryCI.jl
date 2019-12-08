@@ -74,7 +74,14 @@ function meets_patch_release_does_not_narrow_julia_compat(pkg::String,
     if meets_this_guideline
         return true, ""
     else
-        return false, "A patch release is not allowed to narrow the supported range of Julia versions"
+        msg = string("A patch release is not allowed to narrow the ",
+                     "supported ranges of Julia versions. ",
+                     "The ranges have changed from ",
+                     "$(julia_compats_for_old_version) ",
+                     "(in $(old_version)) ",
+                     "to $(julia_compats_for_new_version) ",
+                     "(in $(new_version)).")
+        return false, msg
     end
 end
 
