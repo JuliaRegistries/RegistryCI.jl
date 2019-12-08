@@ -74,7 +74,14 @@ function meets_patch_release_does_not_narrow_julia_compat(pkg::String,
     if meets_this_guideline
         return true, ""
     else
-        return false, "A patch release is not allowed to narrow the supported range of Julia versions"
+        msg = string("A patch release is not allowed to narrow the ",
+                     "supported ranges of Julia versions. ",
+                     "The ranges have changed from ",
+                     "$(julia_compats_for_old_version) ",
+                     "(in $(old_version)) ",
+                     "to $(julia_compats_for_new_version) ",
+                     "(in $(new_version)).")
+        return false, msg
     end
 end
 
@@ -174,6 +181,12 @@ function meets_version_can_be_loaded(working_directory::String,
               env = Dict("PATH" => ENV["PATH"],
                          "PYTHON" => "",
                          "JULIA_DEPOT_PATH" => tmp_dir))
+    # GUI toolkits may need a display just to load the package
+    xvfb = Sys.which("xvfb-run")
+    @debug("xvfb: ", xvfb)
+    if xvfb !== nothing
+        pushfirst!(cmd.exec, xvfb)
+    end
     @info("Attempting to install the package")
     cmd_ran_successfully = success(pipeline(cmd, stdout=stdout, stderr=stderr))
     rm(tmp_dir; force = true, recursive = true)
