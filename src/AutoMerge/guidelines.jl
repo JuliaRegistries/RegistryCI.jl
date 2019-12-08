@@ -104,7 +104,7 @@ function meets_normal_capitalization(pkg)
 end
 
 function meets_repo_url_requirement(pkg::String; registry_head::String)
-    url = Pkg.TOML.parsefile(joinpath(registry_head, pkg[1:1], pkg, "Package.toml"))["repo"]
+    url = Pkg.TOML.parsefile(joinpath(registry_head, uppercase(pkg[1:1]), pkg, "Package.toml"))["repo"]
     meets_this_guideline = url_has_correct_ending(url, pkg)
     if meets_this_guideline
         return true, ""
@@ -181,6 +181,12 @@ function meets_version_can_be_loaded(working_directory::String,
               env = Dict("PATH" => ENV["PATH"],
                          "PYTHON" => "",
                          "JULIA_DEPOT_PATH" => tmp_dir))
+    # GUI toolkits may need a display just to load the package
+    xvfb = Sys.which("xvfb-run")
+    @debug("xvfb: ", xvfb)
+    if xvfb !== nothing
+        pushfirst!(cmd.exec, xvfb)
+    end
     @info("Attempting to install the package")
     cmd_ran_successfully = success(pipeline(cmd, stdout=stdout, stderr=stderr))
     rm(tmp_dir; force = true, recursive = true)
