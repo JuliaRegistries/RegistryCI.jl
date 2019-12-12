@@ -168,7 +168,7 @@ function meets_version_can_be_loaded(working_directory::String,
     # process. For example, we don't want to pass an environment variable containing
     # our GitHub token to the child process. Because if the Julia package that we are
     # testing has malicious code in its __init__() function, it could try to steal
-    # our token. So we only pass three environment variables:
+    # our token. So we only pass four environment variables:
     # 1. PATH. If we don't pass PATH, things break. And PATH should not contain any
     #    sensitive information.
     # 2. PYTHON. We set PYTHON to the empty string. This forces any packages that use
@@ -177,10 +177,12 @@ function meets_version_can_be_loaded(working_directory::String,
     # 3. JULIA_DEPOT_PATH. We set JULIA_DEPOT_PATH to the temporary directory that
     #    we created. This is because we don't want the child process using our
     #    real Julia depot. So we set up a fake depot for the child process to use.
+    # 4. R_HOME. We set R_HOME to "*".
     cmd = Cmd(`$(Base.julia_cmd()) -e $(code)`;
               env = Dict("PATH" => ENV["PATH"],
                          "PYTHON" => "",
-                         "JULIA_DEPOT_PATH" => tmp_dir))
+                         "JULIA_DEPOT_PATH" => tmp_dir,
+                         "R_HOME" => "*"))
     # GUI toolkits may need a display just to load the package
     xvfb = Sys.which("xvfb-run")
     @debug("xvfb: ", xvfb)
