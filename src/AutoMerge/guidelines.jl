@@ -55,7 +55,18 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
             end
         end
         sort!(bad_dependencies)
-        message = string("The following dependencies do not have a compat entry that has an upper bound: ", join(bad_dependencies, ", "))
+        message = string("The following dependencies ",
+                         "do not have a ",
+                         "compat entry that has ",
+                         "an upper bound: ",
+                         join(bad_dependencies,
+                              ", "),
+                         ". You may find ",
+                         "[CompatHelper]",
+                         "(https://github.com/bcbi/CompatHelper.jl) ",
+                         "helpful for keeping ",
+                         "your compat entries ",
+                         "up-to-date.")
         return false, message
     end
 end
