@@ -114,6 +114,7 @@ function pull_request_build(::NewVersion,
                                         auth = auth,
                                         body = this_pr_comment_pass,
                                         whoami = whoami))
+                remove_label!(pr, AUTOMERGE_FAILURE_LABEL; auth=auth)
                 return nothing
             else # failure
                 description = "New version. Failed."
@@ -133,6 +134,7 @@ function pull_request_build(::NewVersion,
                                              pr,
                                              this_pr_comment_fail;
                                              auth = auth))
+                add_label!(pr, AUTOMERGE_FAILURE_LABEL; auth=auth)
                 error("The automerge guidelines were not met.")
                 return nothing
             end
