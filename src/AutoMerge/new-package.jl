@@ -55,6 +55,7 @@ function pull_request_build(::NewPackage,
                     my_retry(() -> delete_all_of_my_reviews!(registry, pr; auth = auth, whoami = whoami))
                     my_retry(() -> approve!(registry, pr, current_pr_head_commit_sha; auth = auth, body = newp_commenttextpass, whoami=whoami))
                     my_retry(() -> GitHub.create_status(registry, current_pr_head_commit_sha; auth=auth, params=Dict("state" => "success", "context" => "automerge/decision", "description" => "New package. Approved. sha=\"$(current_pr_head_commit_sha)\"")))
+                    remove_label!(pr, AUTOMERGE_FAILURE_LABEL; auth=auth)
                     return nothing
                 else
                     newp_commenttext6and7 = comment_text_fail(NewPackage(),
@@ -63,6 +64,7 @@ function pull_request_build(::NewPackage,
                                                               version)
                     my_retry(() -> post_comment!(registry, pr, newp_commenttext6and7; auth = auth))
                     my_retry(() -> GitHub.create_status(registry, current_pr_head_commit_sha; auth=auth, params=Dict("state" => "failure", "context" => "automerge/decision", "description" => "New package. Failed.")))
+                    add_label!(pr, AUTOMERGE_FAILURE_LABEL; auth=auth)
                     error("The automerge guidelines were not met.")
                     return nothing
                 end
@@ -75,6 +77,7 @@ function pull_request_build(::NewPackage,
                                                               version)
                 my_retry(() -> post_comment!(registry, pr, newp_commenttext0through5; auth = auth))
                 my_retry(() -> GitHub.create_status(registry, current_pr_head_commit_sha; auth=auth, params=Dict("state" => "failure", "context" => "automerge/decision", "description" => "New package. Failed.")))
+                add_label!(pr, AUTOMERGE_FAILURE_LABEL; auth=auth)
                 error("The automerge guidelines were not met.")
                 return nothing
             end

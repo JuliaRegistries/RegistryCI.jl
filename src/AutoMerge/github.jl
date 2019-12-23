@@ -87,6 +87,35 @@ function _get_updated_pull_request(pull_request::GitHub.PullRequest; auth::GitHu
     return updated_pr
 end
 
+function _issue_labels(pull_request::GitHub.PullRequest; auth::GitHub.Authorization)
+    pr_base_repo = base_repo(pull_request)
+    pr_number = number(pull_request)
+    issue = GitHub.issue(pr_base_repo, pr_number; auth=auth)
+    if issue.labels === nothing
+        labels = String[]
+    else
+        labels = [ d["name"] for d in issue.labels ]
+    end
+    return issue, labels
+end
+
+function add_label!(pull_request::GitHub.PullRequest, label::String; auth::GitHub.Authorization)
+    issue, labels = _issue_labels(pull_request; auth=auth)
+    if label ∉ labels
+        push!(labels, label)
+        GitHub.edit_issue(base_repo(pull_request), issue; auth=auth, params = Dict("labels"=>labels))
+    end
+end
+
+function remove_label!(pull_request::GitHub.PullRequest, label::String; auth::GitHub.Authorization)
+    issue, labels = _issue_labels(pull_request; auth=auth)
+    if label ∈ labels
+        unique!(labels)
+        deleteat!(labels, findfirst(isequal(label), labels))
+        GitHub.edit_issue(base_repo(pull_request), issue; auth=auth, params = Dict("labels"=>labels))
+    end
+end
+
 function get_all_pull_request_comments(repo::GitHub.Repo,
                                        pr::GitHub.PullRequest;
                                        auth::GitHub.Authorization)
