@@ -10,6 +10,8 @@ import JSON
 
 import ..RegistryCI
 
+const AUTOMERGE_FAILURE_LABEL = "automerge failed"
+
 include("assert.jl")
 
 include("types.jl")
