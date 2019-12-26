@@ -108,10 +108,9 @@ function add_label!(pull_request::GitHub.PullRequest, label::String; auth::GitHu
 end
 
 function remove_label!(pull_request::GitHub.PullRequest, label::String; auth::GitHub.Authorization)
-    issue, labels = _issue_labels(pull_request; auth=auth)
-    if label ∈ labels
-        unique!(labels)
-        deleteat!(labels, findfirst(isequal(label), labels))
+    issue, old_labels = _issue_labels(pull_request; auth=auth)
+    if label ∈ old_labels
+        new_labels = filter(x -> x != label, old_labels)
         GitHub.edit_issue(base_repo(pull_request), issue; auth=auth, params = Dict("labels"=>labels))
     end
 end
