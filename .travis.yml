@@ -3,6 +3,8 @@
 branches:
   only:
     - master
+    - staging
+    - trying
 
 env:
   global:
