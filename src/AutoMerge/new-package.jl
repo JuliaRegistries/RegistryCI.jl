@@ -10,71 +10,132 @@ function pull_request_build(::NewPackage,
                             whoami::String)
     # first check if the PR is open, and the author is authorized - if not, then quit
     # then, delete ALL reviews by me
-    # then check rules 1-5. if fail, post comment.
-    # then check rules 6-7. if fail, post comment.
+    # then check rules 1-8. if fail, post comment.
     # if everything passed, add an approving review by me
-    # 1. Normal capitalization - name should match r"^[A-Z]\w*[a-z][0-9]?$" - i.e. starts with a capital letter, ASCII alphanumerics only, ends in lowercase
-    # 2. Not too short - at least five letters - you can register names shorter than this, but doing so requires someone to approve
-    # 3. Standard initial version number - one of 0.0.1, 0.1.0, 1.0.0
-    # 4. Repo URL ends with /$name.jl.git where name is the package name
-    # 5. Compat for all dependencies - all [deps] should also have [compat] entries (and Julia itself) - [compat] entries should have upper bounds
-    # 6. Version can be installed - given the proposed changes to the registry, can we resolve and install the new version of the package?
-    # 7. Version can be loaded - once it's been installed (and built?), can we load the code?
+    #
+    # Rules:
+    # 1. Only changes a subset of the following files:
+    #     - `Registry.toml`,
+    #     - `E/Example/Compat.toml`
+    #     - `E/Example/Deps.toml`
+    #     - `E/Example/Package.toml`
+    #     - `E/Example/Versions.toml`
+    # 2. Normal capitalization - name should match r"^[A-Z]\w*[a-z][0-9]?$" - i.e. starts with a capital letter, ASCII alphanumerics only, ends in lowercase
+    # 3. Not too short - at least five letters - you can register names shorter than this, but doing so requires someone to approve
+    # 4. Standard initial version number - one of 0.0.1, 0.1.0, 1.0.0
+    # 5. Repo URL ends with /$name.jl.git where name is the package name
+    # 6. Compat for all dependencies - all [deps] should also have [compat] entries (and Julia itself) - [compat] entries should have upper bounds
+    # 7. Version can be installed - given the proposed changes to the registry, can we resolve and install the new version of the package?
+    # 8. Version can be loaded - once it's been installed (and built?), can we load the code?
     pkg, version = parse_pull_request_title(NewPackage(), pr)
     @info("This is a new package pull request", pkg, version)
     pr_author_login = author_login(pr)
     if is_open(pr)
         if pr_author_login in authorized_authors
-            my_retry(() -> delete_all_of_my_reviews!(registry, pr; auth = auth, whoami = whoami))
-            my_retry(() -> GitHub.create_status(registry, current_pr_head_commit_sha; auth=auth, params=Dict("state" => "pending", "context" => "automerge/decision", "description" => "New package. Pending.")))
-            g0, m0 = pr_only_changes_allowed_files(NewPackage(), registry, pr, pkg; auth = auth)
-            newp_g1, newp_m1 = meets_normal_capitalization(pkg)
-            newp_g2, newp_m2 = meets_name_length(pkg)
-            newp_g3, newp_m3 = meets_standard_initial_version_number(version)
-            newp_g4, newp_m4 = meets_repo_url_requirement(pkg;
-                                                          registry_head = registry_head)
-            newp_g5, newp_m5 = meets_compat_for_all_deps(registry_head,
+            my_retry(() -> delete_all_of_my_reviews!(registry,
+                                                     pr;
+                                                     auth = auth,
+                                                     whoami = whoami))
+            description = "New package. Pending."
+            params = Dict("state" => "pending",
+                          "context" => "automerge/decision",
+                          "description" => description)
+            my_retry(() -> GitHub.create_status(registry,
+                                                current_pr_head_commit_sha;
+                                                auth = auth,
+                                                params = params))
+            g1, m1 = pr_only_changes_allowed_files(NewPackage(),
+                                                   registry,
+                                                   pr,
+                                                   pkg;
+                                                   auth = auth)
+            g2, m2 = meets_normal_capitalization(pkg)
+            g3, m3 = meets_name_length(pkg)
+            g4, m4 = meets_standard_initial_version_number(version)
+            g5, m5 = meets_repo_url_requirement(pkg;
+                                                registry_head = registry_head)
+            g6, m6 = meets_compat_for_all_deps(registry_head,
+                                               pkg,
+                                               version)
+
+            @info("Only modifies the files that it's allowed to modify",
+                  meets_this_guideline = g1,
+                  message = m1)
+            @info("Normal capitalization",
+                  meets_this_guideline = g2,
+                  message = m2)
+            @info("Name not too short",
+                  meets_this_guideline = g3,
+                  message = m3)
+            @info("Standard initial version number ",
+                  meets_this_guideline = g4,
+                  message = m4)
+            @info("Repo URL ends with /name.jl.git",
+                  meets_this_guideline = g5,
+                  message = m5)
+            @info("Compat (with upper bound) for all dependencies",
+                  meets_this_guideline = g6,
+                  message = m6)
+            g1through6 = [g1, g2, g3, g4, g5, g6]
+            if !all(g1through6)
+                description = "New package. Failed."
+                params = Dict("state" => "failure",
+                              "context" => "automerge/decision",
+                              "description" => description)
+                my_retry(() -> GitHub.create_status(registry,
+                                                    current_pr_head_commit_sha;
+                                                    auth = auth,
+                                                    params = params))
+            end
+            g7and8, m7and8 = meets_version_can_be_loaded(registry_head,
                                                          pkg,
                                                          version)
-            newp_g0through5 = [g0, newp_g1, newp_g2, newp_g3, newp_g4, newp_g5]
-            @info("Only modifies the files that it's allowed to modify", meets_this_guideline = g0, message = m0)
-            @info("Normal capitalization", meets_this_guideline = newp_g1, message = newp_m1)
-            @info("Name not too short", meets_this_guideline = newp_g2, message = newp_m2)
-            @info("Standard initial version number ", meets_this_guideline = newp_g3, message = newp_m3)
-            @info("Repo URL ends with /name.jl.git", meets_this_guideline = newp_g4, message = newp_m4)
-            @info("Compat (with upper bound) for all dependencies", meets_this_guideline = newp_g5, message = newp_m5)
-            if all(newp_g0through5)
-                newp_g6and7, newp_m6and7 = meets_version_can_be_loaded(registry_head,
-                                                                         pkg,
-                                                                         version)
-                @info("Version can be installed and loaded", meets_this_guideline = newp_g6and7, message = newp_m6and7)
-                if newp_g6and7
-                    newp_commenttextpass = comment_text_pass(NewPackage(),
-                                                             suggest_onepointzero,
-                                                             version)
-                    my_retry(() -> delete_all_of_my_reviews!(registry, pr; auth = auth, whoami = whoami))
-                    my_retry(() -> approve!(registry, pr, current_pr_head_commit_sha; auth = auth, body = newp_commenttextpass, whoami=whoami))
-                    my_retry(() -> GitHub.create_status(registry, current_pr_head_commit_sha; auth=auth, params=Dict("state" => "success", "context" => "automerge/decision", "description" => "New package. Approved. sha=\"$(current_pr_head_commit_sha)\"")))
-                    return nothing
-                else
-                    newp_commenttext6and7 = comment_text_fail(NewPackage(),
-                                                              [newp_m6and7],
-                                                              suggest_onepointzero,
-                                                              version)
-                    my_retry(() -> post_comment!(registry, pr, newp_commenttext6and7; auth = auth))
-                    my_retry(() -> GitHub.create_status(registry, current_pr_head_commit_sha; auth=auth, params=Dict("state" => "failure", "context" => "automerge/decision", "description" => "New package. Failed.")))
-                    error("The automerge guidelines were not met.")
-                    return nothing
-                end
-            else
-                newp_allmessages0through5 = [m0, newp_m1, newp_m2, newp_m3, newp_m4, newp_m5]
-                newp_failingmessages0through5 = newp_allmessages0through5[.!newp_g0through5]
-                newp_commenttext0through5 = comment_text_fail(NewPackage(),
-                                                              newp_failingmessages0through5,
-                                                              suggest_onepointzero,
-                                                              version)
-                my_retry(() -> post_comment!(registry, pr, newp_commenttext0through5; auth = auth))
-                my_retry(() -> GitHub.create_status(registry, current_pr_head_commit_sha; auth=auth, params=Dict("state" => "failure", "context" => "automerge/decision", "description" => "New package. Failed.")))
+            @info("Version can be installed and loaded",
+                  meets_this_guideline = g7and8,
+                  message = m7and8)
+            g1through8 = [g1, g2, g3, g4, g5, g6, g7and8]
+            allmessages1through8 = [m1, m2, m3, m4, m5, m7and8]
+            if all(g1through8) # success
+                description = "New package. Approved. sha=\"$(current_pr_head_commit_sha)\""
+                params = Dict("state" => "success",
+                              "context" => "automerge/decision",
+                              "description" => description)
+                my_retry(() -> GitHub.create_status(registry,
+                                                    current_pr_head_commit_sha;
+                                                    auth = auth,
+                                                    params = params))
+                this_pr_comment_pass = comment_text_pass(NewPackage(),
+                                                         suggest_onepointzero,
+                                                         version)
+                my_retry(() -> delete_all_of_my_reviews!(registry,
+                                                         pr;
+                                                         auth = auth,
+                                                         whoami = whoami))
+                my_retry(() -> approve!(registry,
+                                        pr,
+                                        current_pr_head_commit_sha;
+                                        auth = auth,
+                                        body = this_pr_comment_pass,
+                                        whoami = whoami))
+                return nothing
+            else # failure
+                description = "New package. Failed."
+                params = Dict("state" => "failure",
+                              "context" => "automerge/decision",
+                              "description" => description)
+                my_retry(() -> GitHub.create_status(registry,
+                                                    current_pr_head_commit_sha;
+                                                    auth = auth,
+                                                    params = params))
+                failingmessages1through8 = allmessages1through8[.!g1through8]
+                this_pr_comment_fail = comment_text_fail(NewPackage(),
+                                                         failingmessages1through8,
+                                                         suggest_onepointzero,
+                                                         version)
+                my_retry(() -> post_comment!(registry,
+                                             pr,
+                                             this_pr_comment_fail;
+                                             auth = auth))
                 error("The automerge guidelines were not met.")
                 return nothing
             end
