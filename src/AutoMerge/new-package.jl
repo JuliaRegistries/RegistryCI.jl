@@ -117,7 +117,7 @@ function pull_request_build(::NewPackage,
                                         auth = auth,
                                         body = this_pr_comment_pass,
                                         whoami = whoami))
-                remove_label!(pr, AUTOMERGE_FAILURE_LABEL; auth=auth)
+                my_retry(() -> remove_label!(pr, AUTOMERGE_FAILURE_LABEL; auth=auth))
                 return nothing
             else # failure
                 description = "New package. Failed."
@@ -137,7 +137,7 @@ function pull_request_build(::NewPackage,
                                              pr,
                                              this_pr_comment_fail;
                                              auth = auth))
-                add_label!(pr, AUTOMERGE_FAILURE_LABEL; auth=auth)     
+                my_retry(() -> add_label!(pr, AUTOMERGE_FAILURE_LABEL; auth=auth))
                 error("The automerge guidelines were not met.")
                 return nothing
             end
