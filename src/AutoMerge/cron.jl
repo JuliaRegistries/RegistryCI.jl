@@ -71,7 +71,7 @@ function _postprocess_automerge_decision_status(status::GitHub.Status;
     return false, "", :failing
 end
 
-function pr_has_passing_automerge_decision_status(repo::GitHub.Repo
+function pr_has_passing_automerge_decision_status(repo::GitHub.Repo,
                                                   pr::GitHub.PullRequest;
                                                   auth::GitHub.Authorization,
                                                   whoami)
