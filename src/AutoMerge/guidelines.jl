@@ -273,10 +273,10 @@ function _run_pkg_commands(working_directory::String,
     rm(tmp_dir_2; force = true, recursive = true)
     if cmd_ran_successfully
         @info(success_message)
-        return true, ""
+        return success_return_1, success_return_2
     else
         @error(failure_message)
-        return false, ""
+        return failure_return_1, failure_return_2
     end
 end
 
