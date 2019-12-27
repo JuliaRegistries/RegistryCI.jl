@@ -40,7 +40,7 @@ Note that commenting on a pull request will automatically disable automerging on
     - all `[deps]` should also have `[compat]` entries (and Julia itself)
     - `[compat]` entries should have upper bounds
 
-    Compat entries are not required for standard libraries.
+    Compat entries are not required for standard libraries. For the time being, compat entries are not required for JLL dependencies because they often have non-standard version numbering schemes; however, this may change in the future.
 
 3. Version can be installed
 
