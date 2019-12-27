@@ -42,8 +42,7 @@ end
 
 function _get_all_pr_statuses(repo::GitHub.Repo,
                               pr::GitHub.PullRequest;
-                              auth::GitHub.Authorization,
-                              whoami)
+                              auth::GitHub.Authorization)
     combined_status = GitHub.status(repo, pr.head.sha)
     all_statuses = combined_status.statuses
     return all_statuses
@@ -78,14 +77,10 @@ function pr_has_passing_automerge_decision_status(repo::GitHub.Repo,
     all_statuses = _get_all_pr_statuses(repo, pr; auth = auth)
     for status in all_statuses
         if status.context == "automerge/decision"
-            return _postprocess_automerge_decision_status(status)
+            return _postprocess_automerge_decision_status(status;
+                                                          whoami = whoami)
         end
     end
-    return _postprocess_automerge_decision_status(nothing)
-end
-
-function _postprocess_automerge_decision_status(::Nothing;
-                                                whoami)
     return false, "", :failing
 end
 
