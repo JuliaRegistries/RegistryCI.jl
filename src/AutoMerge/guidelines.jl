@@ -262,7 +262,7 @@ function _run_pkg_commands(working_directory::String,
                          "R_HOME" => "*"))
     # GUI toolkits may need a display just to load the package
     xvfb = Sys.which("xvfb-run")
-    @debug("xvfb: ", xvfb)
+    @info("xvfb: ", xvfb)
     if xvfb !== nothing
         pushfirst!(cmd.exec, xvfb)
     end
