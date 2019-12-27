@@ -66,7 +66,7 @@ end
 function pr_has_no_blocking_comments(registry::GitHub.Repo,
                                      pr::GitHub.PullRequest;
                                      auth::GitHub.Authorization)
-    all_pr_comments = get_all_pull_request_comments(registry, pr; auth=auth)
+    all_pr_comments = get_all_pull_request_comments(registry, pr; auth = auth)
     if isempty(all_pr_comments)
         return true
     else
@@ -166,7 +166,7 @@ function cron_or_api_build(registry::GitHub.Repo;
                            all_check_runs::AbstractVector{<:AbstractString})
     # first, get a list of ALL open pull requests on this repository
     # then, loop through each of them.
-    all_currently_open_pull_requests = my_retry(() -> get_all_pull_requests(registry, "open"; auth=auth))
+    all_currently_open_pull_requests = my_retry(() -> get_all_pull_requests(registry, "open"; auth = auth))
     reverse!(all_currently_open_pull_requests)
     at_least_one_exception_was_thrown = false
     num_retries = 0
@@ -250,12 +250,12 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                                               pr,
                                               passed_pr_head_sha,
                                               all_statuses;
-                                              auth)
+                                              auth = auth)
                 all_specified_check_runs_passed(registry,
                                                 pr,
                                                 passed_pr_head_sha,
                                                 all_check_runs;
-                                                auth)
+                                                auth = auth)
                 if i_passed_this_pr
                     if pr_has_no_blocking_comments(registry, pr; auth = auth)
                         "Pull request: $(pr_number). "
