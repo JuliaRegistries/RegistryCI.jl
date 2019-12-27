@@ -87,14 +87,20 @@ function pull_request_build(::NewPackage,
                                                     auth = auth,
                                                     params = params))
             end
-            g7and8, m7and8 = meets_version_can_be_loaded(registry_head,
-                                                         pkg,
-                                                         version)
-            @info("Version can be installed and loaded",
-                  meets_this_guideline = g7and8,
-                  message = m7and8)
-            g1through8 = [g1, g2, g3, g4, g5, g6, g7and8]
-            allmessages1through8 = [m1, m2, m3, m4, m5, m7and8]
+            g7, m7 = meets_version_can_be_pkg_added(registry_head,
+                                                    pkg,
+                                                    version)
+            @info("Version can be `Pkg.add`ed",
+                  meets_this_guideline = g7,
+                  message = m7)
+            g8, m8 = meets_version_can_be_imported(registry_head,
+                                                   pkg,
+                                                   version)
+            @info("Version can be `import`ed,
+                  meets_this_guideline = g8,
+                  message = m8)
+            g1through8 = [g1, g2, g3, g4, g5, g6, g7, g8]
+            allmessages1through8 = [m1, m2, m3, m4, m5, m7, m8]
             if all(g1through8) # success
                 description = "New package. Approved. sha=\"$(current_pr_head_commit_sha)\""
                 params = Dict("state" => "success",
