@@ -42,46 +42,53 @@ end
 
 @inline my_isless(r1::GitHub.Review, r2::GitHub.Review) = isless(r1.id, r2.id)
 
-function pr_was_approved_by_me(repo::GitHub.Repo,
-                               pr::GitHub.PullRequest;
-                               auth::GitHub.Authorization,
-                               whoami::String)
-    all_pr_reviews = get_all_pull_request_reviews(repo, pr; auth=auth)
-    my_pr_reviews = Vector{GitHub.Review}(undef, 0)
-    i_left_at_least_one_approving_review = false
-    i_did_not_leave_any_nonapproving_reviews = true
-    for rev in all_pr_reviews
-        if reviewer_login(rev) == whoami
-            if review_state(rev) == "APPROVED"
-                i_left_at_least_one_approving_review = true
-            else
-                i_did_not_leave_any_nonapproving_reviews = false
-            end
-            push!(my_pr_reviews, rev)
+function _get_all_pr_statuses(repo::GitHub.Repo,
+                              pr::GitHub.PullRequest;
+                              auth::GitHub.Authorization,
+                              whoami)
+    combined_status = GitHub.status(repo, pr.head.sha)
+    all_statuses = combined_status.statuses
+    return all_statuses
+end
+
+function _postprocess_automerge_decision_status(status::GitHub.Status;
+                                                whoami)
+    always_assert(status.creator.login == whoami)
+    new_package_approved_regex = r"New package. Approved. sha=\"(\w*)\""
+    new_version_approved_regex = r"New version. Approved. sha=\"(\w*)\""
+    if status.state == "success" && occursin(new_package_approved_regex,
+                                             status.description)
+        m = match(new_package_approved_regex,
+                  description)
+        passed_pr_head_sha = m[1]
+        return true, passed_pr_head_sha, :NewPackage
+    end
+    if status.state == "success" && occursin(new_version_approved_regex,
+                                             status.description)
+        m = match(new_version_approved_regex,
+                  description)
+        passed_pr_head_sha = m[1]
+        return true, passed_pr_head_sha, :NewVersion
+    end
+    return false, "", :failing
+end
+
+function pr_has_passing_automerge_decision_status(repo::GitHub.Repo
+                                                  pr::GitHub.PullRequest;
+                                                  auth::GitHub.Authorization,
+                                                  whoami)
+    all_statuses = _get_all_pr_statuses(repo, pr; auth = aith)
+    for status in all_statuses
+        if status.context == "automerge/decision"
+            return _postprocess_automerge_decision_status(status)
         end
     end
-    i_approved_this_pr = i_left_at_least_one_approving_review && i_did_not_leave_any_nonapproving_reviews
-    if i_approved_this_pr
-        if length(my_pr_reviews) == 1
-            my_review = my_pr_reviews[1]
-        else
-            @warn("I did not leave exactly one review. Using the most recent review")
-            sort!(my_pr_reviews; lt = my_isless)
-            my_review = my_pr_reviews[end]
-        end
-        my_review_body = my_review.body
-        approving_review_regex = r"approved_pr_head_commit_sha=\"([A-Za-z0-9]*?)\""
-        if occursin(approving_review_regex, my_review_body)
-            m = match(approving_review_regex, my_review_body)
-            approved_pr_head_sha = m[1]
-            return true, approved_pr_head_sha
-        else
-            @error("The review I left does not match the regex", my_review_body)
-            return false, ""
-        end
-    else
-        return false, ""
-    end
+    return _postprocess_automerge_decision_status(nothing)
+end
+
+function _postprocess_automerge_decision_status(::Nothing;
+                                                whoami)
+    return false, "", :failing
 end
 
 function cron_or_api_build(registry::GitHub.Repo;
@@ -160,28 +167,31 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                 pkg, version = parse_pull_request_title(NewVersion(), pr)
             end
             pr_age = time_since_pr_creation(pr)
-            _pr_is_old_enough = pr_is_old_enough(pr_type,
+            this_pr_is_old_enough = pr_is_old_enough(pr_type,
                                                  pr_age;
                                                  new_package_waiting_period = new_package_waiting_period,
                                                  new_version_waiting_period = new_version_waiting_period)
-            if _pr_is_old_enough
-                i_approved_this_pr, approved_pr_head_sha = pr_was_approved_by_me(registry,
-                                                                                 pr;
-                                                                                 auth = auth,
-                                                                                 whoami = whoami)
-                if i_approved_this_pr
+            if this_pr_is_old_enough
+                i_passed_this_pr,
+                    passed_pr_head_sha,
+                    status_pr_type = pr_has_passing_automerge_decision_status(registry,
+                                                                              pr;
+                                                                              auth = auth,
+                                                                              whoami = whoami)
+                if i_passed_this_pr
                     if pr_has_no_blocking_comments(registry, pr; auth = auth)
                         "Pull request: $(pr_number). "
                         "Type: $(pr_type). "
                         "Decision: merge. "
                         if pr_type == :NewPackage # it is a new package
+                            always_assert(status_pr_type == :NewPackage)
                             if merge_new_packages
                                 my_comment = comment_text_merge_now()
                                 @info(string("Pull request: $(pr_number). ",
                                              "Type: $(pr_type). ",
                                              "Decision: merge now."))
                                 # my_retry(() -> post_comment!(registry, pr, my_comment; auth = auth))
-                                my_retry(() -> merge!(registry, pr, approved_pr_head_sha; auth = auth))
+                                my_retry(() -> merge!(registry, pr, passed_pr_head_sha; auth = auth))
                             else
                                 @info(string("Pull request: $(pr_number). ",
                                              "Type: $(pr_type). ",
@@ -197,13 +207,15 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                                              "pull request right now."))
                             end
                         else # it is a new version
+                            always_assert(pr_type == :NewVersion)
+                            always_assert(status_pr_type == :NewVersion)
                             if merge_new_versions
                                 my_comment = comment_text_merge_now()
                                 @info(string("Pull request: $(pr_number). ",
                                              "Type: $(pr_type). ",
                                              "Decision: merge now."))
                                 # my_retry(() -> post_comment!(registry, pr, my_comment; auth = auth))
-                                my_retry(() -> merge!(registry, pr, approved_pr_head_sha; auth = auth))
+                                my_retry(() -> merge!(registry, pr, passed_pr_head_sha; auth = auth))
                             else
                                 @info(string("Pull request: $(pr_number). ",
                                              "Type: $(pr_type). ",
@@ -229,13 +241,7 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                     @info(string("Pull request: $(pr_number). ",
                                  "Type: $(pr_type). ",
                                  "Decision: do not merge. ",
-                                 "Reason: it is not the case that ",
-                                 "both of the following conditions ",
-                                 "are true: ",
-                                 "(1) I left at least one approving ",
-                                 "review. ",
-                                 "(2) I did not leave any ",
-                                 "non-approving reviews."),
+                                 "Reason: automerge/decision status is not passing"),
                           whoami)
                 end
             else
