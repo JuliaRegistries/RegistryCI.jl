@@ -41,7 +41,8 @@ with_master_branch(templates("master_1"), "master"; GIT = GIT, repo_url = repo_u
                     "TRAVIS_BUILD_DIR" => build_dir,
                     "TRAVIS_EVENT_TYPE" => "pull_request",
                     "TRAVIS_PULL_REQUEST" => string(pr_1_1.number),
-                    "TRAVIS_PULL_REQUEST_SHA" => string(AutoMerge.pull_request_head_sha(pr_1_1))) do
+                    "TRAVIS_PULL_REQUEST_SHA" => string(AutoMerge.pull_request_head_sha(pr_1_1)),
+                    "TRAVIS_REPO_SLUG" => AUTOMERGE_INTEGRATION_TEST_REPO) do
                 AutoMerge.run(;
                               merge_new_packages = true,
                               merge_new_versions = true,
@@ -58,7 +59,8 @@ with_master_branch(templates("master_1"), "master"; GIT = GIT, repo_url = repo_u
                     "TRAVIS_BUILD_DIR" => build_dir,
                     "TRAVIS_EVENT_TYPE" => "cron",
                     "TRAVIS_PULL_REQUEST" => "false",
-                    "TRAVIS_PULL_REQUEST_SHA" => "") do
+                    "TRAVIS_PULL_REQUEST_SHA" => "",
+                    "TRAVIS_REPO_SLUG" => AUTOMERGE_INTEGRATION_TEST_REPO) do
                 AutoMerge.run(;
                               merge_new_packages = true,
                               merge_new_versions = true,
@@ -99,7 +101,8 @@ with_master_branch(templates("master_2"), "master"; GIT = GIT, repo_url = repo_u
                     "TRAVIS_BUILD_DIR" => build_dir,
                     "TRAVIS_EVENT_TYPE" => "pull_request",
                     "TRAVIS_PULL_REQUEST" => string(pr_2_2.number),
-                    "TRAVIS_PULL_REQUEST_SHA" => string(AutoMerge.pull_request_head_sha(pr_2_2))) do
+                    "TRAVIS_PULL_REQUEST_SHA" => string(AutoMerge.pull_request_head_sha(pr_2_2)),
+                    "TRAVIS_REPO_SLUG" => AUTOMERGE_INTEGRATION_TEST_REPO) do
                 AutoMerge.run(;
                               merge_new_packages = true,
                               merge_new_versions = true,
@@ -109,14 +112,14 @@ with_master_branch(templates("master_2"), "master"; GIT = GIT, repo_url = repo_u
                               authorized_authors = String[whoami],
                               master_branch = master_2,
                               master_branch_is_default_branch = false)
-
             end
             withenv("AUTOMERGE_GITHUB_TOKEN" => TEST_USER_GITHUB_TOKEN,
                     "TRAVIS_BRANCH" => master_2,
                     "TRAVIS_BUILD_DIR" => build_dir,
                     "TRAVIS_EVENT_TYPE" => "cron",
                     "TRAVIS_PULL_REQUEST" => "false",
-                    "TRAVIS_PULL_REQUEST_SHA" => "") do
+                    "TRAVIS_PULL_REQUEST_SHA" => "",
+                    "TRAVIS_REPO_SLUG" => AUTOMERGE_INTEGRATION_TEST_REPO) do
                 AutoMerge.run(;
                               merge_new_packages = true,
                               merge_new_versions = true,
@@ -130,7 +133,7 @@ with_master_branch(templates("master_2"), "master"; GIT = GIT, repo_url = repo_u
                               merge_new_packages = true,
                               merge_new_versions = true,
                               new_package_waiting_period = Minute(0),
-                              new_version_waiting_period = Minute(0)),
+                              new_version_waiting_period = Minute(0),
                               registry = AUTOMERGE_INTEGRATION_TEST_REPO,
                               authorized_authors = String[whoami],
                               master_branch = master_2,

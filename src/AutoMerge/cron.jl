@@ -48,22 +48,36 @@ function _get_all_pr_statuses(repo::GitHub.Repo,
     return all_statuses
 end
 
+function _get_status_description(status::GitHub.Status)::String
+    if hasproperty(status, :description)
+        if status.description === nothing
+            return ""
+        else
+            return status.description
+        end
+    else
+        return ""
+    end
+end
+
 function _postprocess_automerge_decision_status(status::GitHub.Status;
                                                 whoami)
-    always_assert(status.creator.login == whoami)
+    @debug("status: ", status)
+    @debug("status.creator: ", status.creator)
     new_package_passed_regex = r"New package. Approved. sha=\"(\w*)\""
     new_version_passed_regex = r"New version. Approved. sha=\"(\w*)\""
+    status_description = _get_status_description(status)
     if status.state == "success" && occursin(new_package_passed_regex,
-                                             status.description)
+                                             status_description)
         m = match(new_package_passed_regex,
-                  description)
+                  status_description)
         passed_pr_head_sha = m[1]
         return true, passed_pr_head_sha, :NewPackage
     end
     if status.state == "success" && occursin(new_version_passed_regex,
-                                             status.description)
+                                             status_description)
         m = match(new_version_passed_regex,
-                  description)
+                  status_description)
         passed_pr_head_sha = m[1]
         return true, passed_pr_head_sha, :NewVersion
     end
