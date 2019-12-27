@@ -34,7 +34,7 @@ function all_specified_check_runs_passed(registry::GitHub.Repo,
     for context in specified_check_run_name_list
         specified_check_run_name_did_fail[context] = true
     end
-    endpoint = "/repos/$(repo.full_name)/commits/$(sha)/check-runs"
+    endpoint = "/repos/$(registry.full_name)/commits/$(sha)/check-runs"
     check_runs = GitHub.gh_get_json(GitHub.DEFAULT_API,
                                     endpoint;
                                     auth = auth,
