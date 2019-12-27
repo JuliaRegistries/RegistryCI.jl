@@ -182,6 +182,7 @@ function meets_version_can_be_pkg_added(working_directory::String,
     return _run_pkg_commands(working_directory,
                              pkg,
                              version;
+                             code = code,
                              before_message = before_message,
                              success_message = success_message,
                              success_return_1 = success_return_1,
@@ -216,6 +217,7 @@ function meets_version_can_be_imported(working_directory::String,
     return _run_pkg_commands(working_directory,
                              pkg,
                              version;
+                             code = code,
                              before_message = before_message,
                              success_message = success_message,
                              success_return_1 = success_return_1,
@@ -228,6 +230,7 @@ end
 function _run_pkg_commands(working_directory::String,
                            pkg::String,
                            version::VersionNumber;
+                           code,
                            before_message,
                            success_message,
                            success_return_1,
