@@ -40,8 +40,6 @@ function pr_is_old_enough(pr_type::Symbol,
     end
 end
 
-@inline my_isless(r1::GitHub.Review, r2::GitHub.Review) = isless(r1.id, r2.id)
-
 function _get_all_pr_statuses(repo::GitHub.Repo,
                               pr::GitHub.PullRequest;
                               auth::GitHub.Authorization,
@@ -54,18 +52,18 @@ end
 function _postprocess_automerge_decision_status(status::GitHub.Status;
                                                 whoami)
     always_assert(status.creator.login == whoami)
-    new_package_approved_regex = r"New package. Approved. sha=\"(\w*)\""
-    new_version_approved_regex = r"New version. Approved. sha=\"(\w*)\""
-    if status.state == "success" && occursin(new_package_approved_regex,
+    new_package_passed_regex = r"New package. Approved. sha=\"(\w*)\""
+    new_version_passed_regex = r"New version. Approved. sha=\"(\w*)\""
+    if status.state == "success" && occursin(new_package_passed_regex,
                                              status.description)
-        m = match(new_package_approved_regex,
+        m = match(new_package_passed_regex,
                   description)
         passed_pr_head_sha = m[1]
         return true, passed_pr_head_sha, :NewPackage
     end
-    if status.state == "success" && occursin(new_version_approved_regex,
+    if status.state == "success" && occursin(new_version_passed_regex,
                                              status.description)
-        m = match(new_version_approved_regex,
+        m = match(new_version_passed_regex,
                   description)
         passed_pr_head_sha = m[1]
         return true, passed_pr_head_sha, :NewVersion
@@ -143,14 +141,12 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                            new_package_waiting_period,
                            new_version_waiting_period,
                            whoami::String)
-    #       first, see if the author is an approved author. if not, then skip.
+    #       first, see if the author is an authorized author. if not, then skip.
     #       next, see if the title matches either the "New Version" regex or
     #               the "New Package regex". if it is not either a new
     #               package or a new version, skip.
     #       next, see if it is old enough. if it is not old enough, then skip.
-    #       then, get all of the reviews. make sure that (1) I left at least one
-    #               review, and (2) all of my reviews are approving. if this criterion
-    #               is not met, skip
+    #       then, get the `automerge/decision` status and make sure it is passing
     #       then, get all of the pull request comments. if there is any comment that is
     #               (1) not by me, and (2) does not contain the text [noblock], then skip
     #       if all of the above criteria were met, then merge the pull request
