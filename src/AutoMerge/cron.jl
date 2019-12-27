@@ -1,3 +1,59 @@
+import GitHub
+
+function all_specified_statuses_passed(registry::GitHub.Repo,
+                                       pr::GitHub.PullRequest,
+                                       sha::AbstractString,
+                                       specified_status_context_list::AbstractVector{<:AbstractString};
+                                       auth::GitHub.Authorization)
+    specified_status_context_did_fail = Dict{String, Bool}()
+    for context in specified_status_context_list
+        specified_status_context_did_fail[context] = true
+    end
+    combined_status = GitHub.status(registry, sha; auth = auth)
+    all_statuses = combined_status.statuses
+    for status in all_statuses
+        context = status.context
+        if haskey(specified_status_context_did_fail, context)
+            status_was_success = status.state == "success"
+            status_was_failure = !status_was_success
+            specified_status_context_did_fail[context] = status_was_failure
+        end
+    end
+    if any(values(specified_status_context_did_fail))
+        return false
+    end
+    return true
+end
+
+function all_specified_check_runs_passed(registry::GitHub.Repo,
+                                         pr::GitHub.PullRequest,
+                                         sha::AbstractString,
+                                         specified_check_run_name_list::AbstractVector{<:AbstractString};
+                                         auth::GitHub.Authorization)
+    specified_check_run_name_did_fail = Dict{String, Bool}()
+    for context in specified_check_run_name_list
+        specified_check_run_name_did_fail[context] = true
+    end
+    endpoint = "/repos/$(repo.full_name)/commits/$(sha)/check-runs"
+    check_runs = GitHub.gh_get_json(GitHub.DEFAULT_API,
+                                    endpoint;
+                                    auth = auth,
+                                    headers = Dict("Accept" =>
+                                                   "application/vnd.github.antiope-preview+json"))
+    for check_run in check_runs["check_runs"]
+        name = check_run["name"]
+        check_run_was_success = (check_run["status"] == "completed") & (check_run["conclusion"] == "success")
+        check_run_was_failure = !check_run_was_success
+        if haskey(specified_check_run_name_did_fail, name)
+            specified_check_run_name_did_fail[name] = check_run_was_failure
+        end
+    end
+    if any(values(specified_check_run_name_did_fail))
+        return false
+    end
+    return true
+end
+
 function pr_comment_is_blocking(c::GitHub.Comment)
     c_body = body(c)
     if occursin("[noblock]", c_body)
@@ -105,7 +161,9 @@ function cron_or_api_build(registry::GitHub.Repo;
                            merge_new_versions::Bool,
                            new_package_waiting_period,
                            new_version_waiting_period,
-                           whoami::String)
+                           whoami::String,
+                           all_statuses::AbstractVector{<:AbstractString},
+                           all_check_runs::AbstractVector{<:AbstractString})
     # first, get a list of ALL open pull requests on this repository
     # then, loop through each of them.
     all_currently_open_pull_requests = my_retry(() -> get_all_pull_requests(registry, "open"; auth=auth))
@@ -125,7 +183,9 @@ function cron_or_api_build(registry::GitHub.Repo;
                                                  merge_new_versions = merge_new_versions,
                                                  new_package_waiting_period = new_package_waiting_period,
                                                  new_version_waiting_period = new_version_waiting_period,
-                                                 whoami = whoami),
+                                                 whoami = whoami,
+                                                 all_statuses = all_statuses,
+                                                 all_check_runs = all_check_runs),
                          num_retries)
             catch ex
                 at_least_one_exception_was_thrown = true
@@ -149,7 +209,9 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                            merge_new_versions::Bool,
                            new_package_waiting_period,
                            new_version_waiting_period,
-                           whoami::String)
+                           whoami::String,
+                           all_statuses::AbstractVector{<:AbstractString},
+                           all_check_runs::AbstractVector{<:AbstractString})
     #       first, see if the author is an authorized author. if not, then skip.
     #       next, see if the title matches either the "New Version" regex or
     #               the "New Package regex". if it is not either a new
@@ -183,6 +245,17 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                                                                               pr;
                                                                               auth = auth,
                                                                               whoami = whoami)
+                always_assert(pr.head.sha == passed_pr_head_sha)
+                all_specified_statuses_passed(registry,
+                                              pr,
+                                              passed_pr_head_sha,
+                                              all_statuses;
+                                              auth)
+                all_specified_check_runs_passed(registry,
+                                                pr,
+                                                passed_pr_head_sha,
+                                                all_check_runs;
+                                                auth)
                 if i_passed_this_pr
                     if pr_has_no_blocking_comments(registry, pr; auth = auth)
                         "Pull request: $(pr_number). "
@@ -195,7 +268,6 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                                 @info(string("Pull request: $(pr_number). ",
                                              "Type: $(pr_type). ",
                                              "Decision: merge now."))
-                                # my_retry(() -> post_comment!(registry, pr, my_comment; auth = auth))
                                 my_retry(() -> merge!(registry, pr, passed_pr_head_sha; auth = auth))
                             else
                                 @info(string("Pull request: $(pr_number). ",
@@ -219,7 +291,6 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                                 @info(string("Pull request: $(pr_number). ",
                                              "Type: $(pr_type). ",
                                              "Decision: merge now."))
-                                # my_retry(() -> post_comment!(registry, pr, my_comment; auth = auth))
                                 my_retry(() -> merge!(registry, pr, passed_pr_head_sha; auth = auth))
                             else
                                 @info(string("Pull request: $(pr_number). ",
