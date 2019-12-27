@@ -75,7 +75,7 @@ function pr_has_passing_automerge_decision_status(repo::GitHub.Repo,
                                                   pr::GitHub.PullRequest;
                                                   auth::GitHub.Authorization,
                                                   whoami)
-    all_statuses = _get_all_pr_statuses(repo, pr; auth = aith)
+    all_statuses = _get_all_pr_statuses(repo, pr; auth = auth)
     for status in all_statuses
         if status.context == "automerge/decision"
             return _postprocess_automerge_decision_status(status)
