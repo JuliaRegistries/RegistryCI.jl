@@ -165,21 +165,90 @@ function meets_standard_initial_version_number(version)
     end
 end
 
-function meets_version_can_be_loaded(working_directory::String,
-                                     pkg::String,
-                                     version::VersionNumber)
-    tmp_dir = mktempdir()
-    atexit(() -> rm(tmp_dir; force = true, recursive = true))
+function meets_version_can_be_pkg_added(working_directory::String,
+                                        pkg::String,
+                                        version::VersionNumber)
     code = """
         import Pkg;
         Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));
-        @info("Attempting to install package...");
+        @info("Attempting to `Pkg.add` package...");
         Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\", version=\"$(string(version))\"));
-        @info("Successfully installed package");
-        @info("Attempting to import package");
-        import $(pkg);
-        @info("Successfully imported package");
+        @info("Successfully `Pkg.add`ed package");
         """
+    before_message = "Attempting to `Pkg.add` the package"
+    success_message = "Successfully `Pkg.add`ed the package"
+    success_return_1 = true
+    success_return_2 = ""
+    failure_message = "Was not able to successfully `Pkg.add` the package"
+    failure_return_1 = false
+    failure_return_2 = string("I was not able to install the package ",
+                              "(i.e. `Pkg.add(\"$(pkg)\")` failed). ",
+                              "See the CI logs for details.")
+    return _run_pkg_commands(working_directory,
+                             pkg,
+                             version;
+                             code = code,
+                             before_message = before_message,
+                             success_message = success_message,
+                             success_return_1 = success_return_1,
+                             success_return_2 = success_return_2,
+                             failure_message = failure_message,
+                             failure_return_1 = failure_return_1,
+                             failure_return_2 = failure_return_2)
+end
+
+function meets_version_can_be_imported(working_directory::String,
+                                       pkg::String,
+                                       version::VersionNumber)
+    code = """
+        import Pkg;
+        Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));
+        @info("Attempting to `Pkg.add` package...");
+        Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\", version=\"$(string(version))\"));
+        @info("Successfully `Pkg.add`ed package");
+        @info("Attempting to `import` package");
+        import $(pkg);
+        @info("Successfully `import`ed package");
+        """
+    before_message = "Attempting to `import` the package"
+    success_message = "Successfully `import`ed the package"
+    success_return_1 = true
+    success_return_2 = ""
+    failure_message = "Was not able to successfully `import` the package"
+    failure_return_1 = false
+    failure_return_2 = string("I was not able to install the package ",
+                              "(i.e. `import $(pkg)` failed). ",
+                              "See the CI logs for details.")
+    return _run_pkg_commands(working_directory,
+                             pkg,
+                             version;
+                             code = code,
+                             before_message = before_message,
+                             success_message = success_message,
+                             success_return_1 = success_return_1,
+                             success_return_2 = success_return_2,
+                             failure_message = failure_message,
+                             failure_return_1 = failure_return_1,
+                             failure_return_2 = failure_return_2)
+end
+
+function _run_pkg_commands(working_directory::String,
+                           pkg::String,
+                           version::VersionNumber;
+                           code,
+                           before_message,
+                           success_message,
+                           success_return_1,
+                           success_return_2,
+                           failure_message,
+                           failure_return_1,
+                           failure_return_2)
+    original_directory = pwd()
+    tmp_dir_1 = mktempdir()
+    tmp_dir_2 = mktempdir()
+    atexit(() -> rm(tmp_dir_1; force = true, recursive = true))
+    atexit(() -> rm(tmp_dir_2; force = true, recursive = true))
+    cd(tmp_dir_1)
     # We need to be careful with what environment variables we pass to the child
     # process. For example, we don't want to pass an environment variable containing
     # our GitHub token to the child process. Because if the Julia package that we are
@@ -197,23 +266,25 @@ function meets_version_can_be_loaded(working_directory::String,
     cmd = Cmd(`$(Base.julia_cmd()) -e $(code)`;
               env = Dict("PATH" => ENV["PATH"],
                          "PYTHON" => "",
-                         "JULIA_DEPOT_PATH" => tmp_dir,
+                         "JULIA_DEPOT_PATH" => tmp_dir_2,
                          "R_HOME" => "*"))
     # GUI toolkits may need a display just to load the package
     xvfb = Sys.which("xvfb-run")
-    @debug("xvfb: ", xvfb)
+    @info("xvfb: ", xvfb)
     if xvfb !== nothing
         pushfirst!(cmd.exec, xvfb)
     end
-    @info("Attempting to install the package")
+    @info(before_message)
     cmd_ran_successfully = success(pipeline(cmd, stdout=stdout, stderr=stderr))
-    rm(tmp_dir; force = true, recursive = true)
+    cd(original_directory)
+    rm(tmp_dir_1; force = true, recursive = true)
+    rm(tmp_dir_2; force = true, recursive = true)
     if cmd_ran_successfully
-        @info("Successfully installed the package")
-        return true, ""
+        @info(success_message)
+        return success_return_1, success_return_2
     else
-        @error("Was not able to successfully install the package")
-        return false, "I was not able to install and import the package. See the CI logs for details."
+        @error(failure_message)
+        return failure_return_1, failure_return_2
     end
 end
 
