@@ -66,7 +66,12 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
                          "(https://github.com/bcbi/CompatHelper.jl) ",
                          "helpful for keeping ",
                          "your compat entries ",
-                         "up-to-date.")
+                         "up-to-date.",
+                         "Note: If your package works for the current version `x.y.z` of a dependency `foo`, ",
+                         "then a compat entry `foo = x.y.z` implies a compatibility upper bound ",
+                         "for packages following semver. You can additionally include earlier versions ",
+                         "your package is compatible with. ",
+                         "See https://julialang.github.io/Pkg.jl/v1/compatibility/ for details.")
         return false, message
     end
 end
