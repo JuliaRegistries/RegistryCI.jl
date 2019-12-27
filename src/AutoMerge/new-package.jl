@@ -96,7 +96,7 @@ function pull_request_build(::NewPackage,
             g8, m8 = meets_version_can_be_imported(registry_head,
                                                    pkg,
                                                    version)
-            @info("Version can be `import`ed,
+            @info("Version can be `import`ed",
                   meets_this_guideline = g8,
                   message = m8)
             g1through8 = [g1, g2, g3, g4, g5, g6, g7, g8]
