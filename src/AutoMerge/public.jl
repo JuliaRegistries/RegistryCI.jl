@@ -7,9 +7,17 @@ function run(env = ENV,
              registry::String,
              authorized_authors::Vector{String},
              #
+             additional_statuses::AbstractVector{<:AbstractString} = String[],
+             additional_check_runs::AbstractVector{<:AbstractString} = String[],
+             #
              master_branch::String = "master",
              master_branch_is_default_branch::Bool = true,
              suggest_onepointzero::Bool = true)
+    all_statuses = deepcopy(additional_statuses)
+    all_check_runs = deepcopy(additional_check_runs)
+    push!(all_statuses, "automerge/decision")
+    unique!(all_statuses)
+    unique!(all_check_runs)
 
     registry_head = directory_of_cloned_registry(cicfg; env=env)
 
@@ -53,7 +61,9 @@ function run(env = ENV,
                           merge_new_versions = merge_new_versions,
                           new_package_waiting_period = new_package_waiting_period,
                           new_version_waiting_period = new_version_waiting_period,
-                          whoami = whoami)
+                          whoami = whoami,
+                          all_statuses = all_statuses,
+                          all_check_runs = all_check_runs)
         return nothing
     else
         error("This should not happen.")
