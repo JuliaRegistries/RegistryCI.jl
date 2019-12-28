@@ -180,14 +180,26 @@ function meets_standard_initial_version_number(version)
     end
 end
 
+function _generate_pkg_add_command(pkg::String,
+                                   version::VersionNumber)::String
+    if is_jll_name(pkg)
+        return "Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\"));"
+    else
+        return "Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\", version=\"$(string(version))\"));"
+    end
+    
+end
+
 function meets_version_can_be_pkg_added(working_directory::String,
                                         pkg::String,
                                         version::VersionNumber)
+    pkg_add_command = _generate_pkg_add_command(pkg,
+                                                version)
     code = """
         import Pkg;
         Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));
         @info("Attempting to `Pkg.add` package...");
-        Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\", version=\"$(string(version))\"));
+        $(pkg_add_command)
         @info("Successfully `Pkg.add`ed package");
         """
     before_message = "Attempting to `Pkg.add` the package"
@@ -215,11 +227,13 @@ end
 function meets_version_can_be_imported(working_directory::String,
                                        pkg::String,
                                        version::VersionNumber)
+    pkg_add_command = _generate_pkg_add_command(pkg,
+                                                version)
     code = """
         import Pkg;
         Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));
         @info("Attempting to `Pkg.add` package...");
-        Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\", version=\"$(string(version))\"));
+        $(pkg_add_command)
         @info("Successfully `Pkg.add`ed package");
         @info("Attempting to `import` package");
         import $(pkg);
@@ -231,7 +245,7 @@ function meets_version_can_be_imported(working_directory::String,
     success_return_2 = ""
     failure_message = "Was not able to successfully `import` the package"
     failure_return_1 = false
-    failure_return_2 = string("I was not able to install the package ",
+    failure_return_2 = string("I was not able to load the package ",
                               "(i.e. `import $(pkg)` failed). ",
                               "See the CI logs for details.")
     return _run_pkg_commands(working_directory,
