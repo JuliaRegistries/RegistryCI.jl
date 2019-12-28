@@ -20,8 +20,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-The files `src/AutoMerge/semver.jl`, `src/AutoMerge/guidelines.jl`, and
-`test/automerge-unit.jl` contain code adapted from the Julia Language, which is
+Some of the code in the files `src/AutoMerge/semver.jl`, `src/AutoMerge/guidelines.jl`, and
+`test/automerge-unit.jl` is adapted from the Julia Language, which is
 available under the following MIT License:
 
 Copyright (c) 2009-2019: Jeff Bezanson, Stefan Karpinski, Viral B. Shah, and other contributors:
