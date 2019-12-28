@@ -1,4 +1,5 @@
 using Dates
+using GitCommand
 using GitHub
 using Pkg
 using Printf

@@ -1,4 +1,5 @@
 using Dates
+using GitCommand
 using GitHub
 using Pkg
 using Printf
@@ -11,7 +12,7 @@ const AutoMerge = RegistryCI.AutoMerge
 @testset "RegistryCI.jl" begin
     @testset "RegistryCI.jl unit tests" begin
         @info("Running the RegistryCI.jl unit tests")
-        include("registryci.jl")
+        include("registryci_registry_testing.jl")
     end
 
     @testset "AutoMerge.jl unit tests" begin

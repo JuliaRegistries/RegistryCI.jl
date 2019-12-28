@@ -1,6 +1,6 @@
 using Dates
+using GitCommand
 using GitHub
-using JSON
 using Pkg
 using Printf
 using RegistryCI
