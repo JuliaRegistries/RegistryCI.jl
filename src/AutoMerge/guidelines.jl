@@ -129,30 +129,42 @@ function meets_repo_url_requirement(pkg::String; registry_head::String)
     end
 end
 
-function meets_sequential_version_number(old_version::VersionNumber, new_version::VersionNumber)
-    if new_version > old_version
-        diff = difference(old_version, new_version)
-        @debug("Difference between versions: ", old_version, new_version, diff)
-        if diff == v"1.0.0"
-            return true, "", :major
-        elseif diff == v"0.1.0"
-            return true, "", :minor
-        elseif diff == v"0.0.1"
-            return true, "", :patch
-        else
-            return false, "Does not meet sequential version number guideline", :invalid
-        end
+
+function valid_change(old_version, new_version)
+    diff = difference(old_version, new_version)
+    @debug("Difference between versions: ", old_version, new_version, diff)
+    if diff == v"0.0.1"
+        return true, "", :patch
+    elseif diff == v"0.1.0"
+        return true, "", :minor
+    elseif diff == v"1.0.0"
+        return true, "", :major
     else
-        return false, "Does not meet sequential version number guideline", :invalid
+        @assert false
     end
 end
+
+function meets_sequential_version_number(existing::Vector{VersionNumber}, ver::VersionNumber)
+    @assert !isempty(existing)
+    invalid(reason) = (false, "Does not meet sequential version number guideline: $reason", :invalid)
+    issorted(existing) || (existing = sort(existing))
+    idx = searchsortedlast(existing, ver)
+    idx > 0 || return invalid("version $ver less than least existing version $(existing[1])")
+    prv = existing[idx]
+    ver == prv && return invalid("version $ver already exists")
+    nxt = thismajor(ver) != thismajor(prv) ? nextmajor(prv) :
+          thisminor(ver) != thisminor(prv) ? nextminor(prv) : nextpatch(prv)
+    ver <= nxt || return invalid("version $ver skips over $nxt")
+    return valid_change(prv, ver)
+end
+
 
 function meets_sequential_version_number(pkg::String,
                                          new_version::VersionNumber;
                                          registry_head::String,
                                          registry_master::String)
-    old_version = latest_version(pkg, registry_master)
-    return meets_sequential_version_number(old_version, new_version)
+    all_versions = all_versions(pkg, registry_master)
+    return meets_sequential_version_number(all_versions, new_version)
 end
 
 
