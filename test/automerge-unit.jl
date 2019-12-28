@@ -71,8 +71,19 @@ end
         @test !AutoMerge.meets_sequential_version_number([v"1.0.0"], v"2.0.1")[1]
         @test !AutoMerge.meets_sequential_version_number([v"1.0.0"], v"2.1.0")[1]
         @test !AutoMerge.meets_sequential_version_number([v"1.0.0"], v"2.1.0")[1]
-
-        @test AutoMerge.meets_sequential_version_number([v"0.0.1", v"0.1.0"], v"0.0.2")[1]
+        @test AutoMerge.meets_sequential_version_number([v"0.0.1"], v"0.0.2")[1]
+        @test AutoMerge.meets_sequential_version_number([v"0.0.1"], v"0.1.0")[1]
+        @test AutoMerge.meets_sequential_version_number([v"0.0.1"], v"1.0.0")[1]
+        @test AutoMerge.meets_sequential_version_number([v"0.0.1", v"0.1.0"], v"0.0.2")[1] # issue #49
+        @test AutoMerge.meets_sequential_version_number([v"0.0.1", v"0.1.0"], v"0.1.1")[1]
+        @test AutoMerge.meets_sequential_version_number([v"0.0.1", v"0.1.0"], v"0.2.0")[1]
+        @test AutoMerge.meets_sequential_version_number([v"0.0.1", v"0.1.0"], v"1.0.0")[1]
+        @test AutoMerge.meets_sequential_version_number([v"0.0.1", v"0.1.0", v"1.0.0"], v"0.0.2")[1] # issue #49
+        @test AutoMerge.meets_sequential_version_number([v"0.0.1", v"0.1.0", v"1.0.0"], v"0.1.1")[1] # issue #49
+        @test AutoMerge.meets_sequential_version_number([v"0.0.1", v"0.1.0", v"1.0.0"], v"0.2.0")[1]
+        @test AutoMerge.meets_sequential_version_number([v"0.0.1", v"0.1.0", v"1.0.0"], v"1.0.1")[1]
+        @test AutoMerge.meets_sequential_version_number([v"0.0.1", v"0.1.0", v"1.0.0"], v"1.1.0")[1]
+        @test AutoMerge.meets_sequential_version_number([v"0.0.1", v"0.1.0", v"1.0.0"], v"2.0.0")[1]
         @test AutoMerge.meets_sequential_version_number([v"1", v"2"], v"3")[1]
         @test AutoMerge.meets_sequential_version_number([v"2", v"1"], v"3")[1]
         @test !AutoMerge.meets_sequential_version_number([v"1", v"2"], v"2")[1]
@@ -83,7 +94,6 @@ end
         @test AutoMerge.meets_sequential_version_number([v"1", v"2"], v"2.0.1")[1]
         @test AutoMerge.meets_sequential_version_number([v"1", v"2"], v"2.1")[1]
         @test AutoMerge.meets_sequential_version_number([v"1", v"2"], v"3")[1]
-
         let vers = [v"2", v"1"]
             @test AutoMerge.meets_sequential_version_number(vers, v"3")[1]
             @test vers == [v"2", v"1"] # no mutation
