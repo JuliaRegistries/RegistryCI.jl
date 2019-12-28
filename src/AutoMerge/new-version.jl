@@ -87,7 +87,7 @@ function pull_request_build(::NewVersion,
                 m5 = m5_if_jll
             else
                 g5 = true
-                m5 = true
+                m5 = ""
             end
             @info("Only modifies the files that it's allowed to modify",
                   meets_this_guideline = g1,
@@ -104,7 +104,7 @@ function pull_request_build(::NewVersion,
             @info("If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
                   meets_this_guideline = g5,
                   message = m5)
-            g1through5 = [g1, g2, g3, g4, g5]
+            g1through5 = Bool[g1, g2, g3, g4, g5]
             if !all(g1through5)
                 description = "New version. Failed."
                 params = Dict("state" => "failure",
@@ -127,8 +127,8 @@ function pull_request_build(::NewVersion,
             @info("Version can be `import`ed",
                   meets_this_guideline = g7,
                   message = m7)
-            g1through7 = [g1, g2, g3, g4, g5, g6, g7]
-            allmessages1through7 = [m1, m2, m3, m4, m5, m6, m7]
+            g1through7 = Bool[g1, g2, g3, g4, g5, g6, g7]
+            allmessages1through7 = String[m1, m2, m3, m4, m5, m6, m7]
             if all(g1through7) # success
                 description = "New version. Approved. sha=\"$(current_pr_head_commit_sha)\""
                 params = Dict("state" => "success",
@@ -170,7 +170,7 @@ function pull_request_build(::NewVersion,
                                              pr,
                                              this_pr_comment_fail;
                                              auth = auth))
-                error("The automerge guidelines were not met.")
+                throw(AutoMergeGuidelinesNotMet("The automerge guidelines were not met."))
                 return nothing
             end
         else
