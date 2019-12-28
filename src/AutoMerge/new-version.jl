@@ -61,10 +61,17 @@ function pull_request_build(::NewVersion,
                                                    pr,
                                                    pkg;
                                                    auth = auth)
-            g2, m2, release_type = meets_sequential_version_number(pkg,
-                                                                   version;
-                                                                   registry_head = registry_head,
-                                                                   registry_master = registry_master)
+            if this_is_jll_package
+                g2 = true
+                m2 = ""
+                release_type = :jll_release
+            else
+                g2, m2, release_type = meets_sequential_version_number(pkg,
+                                                                       version;
+                                                                       registry_head = registry_head,
+                                                                       registry_master = registry_master)
+            end
+            
             g3, m3 = meets_compat_for_all_deps(registry_head,
                                                pkg,
                                                version)
