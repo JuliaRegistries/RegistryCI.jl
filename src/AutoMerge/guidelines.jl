@@ -151,7 +151,7 @@ function meets_sequential_version_number(existing::Vector{VersionNumber}, ver::V
     always_assert(!isempty(existing))
     issorted(existing) || (existing = sort(existing))
     idx = searchsortedlast(existing, ver)
-    idx > 0 || return invalid("version $ver less than least existing version $(existing[1])")
+    idx > 0 || return _invalid_sequential_version("version $ver less than least existing version $(existing[1])")
     prv = existing[idx]
     ver == prv && return _invalid_sequential_version("version $ver already exists")
     nxt = thismajor(ver) != thismajor(prv) ? nextmajor(prv) :
@@ -164,8 +164,8 @@ function meets_sequential_version_number(pkg::String,
                                          new_version::VersionNumber;
                                          registry_head::String,
                                          registry_master::String)
-    all_versions = all_versions(pkg, registry_master)
-    return meets_sequential_version_number(all_versions, new_version)
+    _all_versions = all_versions(pkg, registry_master)
+    return meets_sequential_version_number(_all_versions, new_version)
 end
 
 function meets_standard_initial_version_number(version)
