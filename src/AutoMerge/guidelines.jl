@@ -129,32 +129,44 @@ function meets_repo_url_requirement(pkg::String; registry_head::String)
     end
 end
 
-function meets_sequential_version_number(old_version::VersionNumber, new_version::VersionNumber)
-    if new_version > old_version
-        diff = difference(old_version, new_version)
-        @debug("Difference between versions: ", old_version, new_version, diff)
-        if diff == v"1.0.0"
-            return true, "", :major
-        elseif diff == v"0.1.0"
-            return true, "", :minor
-        elseif diff == v"0.0.1"
-            return true, "", :patch
-        else
-            return false, "Does not meet sequential version number guideline", :invalid
-        end
+function _invalid_sequential_version(reason::AbstractString)
+    return false, "Does not meet sequential version number guideline: $reason", :invalid
+end
+
+function _valid_change(old_version::VersionNumber, new_version::VersionNumber)
+    diff = difference(old_version, new_version)
+    @debug("Difference between versions: ", old_version, new_version, diff)
+    if diff == v"0.0.1"
+        return true, "", :patch
+    elseif diff == v"0.1.0"
+        return true, "", :minor
+    elseif diff == v"1.0.0"
+        return true, "", :major
     else
-        return false, "Does not meet sequential version number guideline", :invalid
+        return _invalid_sequential_version("increment is not one of: 0.0.1, 0.1.0, 1.0.0")
     end
+end
+
+function meets_sequential_version_number(existing::Vector{VersionNumber}, ver::VersionNumber)
+    always_assert(!isempty(existing))
+    issorted(existing) || (existing = sort(existing))
+    idx = searchsortedlast(existing, ver)
+    idx > 0 || return _invalid_sequential_version("version $ver less than least existing version $(existing[1])")
+    prv = existing[idx]
+    ver == prv && return _invalid_sequential_version("version $ver already exists")
+    nxt = thismajor(ver) != thismajor(prv) ? nextmajor(prv) :
+          thisminor(ver) != thisminor(prv) ? nextminor(prv) : nextpatch(prv)
+    ver <= nxt || return _invalid_sequential_version("version $ver skips over $nxt")
+    return _valid_change(prv, ver)
 end
 
 function meets_sequential_version_number(pkg::String,
                                          new_version::VersionNumber;
                                          registry_head::String,
                                          registry_master::String)
-    old_version = latest_version(pkg, registry_master)
-    return meets_sequential_version_number(old_version, new_version)
+    _all_versions = all_versions(pkg, registry_master)
+    return meets_sequential_version_number(_all_versions, new_version)
 end
-
 
 function meets_standard_initial_version_number(version)
     meets_this_guideline = version == v"0.0.1" || version == v"0.1.0" || version == v"1.0.0"

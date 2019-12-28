@@ -61,10 +61,11 @@ function is_breaking(a::VersionNumber, b::VersionNumber)::Bool
     end
 end
 
-function latest_version(pkg::String, registry_path::String)
-    all_versions = VersionNumber.(keys(Pkg.TOML.parsefile(joinpath(registry_path, uppercase(pkg[1:1]), pkg, "Versions.toml"))))
-    return maximum(all_versions)
+function all_versions(pkg::String, registry_path::String)
+    return VersionNumber.(keys(Pkg.TOML.parsefile(joinpath(registry_path, uppercase(pkg[1:1]), pkg, "Versions.toml"))))
 end
+
+latest_version(pkg::String, registry_path::String) = maximum(all_versions(pkg, registry_path))
 
 function julia_compat(pkg::String, version::VersionNumber, registry_path::String)
     all_compat_entries_for_julia = Vector{Pkg.Types.VersionRange}(undef, 0)
@@ -121,3 +122,11 @@ function range_did_not_narrow(v1::Vector{Pkg.Types.VersionRange}, v2::Vector{Pkg
         return all(results)
     end
 end
+
+thispatch(v::VersionNumber) = VersionNumber(v.major, v.minor, v.patch)
+thisminor(v::VersionNumber) = VersionNumber(v.major, v.minor, 0)
+thismajor(v::VersionNumber) = VersionNumber(v.major, 0, 0)
+
+nextpatch(v::VersionNumber) = v < thispatch(v) ? thispatch(v) : VersionNumber(v.major, v.minor, v.patch+1)
+nextminor(v::VersionNumber) = v < thisminor(v) ? thisminor(v) : VersionNumber(v.major, v.minor+1, 0)
+nextmajor(v::VersionNumber) = v < thismajor(v) ? thismajor(v) : VersionNumber(v.major+1, 0, 0)
