@@ -272,6 +272,7 @@ function _run_pkg_commands(working_directory::String,
     xvfb = Sys.which("xvfb-run")
     @info("xvfb: ", xvfb)
     if xvfb !== nothing
+        pushfirst!(cmd.exec, "-a")
         pushfirst!(cmd.exec, xvfb)
     end
     @info(before_message)

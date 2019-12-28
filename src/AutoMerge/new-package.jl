@@ -113,7 +113,7 @@ function pull_request_build(::NewPackage,
             @info("If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
                   meets_this_guideline = g8,
                   message = m8)
-            g1through8 = [g1, g2, g3, g4, g5, g6, g7, g8]
+            g1through8 = Bool[g1, g2, g3, g4, g5, g6, g7, g8]
             if !all(g1through8)
                 description = "New package. Failed."
                 params = Dict("state" => "failure",
@@ -136,8 +136,8 @@ function pull_request_build(::NewPackage,
             @info("Version can be `import`ed",
                   meets_this_guideline = g9,
                   message = m9)
-            g1through10 = [g1, g2, g3, g4, g5, g6, g7, g8, g9, g10]
-            allmessages1through10 = [m1, m2, m3, m4, m5, m7, m8, m9, m10]
+            g1through10 = Bool[g1, g2, g3, g4, g5, g6, g7, g8, g9, g10]
+            allmessages1through10 = String[m1, m2, m3, m4, m5, m6, m7, m8, m9, m10]
             if all(g1through10) # success
                 description = "New package. Approved. sha=\"$(current_pr_head_commit_sha)\""
                 params = Dict("state" => "success",
@@ -179,7 +179,7 @@ function pull_request_build(::NewPackage,
                                              pr,
                                              this_pr_comment_fail;
                                              auth = auth))
-                error("The automerge guidelines were not met.")
+                throw(AutoMergeGuidelinesNotMet("The automerge guidelines were not met."))
                 return nothing
             end
         else

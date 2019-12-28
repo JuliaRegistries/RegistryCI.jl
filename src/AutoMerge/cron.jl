@@ -195,7 +195,7 @@ function cron_or_api_build(registry::GitHub.Repo;
             end
         end
         if at_least_one_exception_was_thrown
-            error("At least one exception was thrown. Check the logs for details.")
+            throw(AutoMergeCronJobError("At least one exception was thrown. Check the logs for details."))
         end
     end
     return nothing
