@@ -149,11 +149,14 @@ end
 
 function meets_sequential_version_number(existing::Vector{VersionNumber}, ver::VersionNumber)
     always_assert(!isempty(existing))
+    if ver in existing
+        return _invalid_sequential_version("version $ver already exists")
+    end
     issorted(existing) || (existing = sort(existing))
     idx = searchsortedlast(existing, ver)
     idx > 0 || return _invalid_sequential_version("version $ver less than least existing version $(existing[1])")
     prv = existing[idx]
-    ver == prv && return _invalid_sequential_version("version $ver already exists")
+    always_assert(ver != prv)
     nxt = thismajor(ver) != thismajor(prv) ? nextmajor(prv) :
           thisminor(ver) != thisminor(prv) ? nextminor(prv) : nextpatch(prv)
     ver <= nxt || return _invalid_sequential_version("version $ver skips over $nxt")
