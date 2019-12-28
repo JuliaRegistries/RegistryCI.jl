@@ -73,7 +73,12 @@ function pull_request_build(::NewPackage,
             m2 = ""
             g3, m3 = meets_normal_capitalization(pkg)
             g4, m4 = meets_name_length(pkg)
-            g5, m5 = meets_standard_initial_version_number(version)
+            if this_is_jll_package
+                g5 = true
+                m5 = ""
+            else
+                g5, m5 = meets_standard_initial_version_number(version)
+            end
             g6, m6 = meets_repo_url_requirement(pkg;
                                                 registry_head = registry_head)
             g7, m7 = meets_compat_for_all_deps(registry_head,
