@@ -245,18 +245,18 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                                                                               pr;
                                                                               auth = auth,
                                                                               whoami = whoami)
-                always_assert(pr.head.sha == passed_pr_head_sha)
-                all_specified_statuses_passed(registry,
-                                              pr,
-                                              passed_pr_head_sha,
-                                              all_statuses;
-                                              auth = auth)
-                all_specified_check_runs_passed(registry,
-                                                pr,
-                                                passed_pr_head_sha,
-                                                all_check_runs;
-                                                auth = auth)
                 if i_passed_this_pr
+                    always_assert(pr.head.sha == passed_pr_head_sha)
+                    always_assert(all_specified_statuses_passed(registry,
+                                                                pr,
+                                                                passed_pr_head_sha,
+                                                                all_statuses;
+                                                                auth = auth))
+                    always_assert(all_specified_check_runs_passed(registry,
+                                                                  pr,
+                                                                  passed_pr_head_sha,
+                                                                  all_check_runs;
+                                                                  auth = auth))
                     if pr_has_no_blocking_comments(registry, pr; auth = auth)
                         "Pull request: $(pr_number). "
                         "Type: $(pr_type). "
