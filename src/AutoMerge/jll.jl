@@ -10,6 +10,7 @@ function _get_all_dependencies_nonrecursive(working_directory::AbstractString,
     for version_range in keys(deps)
         if version in Pkg.Types.VersionRange(version_range)
             for name in keys(deps[version_range])
+                push!(all_dependencies, name)
             end
         end
     end

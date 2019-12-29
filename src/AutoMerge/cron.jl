@@ -85,14 +85,27 @@ end
 
 function pr_is_old_enough(pr_type::Symbol,
                           pr_age::Dates.Period;
+                          pkg::AbstractString,
                           new_package_waiting_period::Dates.Period,
-                          new_version_waiting_period::Dates.Period)
-    if pr_type == :NewPackage
-        return pr_age > new_package_waiting_period
-    elseif pr_type == :NewVersion
-        return pr_age > new_version_waiting_period
+                          new_jll_package_waiting_period::Dates.Period,
+                          new_version_waiting_period::Dates.Period,
+                          new_jll_version_waiting_period::Dates.Period)
+    if is_jll_name(pkg)
+        if pr_type == :NewPackage
+            return pr_age > new_jll_package_waiting_period
+        elseif pr_type == :NewVersion
+            return pr_age > new_jll_version_waiting_period
+        else
+            throw(ArgumentError("pr_type must be either :NewPackage or :NewVersion"))
+        end
     else
-        throw(ArgumentError("pr_type must be either :NewPackage or :NewVersion"))
+        if pr_type == :NewPackage
+            return pr_age > new_package_waiting_period
+        elseif pr_type == :NewVersion
+            return pr_age > new_version_waiting_period
+        else
+            throw(ArgumentError("pr_type must be either :NewPackage or :NewVersion"))
+        end
     end
 end
 
@@ -120,24 +133,26 @@ function _postprocess_automerge_decision_status(status::GitHub.Status;
                                                 whoami)
     @debug("status: ", status)
     @debug("status.creator: ", status.creator)
-    new_package_passed_regex = r"New package. Approved. sha=\"(\w*)\""
-    new_version_passed_regex = r"New version. Approved. sha=\"(\w*)\""
+    new_package_passed_regex = r"New package. Approved. name=\"(\w*)\". sha=\"(\w*)\""
+    new_version_passed_regex = r"New version. Approved. name=\"(\w*)\". sha=\"(\w*)\""
     status_description = _get_status_description(status)
     if status.state == "success" && occursin(new_package_passed_regex,
                                              status_description)
         m = match(new_package_passed_regex,
                   status_description)
-        passed_pr_head_sha = m[1]
-        return true, passed_pr_head_sha, :NewPackage
+        passed_pkg_name = m[1]
+        passed_pr_head_sha = m[2]
+        return true, passed_pkg_name, passed_pr_head_sha, :NewPackage
     end
     if status.state == "success" && occursin(new_version_passed_regex,
                                              status_description)
         m = match(new_version_passed_regex,
                   status_description)
-        passed_pr_head_sha = m[1]
-        return true, passed_pr_head_sha, :NewVersion
+        passed_pkg_name = m[1]
+        passed_pr_head_sha = m[2]
+        return true, passed_pkg_name, passed_pr_head_sha, :NewVersion
     end
-    return false, "", :failing
+    return false, "", "", :failing
 end
 
 function pr_has_passing_automerge_decision_status(repo::GitHub.Repo,
@@ -151,7 +166,7 @@ function pr_has_passing_automerge_decision_status(repo::GitHub.Repo,
                                                           whoami = whoami)
         end
     end
-    return false, "", :failing
+    return false, "", "", :failing
 end
 
 function cron_or_api_build(registry::GitHub.Repo;
@@ -160,7 +175,9 @@ function cron_or_api_build(registry::GitHub.Repo;
                            merge_new_packages::Bool,
                            merge_new_versions::Bool,
                            new_package_waiting_period,
+                           new_jll_package_waiting_period,
                            new_version_waiting_period,
+                           new_jll_version_waiting_period,
                            whoami::String,
                            all_statuses::AbstractVector{<:AbstractString},
                            all_check_runs::AbstractVector{<:AbstractString})
@@ -182,7 +199,9 @@ function cron_or_api_build(registry::GitHub.Repo;
                                                  merge_new_packages = merge_new_packages,
                                                  merge_new_versions = merge_new_versions,
                                                  new_package_waiting_period = new_package_waiting_period,
+                                                 new_jll_package_waiting_period = new_jll_package_waiting_period,
                                                  new_version_waiting_period = new_version_waiting_period,
+                                                 new_jll_version_waiting_period = new_jll_version_waiting_period,
                                                  whoami = whoami,
                                                  all_statuses = all_statuses,
                                                  all_check_runs = all_check_runs),
@@ -208,7 +227,9 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                            merge_new_packages::Bool,
                            merge_new_versions::Bool,
                            new_package_waiting_period,
+                           new_jll_package_waiting_period,
                            new_version_waiting_period,
+                           new_jll_version_waiting_period,
                            whoami::String,
                            all_statuses::AbstractVector{<:AbstractString},
                            all_check_runs::AbstractVector{<:AbstractString})
@@ -235,17 +256,22 @@ function cron_or_api_build(pr::GitHub.PullRequest,
             end
             pr_age = time_since_pr_creation(pr)
             this_pr_is_old_enough = pr_is_old_enough(pr_type,
-                                                 pr_age;
-                                                 new_package_waiting_period = new_package_waiting_period,
-                                                 new_version_waiting_period = new_version_waiting_period)
+                                                     pr_age;
+                                                     pkg = pkg,
+                                                     new_package_waiting_period = new_package_waiting_period,
+                                                     new_jll_package_waiting_period = new_jll_package_waiting_period,
+                                                     new_version_waiting_period = new_version_waiting_period,
+                                                     new_jll_version_waiting_period = new_jll_version_waiting_period)
             if this_pr_is_old_enough
                 i_passed_this_pr,
+                    passed_pkg_name,
                     passed_pr_head_sha,
                     status_pr_type = pr_has_passing_automerge_decision_status(registry,
                                                                               pr;
                                                                               auth = auth,
                                                                               whoami = whoami)
                 if i_passed_this_pr
+                    always_assert(pkg == passed_pkg_name)
                     always_assert(pr.head.sha == passed_pr_head_sha)
                     always_assert(all_specified_statuses_passed(registry,
                                                                 pr,
@@ -327,8 +353,12 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                              "Reason: mandatory waiting period has not elapsed."),
                       pr_type,
                       pr_age,
+                      pkg,
+                      is_jll_name(pkg),
                       new_package_waiting_period,
-                      new_version_waiting_period)
+                      new_jll_package_waiting_period,
+                      new_version_waiting_period,
+                      new_jll_version_waiting_period)
             end
         else
             @info(string("Pull request: $(pr_number). ",

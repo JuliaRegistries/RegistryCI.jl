@@ -71,7 +71,7 @@ function pull_request_build(::NewVersion,
                                                                        registry_head = registry_head,
                                                                        registry_master = registry_master)
             end
-            
+
             g3, m3 = meets_compat_for_all_deps(registry_head,
                                                pkg,
                                                version)
@@ -137,7 +137,7 @@ function pull_request_build(::NewVersion,
             g1through7 = Bool[g1, g2, g3, g4, g5, g6, g7]
             allmessages1through7 = String[m1, m2, m3, m4, m5, m6, m7]
             if all(g1through7) # success
-                description = "New version. Approved. sha=\"$(current_pr_head_commit_sha)\""
+                description = "New version. Approved. name=\"$(pkg)\". sha=\"$(current_pr_head_commit_sha)\""
                 params = Dict("state" => "success",
                               "context" => "automerge/decision",
                               "description" => description)

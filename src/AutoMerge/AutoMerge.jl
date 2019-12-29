@@ -19,6 +19,7 @@ include("ciservice.jl")
 include("public.jl")
 
 include("api_rate_limiting.jl")
+include("automerge_comment.jl")
 include("changed_files.jl")
 include("cron.jl")
 include("github.jl")
