@@ -144,7 +144,7 @@ function pull_request_build(::NewPackage,
             g1through10 = Bool[g1, g2, g3, g4, g5, g6, g7, g8, g9, g10]
             allmessages1through10 = String[m1, m2, m3, m4, m5, m6, m7, m8, m9, m10]
             if all(g1through10) # success
-                description = "New package. Approved. sha=\"$(current_pr_head_commit_sha)\""
+                description = "New package. Approved. name=\"$(pkg)\". sha=\"$(current_pr_head_commit_sha)\""
                 params = Dict("state" => "success",
                               "context" => "automerge/decision",
                               "description" => description)
