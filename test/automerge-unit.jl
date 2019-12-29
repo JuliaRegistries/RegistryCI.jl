@@ -160,6 +160,15 @@ end
         @test AutoMerge.is_breaking(v"0.0.3", v"2.0.0")
         @test AutoMerge.is_breaking(v"0.0.3", v"2.1.0")
         @test AutoMerge.is_breaking(v"0.0.3", v"2.2.0")
+        @test AutoMerge.thispatch(v"1.2.3") == v"1.2.3"
+        @test AutoMerge.thisminor(v"1.2.3") == v"1.2"
+        @test AutoMerge.thismajor(v"1.2.3") == v"1"
+        @test AutoMerge.nextpatch(v"1.2.3") == v"1.2.4"
+        @test AutoMerge.nextminor(v"1.2") == v"1.3"
+        @test AutoMerge.nextminor(v"1.2.3") == v"1.3"
+        @test AutoMerge.nextmajor(v"1") == v"2"
+        @test AutoMerge.nextmajor(v"1.2") == v"2"
+        @test AutoMerge.nextmajor(v"1.2.3") == v"2"
     end
 end
 
