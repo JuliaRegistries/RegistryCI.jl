@@ -1,0 +1,9 @@
+name = "ExampleRegistry"
+uuid = "4ad491bb-ba2e-4d0a-a074-3ebed9b9859b"
+repo = ""
+
+description = "This is a test registry for the AutoMerge integration tests."
+
+[packages]
+ae029012-a4dd-5104-9daa-d747884805df = { name = "Requires", path = "R/Requires" }
+ae5879a3-cd67-5da8-be7f-38c6eb64a37b = { name = "ResettableStacks", path = "R/ResettableStacks" }
