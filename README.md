@@ -49,6 +49,10 @@ Note that commenting on a pull request will automatically disable automerging on
 4. Version can be loaded
 
     Once it's been installed (and built?), can we load the code?
+    
+## RegistryCI.jl integration tests
+
+For instructions on how to run the RegistryCI.jl integration tests on your local machine, see [`INTEGRATION_TESTS.md`](INTEGRATION_TESTS.md).
 
 ## Acknowledgements
 
