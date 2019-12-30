@@ -110,6 +110,15 @@ function meets_name_length(pkg)
     end
 end
 
+function meets_jll_name_length(pkg)
+    meets_this_guideline = length(pkg) >= 9
+    if meets_this_guideline
+        return true, ""
+    else
+        return false, "Name (excluding the `_jll` suffix) is not at least five characters long"
+    end
+end
+
 function meets_normal_capitalization(pkg)
     meets_this_guideline = occursin(r"^[A-Z]\w*[a-z][0-9]?$", pkg)
     if meets_this_guideline
