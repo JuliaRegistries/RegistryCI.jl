@@ -72,7 +72,11 @@ function pull_request_build(::NewPackage,
             g2 = true
             m2 = ""
             g3, m3 = meets_normal_capitalization(pkg)
-            g4, m4 = meets_name_length(pkg)
+            if this_is_jll_package
+                g4, m4 = meets_jll_name_length(pkg)
+            else
+                g4, m4 = meets_name_length(pkg)
+            end
             if this_is_jll_package
                 g5 = true
                 m5 = ""
