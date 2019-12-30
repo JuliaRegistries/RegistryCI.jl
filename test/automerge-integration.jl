@@ -28,11 +28,14 @@ delete_stale_branches(repo_url_with_auth; GIT = GIT)
 
 @testset "Integration tests" begin
     for (master_dir, feature_dir, title, pass) in [
-            ("master_1", "feature_1", "New package: Requires v1.0.0", true),
-            ("master_2", "feature_2", "New version: Requires v2.0.0", true),
-            ("master_1", "feature_3", "New package: Req v1.0.0", false),
-            ("master_2", "feature_4", "New version: Requires v2.0.1", false),
-            ("master_3", "feature_5", "New version: Requires v2.0.0", false), # modifies extra file
+            ("master_1", "feature_1", "New package: Requires v1.0.0", true),            # OK: new package
+            ("master_2", "feature_2", "New version: Requires v2.0.0", true),            # OK: new version
+            ("master_1", "feature_3", "New package: Req v1.0.0", false),                # FAIL: name too short
+            ("master_2", "feature_4", "New version: Requires v2.0.1", false),           # FAIL: skips v2.0.0
+            ("master_3", "feature_5", "New version: Requires v2.0.0", false),           # FAIL: modifies extra file
+            ("master_1", "feature_6", "New package: HelloWorldC_jll v1.0.6+0", true),   # OK: new JLL package
+            ("master_4", "feature_7", "New version: HelloWorldC_jll v1.0.8+0", true),   # OK: new JLL version
+            ("master_1", "feature_8", "New package: HelloWorldC_jll v1.0.6+0", false),  # FAIL: unallowed dependency
         ]
         with_master_branch(templates(master_dir), "master"; GIT = GIT, repo_url = repo_url_with_auth) do master
             with_feature_branch(templates(feature_dir), master; GIT = GIT, repo_url = repo_url_with_auth) do feature
