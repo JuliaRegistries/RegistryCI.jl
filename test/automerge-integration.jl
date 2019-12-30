@@ -107,6 +107,5 @@ delete_stale_branches(repo_url_with_auth; GIT = GIT)
                 end
             end
         end
-        
     end
 end
