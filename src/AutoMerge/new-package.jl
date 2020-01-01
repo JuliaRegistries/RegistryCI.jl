@@ -52,10 +52,6 @@ function pull_request_build(::NewPackage,
     pr_author_login = author_login(pr)
     if is_open(pr)
         if pr_author_login in authorized_authors
-            my_retry(() -> delete_all_of_my_reviews!(registry,
-                                                     pr;
-                                                     auth = auth,
-                                                     whoami = whoami))
             description = "New package. Pending."
             params = Dict("state" => "pending",
                           "context" => "automerge/decision",

@@ -44,10 +44,6 @@ function pull_request_build(::NewVersion,
     pr_author_login = author_login(pr)
     if is_open(pr)
         if pr_author_login in authorized_authors
-            my_retry(() -> delete_all_of_my_reviews!(registry,
-                                                     pr;
-                                                     auth = auth,
-                                                     whoami = whoami))
             description = "New version. Pending."
             params = Dict("state" => "pending",
                           "context" => "automerge/decision",
@@ -170,7 +166,7 @@ function pull_request_build(::NewVersion,
                                                          version)
                 my_retry(() -> update_automerge_comment!(registry,
                                                          pr;
-                                                         body = this_pr_comment_fail;
+                                                         body = this_pr_comment_fail,
                                                          auth = auth))
                 throw(AutoMergeGuidelinesNotMet("The automerge guidelines were not met."))
                 return nothing

@@ -9,19 +9,6 @@ function created_at(pull_request::GitHub.PullRequest)
     return result
 end
 
-function delete_all_of_my_reviews!(repo::GitHub.Repo,
-                                  pr::GitHub.PullRequest;
-                                  auth::GitHub.Authorization,
-                                  whoami::String)
-    all_pr_reviews = get_all_pull_request_reviews(repo, pr; auth = auth)
-    for rev in all_pr_reviews
-        if reviewer_login(rev) == whoami
-            delete_pr_review!(repo, pr, rev; auth = auth)
-        end
-    end
-    return nothing
-end
-
 function delete_comment!(repo::GitHub.Repo,
                          pr::GitHub.PullRequest,
                          comment_to_delete::GitHub.Comment;
@@ -47,18 +34,6 @@ function delete_merged_branch!(repo::GitHub.Repo, pr::GitHub.PullRequest; auth::
             println(stderr)
         end
     end
-    return nothing
-end
-
-function delete_pr_review!(repo::GitHub.Repo, pr::GitHub.PullRequest, r::GitHub.Review; auth::GitHub.Authorization)
-    return nothing
-    repo_full_name = full_name(repo)
-    pr_number = number(pr)
-    review_id = r.id
-    endpoint = "/repos/$(repo_full_name)/pulls/$(pr_number)/reviews/$(review_id)"
-    GitHub.gh_delete_json(GitHub.DEFAULT_API,
-                          endpoint;
-                          auth=auth)
     return nothing
 end
 
@@ -113,21 +88,6 @@ function get_all_pull_request_comments(repo::GitHub.Repo,
     unique!(all_comments)
     all_comments = all_comments[sortperm([x.created_at for x in all_comments])]
     return all_comments
-end
-
-function get_all_pull_request_reviews(repo::GitHub.Repo,
-                                      pr::GitHub.PullRequest;
-                                      auth::GitHub.Authorization)
-    all_reviews = Vector{GitHub.Review}(undef, 0)
-    myparams = Dict("per_page" => 100, "page" => 1)
-    revs, page_data = GitHub.reviews(repo, pr; auth=auth, params = myparams, page_limit = 100)
-    append!(all_reviews, revs)
-    while haskey(page_data, "next")
-        revs, page_data = GitHub.reviews(repo, pr; auth=auth, page_limit = 100, start_page = page_data["next"])
-        append!(all_reviews, revs)
-    end
-    unique!(all_reviews)
-    return all_reviews
 end
 
 function get_all_pull_requests(repo::GitHub.Repo,
@@ -226,10 +186,6 @@ pull_request_head_sha(pull_request::GitHub.PullRequest) = pull_request.head.sha
 repo_url(repo::GitHub.Repo) = repo.html_url.uri
 
 pr_state(pull_request::GitHub.PullRequest) = pull_request.state
-
-review_state(r::GitHub.Review) = r.state
-
-reviewer_login(r::GitHub.Review) = r.user.login
 
 function time_since_pr_creation(pull_request::GitHub.PullRequest)
     _pr_created_at_utc = created_at(pull_request)
