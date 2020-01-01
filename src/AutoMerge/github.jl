@@ -39,11 +39,11 @@ end
 
 function edit_comment!(repo::GitHub.Repo,
                        pr::GitHub.PullRequest,
-                       c::GitHub.Comment,
+                       comment::GitHub.Comment,
                        body::String;
                        auth::GitHub.Authorization)
     myparams = Dict("body" => body)
-    GitHub.create_comment(repo, comment, :pr; auth=auth, params = myparams)
+    GitHub.edit_comment(repo, comment, :pr; auth=auth, params = myparams)
     return nothing
 end
 
