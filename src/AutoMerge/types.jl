@@ -28,7 +28,6 @@ struct AutoMergeShaMismatch <: AutoMergeException
     msg::String
 end
 
-
 struct AutoMergeWrongBuildType <: AutoMergeException
     msg::String
 end
