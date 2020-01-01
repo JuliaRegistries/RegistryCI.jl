@@ -35,7 +35,7 @@ function pull_request_build(pr_number::Integer,
     pr = my_retry(() -> GitHub.pull_request(registry, pr_number; auth=auth))
     _github_api_pr_head_commit_sha = pull_request_head_sha(pr)
     if current_pr_head_commit_sha != _github_api_pr_head_commit_sha
-        error("Current commit sha (\"$(current_pr_head_commit_sha)\") does not match what the GitHub API tells us (\"$(_github_api_pr_head_commit_sha)\")")
+        throw(AutoMergeShaMismatch("Current commit sha (\"$(current_pr_head_commit_sha)\") does not match what the GitHub API tells us (\"$(_github_api_pr_head_commit_sha)\")"))
     end
     result = pull_request_build(pr,
                                 current_pr_head_commit_sha,
