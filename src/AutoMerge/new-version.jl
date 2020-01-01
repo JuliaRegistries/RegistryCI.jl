@@ -7,7 +7,7 @@ function pull_request_build(::NewVersion,
                             registry_head::String,
                             registry_master::String,
                             suggest_onepointzero::Bool,
-                            whoami::String)
+                            whoami::String)::Nothing
     # first check if the PR is open, and the author is authorized - if not, then quit
     # then, delete ALL reviews by me
     # then check rules 1-6. if fail, post comment.
@@ -170,15 +170,11 @@ function pull_request_build(::NewVersion,
                                                          auth = auth,
                                                          whoami = whoami))
                 throw(AutoMergeGuidelinesNotMet("The automerge guidelines were not met."))
-                return nothing
             end
         else
-            @info("Author $(pr_author_login) is not authorized to automerge. Exiting...")
-            return nothing
+            throw(AutoMergeAuthorNotAuthorized("Author $(pr_author_login) is not authorized to automerge. Exiting..."))
         end
     else
-        @info("The pull request is not open. Exiting...")
-        return nothing
+        throw(AutoMergePullRequestNotOpen("The pull request is not open. Exiting..."))
     end
-    return nothing
 end
