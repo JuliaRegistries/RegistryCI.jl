@@ -1,30 +1,3 @@
-function approve!(repo::GitHub.Repo,
-                  pr::GitHub.PullRequest,
-                  pr_head_commit_sha_to_approve::String;
-                  auth::GitHub.Authorization,
-                  body::String="",
-                  whoami)
-    if pr.user.login == whoami
-    else
-        repo_full_name = full_name(repo)
-        pr_number = number(pr)
-        endpoint = "/repos/$(repo_full_name)/pulls/$(pr_number)/reviews"
-        approving_review_body = """
-                $body
-                <!---
-                approved_pr_head_commit_sha=\"$(pr_head_commit_sha_to_approve)\"
-                --->
-                """
-        myparams = Dict("event" => "APPROVE",
-                        "body" => approving_review_body)
-        GitHub.gh_post_json(GitHub.DEFAULT_API,
-                            endpoint;
-                            auth=auth,
-                            params = myparams)
-    end
-    return nothing
-end
-
 author_login(pull_request::GitHub.PullRequest) = pull_request.user.login
 
 base_repo(pull_request::GitHub.PullRequest) = pull_request.base.repo
@@ -46,6 +19,17 @@ function delete_all_of_my_reviews!(repo::GitHub.Repo,
             delete_pr_review!(repo, pr, rev; auth = auth)
         end
     end
+    return nothing
+end
+
+function delete_comment!(repo::GitHub.Repo,
+                         pr::GitHub.PullRequest,
+                         comment_to_delete::GitHub.Comment;
+                         auth::GitHub.Authorization)
+    GitHub.delete_comment(repo,
+                          comment_to_delete,
+                          :pr;
+                          auth = auth)
     return nothing
 end
 
@@ -78,6 +62,16 @@ function delete_pr_review!(repo::GitHub.Repo, pr::GitHub.PullRequest, r::GitHub.
     return nothing
 end
 
+function edit_comment!(repo::GitHub.Repo,
+                       pr::GitHub.PullRequest,
+                       c::GitHub.Comment,
+                       body::String;
+                       auth::GitHub.Authorization)
+    myparams = Dict("body" => body)
+    GitHub.create_comment(repo, comment, :pr; auth=auth, params = myparams)
+    return nothing
+end
+
 full_name(repo::GitHub.Repo) = repo.full_name
 
 function _get_updated_pull_request(pull_request::GitHub.PullRequest; auth::GitHub.Authorization)
@@ -85,6 +79,24 @@ function _get_updated_pull_request(pull_request::GitHub.PullRequest; auth::GitHu
     pr_number = number(pull_request)
     updated_pr = GitHub.pull_request(pr_base_repo, pr_number; auth=auth)
     return updated_pr
+end
+
+function get_all_my_pull_request_comments(repo::GitHub.Repo,
+                                          pr::GitHub.PullRequest;
+                                          auth::GitHub.Authorization,
+                                          whoami)
+    all_comments = get_all_pull_request_comments(repo,
+                                                 pr;
+                                                 auth = auth)
+    my_comments = Vector{GitHub.Comment}(undef, 0)
+    for c in all_comments
+        if c.user.login == whoami
+            push!(my_comments, c)
+        end
+    end
+    unique!(my_comments)
+    my_comments = my_comments[sortperm([x.created_at for x in my_comments])]
+    return my_comments
 end
 
 function get_all_pull_request_comments(repo::GitHub.Repo,
@@ -99,6 +111,7 @@ function get_all_pull_request_comments(repo::GitHub.Repo,
         append!(all_comments, cs)
     end
     unique!(all_comments)
+    all_comments = all_comments[sortperm([x.created_at for x in all_comments])]
     return all_comments
 end
 
