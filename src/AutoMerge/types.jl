@@ -1,10 +1,33 @@
 struct NewPackage end
 struct NewVersion end
 
-struct AutoMergeCronJobError <: Exception
+abstract type AutoMergeException <: Exception
+end
+
+struct AutoMergeAuthorNotAuthorized <: AutoMergeException
     msg::String
 end
 
-struct AutoMergeGuidelinesNotMet <: Exception
+struct AutoMergeCronJobError <: AutoMergeException
+    msg::String
+end
+
+struct AutoMergeGuidelinesNotMet <: AutoMergeException
+    msg::String
+end
+
+struct AutoMergeNeitherNewPackageNorNewVersion <: AutoMergeException
+    msg::String
+end
+
+struct AutoMergePullRequestNotOpen <: AutoMergeException
+    msg::String
+end
+
+struct AutoMergeShaMismatch <: AutoMergeException
+    msg::String
+end
+
+struct AutoMergeWrongBuildType <: AutoMergeException
     msg::String
 end

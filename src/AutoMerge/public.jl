@@ -14,7 +14,7 @@ function run(env = ENV,
              #
              master_branch::String = "master",
              master_branch_is_default_branch::Bool = true,
-             suggest_onepointzero::Bool = true)
+             suggest_onepointzero::Bool = true)::Nothing
     all_statuses = deepcopy(additional_statuses)
     all_check_runs = deepcopy(additional_check_runs)
     push!(all_statuses, "automerge/decision")
@@ -31,8 +31,7 @@ function run(env = ENV,
     run_merge_build = conditions_met_for_merge_build(cicfg; env=env, master_branch=master_branch)
 
     if !(run_pr_build || run_merge_build)
-        @info "Build not determined to be either a PR build or a merge build. Exiting."
-        return nothing
+        throw(AutoMergeWrongBuildType("Build not determined to be either a PR build or a merge build. Exiting."))
     end
 
     # Authentication
@@ -55,7 +54,8 @@ function run(env = ENV,
                            suggest_onepointzero = suggest_onepointzero,
                            whoami = whoami)
         return nothing
-    elseif run_merge_build
+    else
+        always_assert(run_merge_build)
         cron_or_api_build(registry_repo;
                           auth = auth,
                           authorized_authors = authorized_authors,
@@ -69,7 +69,5 @@ function run(env = ENV,
                           all_statuses = all_statuses,
                           all_check_runs = all_check_runs)
         return nothing
-    else
-        error("This should not happen.")
     end
 end

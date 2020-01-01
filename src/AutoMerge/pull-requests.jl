@@ -31,11 +31,11 @@ function pull_request_build(pr_number::Integer,
                             authorized_authors::Vector{String},
                             master_branch::String,
                             master_branch_is_default_branch::Bool,
-                            suggest_onepointzero::Bool)
+                            suggest_onepointzero::Bool)::Nothing
     pr = my_retry(() -> GitHub.pull_request(registry, pr_number; auth=auth))
     _github_api_pr_head_commit_sha = pull_request_head_sha(pr)
     if current_pr_head_commit_sha != _github_api_pr_head_commit_sha
-        error("Current commit sha (\"$(current_pr_head_commit_sha)\") does not match what the GitHub API tells us (\"$(_github_api_pr_head_commit_sha)\")")
+        throw(AutoMergeShaMismatch("Current commit sha (\"$(current_pr_head_commit_sha)\") does not match what the GitHub API tells us (\"$(_github_api_pr_head_commit_sha)\")"))
     end
     result = pull_request_build(pr,
                                 current_pr_head_commit_sha,
@@ -59,7 +59,7 @@ function pull_request_build(pr::GitHub.PullRequest,
                             master_branch::String,
                             master_branch_is_default_branch::Bool,
                             suggest_onepointzero::Bool,
-                            whoami::String)
+                            whoami::String)::Nothing
     if is_new_package(pr)
         registry_master = clone_repo(registry)
         if !master_branch_is_default_branch
@@ -93,7 +93,6 @@ function pull_request_build(pr::GitHub.PullRequest,
                            whoami=whoami)
         rm(registry_master; force = true, recursive = true)
     else
-        @info("Neither a new package nor a new version. Exiting...")
-        return nothing
+        throw(AutoMergeNeitherNewPackageNorNewVersion("Neither a new package nor a new version. Exiting..."))
     end
 end
