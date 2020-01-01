@@ -167,7 +167,8 @@ function pull_request_build(::NewVersion,
                 my_retry(() -> update_automerge_comment!(registry,
                                                          pr;
                                                          body = this_pr_comment_fail,
-                                                         auth = auth))
+                                                         auth = auth,
+                                                         whoami = whoami))
                 throw(AutoMergeGuidelinesNotMet("The automerge guidelines were not met."))
                 return nothing
             end
