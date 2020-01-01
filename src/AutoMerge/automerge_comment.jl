@@ -27,18 +27,22 @@ function update_automerge_comment!(repo::GitHub.Repo,
             end
         end
         comment_to_update = my_comments[1]
-        my_retry(() -> edit_comment!(repo,
-                                     pr,
-                                     comment_to_update,
-                                     _body;
-                                     auth = auth))
+        if strip(comment_to_update.body) != strip(_body)
+            my_retry(() -> edit_comment!(repo,
+                                         pr,
+                                         comment_to_update,
+                                         _body;
+                                         auth = auth))
+        end
     elseif num_comments == 1
         comment_to_update = my_comments[1]
-        my_retry(() -> edit_comment!(repo,
-                                     pr,
-                                     comment_to_update,
-                                     _body;
-                                     auth = auth))
+        if strip(comment_to_update.body) != strip(_body)
+            my_retry(() -> edit_comment!(repo,
+                                         pr,
+                                         comment_to_update,
+                                         _body;
+                                         auth = auth))
+        end
     else
         always_assert(num_comments < 1)
         my_retry(() -> post_comment!(repo,
