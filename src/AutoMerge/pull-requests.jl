@@ -31,7 +31,7 @@ function pull_request_build(pr_number::Integer,
                             authorized_authors::Vector{String},
                             master_branch::String,
                             master_branch_is_default_branch::Bool,
-                            suggest_onepointzero::Bool)
+                            suggest_onepointzero::Bool)::Nothing
     pr = my_retry(() -> GitHub.pull_request(registry, pr_number; auth=auth))
     _github_api_pr_head_commit_sha = pull_request_head_sha(pr)
     if current_pr_head_commit_sha != _github_api_pr_head_commit_sha
