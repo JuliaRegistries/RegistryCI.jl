@@ -16,6 +16,10 @@ struct AutoMergeGuidelinesNotMet <: AutoMergeException
     msg::String
 end
 
+struct AutoMergeNeitherNewPackageNorNewVersion <: AutoMergeException
+    msg::String
+end
+
 struct AutoMergePullRequestNotOpen <: AutoMergeException
     msg::String
 end
