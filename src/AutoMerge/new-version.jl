@@ -44,10 +44,6 @@ function pull_request_build(::NewVersion,
     pr_author_login = author_login(pr)
     if is_open(pr)
         if pr_author_login in authorized_authors
-            my_retry(() -> delete_all_of_my_reviews!(registry,
-                                                     pr;
-                                                     auth = auth,
-                                                     whoami = whoami))
             description = "New version. Pending."
             params = Dict("state" => "pending",
                           "context" => "automerge/decision",
@@ -148,16 +144,11 @@ function pull_request_build(::NewVersion,
                 this_pr_comment_pass = comment_text_pass(NewVersion(),
                                                          suggest_onepointzero,
                                                          version)
-                my_retry(() -> delete_all_of_my_reviews!(registry,
+                my_retry(() -> update_automerge_comment!(registry,
                                                          pr;
                                                          auth = auth,
+                                                         body = this_pr_comment_pass,
                                                          whoami = whoami))
-                my_retry(() -> approve!(registry,
-                                        pr,
-                                        current_pr_head_commit_sha;
-                                        auth = auth,
-                                        body = this_pr_comment_pass,
-                                        whoami = whoami))
                 return nothing
             else # failure
                 description = "New version. Failed."
@@ -173,10 +164,11 @@ function pull_request_build(::NewVersion,
                                                          failingmessages1through7,
                                                          suggest_onepointzero,
                                                          version)
-                my_retry(() -> post_comment!(registry,
-                                             pr,
-                                             this_pr_comment_fail;
-                                             auth = auth))
+                my_retry(() -> update_automerge_comment!(registry,
+                                                         pr;
+                                                         body = this_pr_comment_fail,
+                                                         auth = auth,
+                                                         whoami = whoami))
                 throw(AutoMergeGuidelinesNotMet("The automerge guidelines were not met."))
                 return nothing
             end
