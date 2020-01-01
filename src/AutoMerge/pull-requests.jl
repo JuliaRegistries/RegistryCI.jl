@@ -59,7 +59,7 @@ function pull_request_build(pr::GitHub.PullRequest,
                             master_branch::String,
                             master_branch_is_default_branch::Bool,
                             suggest_onepointzero::Bool,
-                            whoami::String)
+                            whoami::String)::Nothing
     if is_new_package(pr)
         registry_master = clone_repo(registry)
         if !master_branch_is_default_branch
@@ -93,7 +93,6 @@ function pull_request_build(pr::GitHub.PullRequest,
                            whoami=whoami)
         rm(registry_master; force = true, recursive = true)
     else
-        @info("Neither a new package nor a new version. Exiting...")
-        return nothing
+        throw(AutoMergeNeitherNewPackageNorNewVersion("Neither a new package nor a new version. Exiting..."))
     end
 end
