@@ -17,4 +17,5 @@ RegistryCI.test(path)
 Pkg.Registry.add("https://github.com/BioJulia/BioJuliaRegistry.git")
 # Test this will validate the BioJuliaRegistry, when providing General as an
 # optional dependency. BJW.
-RegistryCI.test(joinpath(DEPOT_PATH[1], "registries", "BioJuliaRegistry"), ["https://github.com/JuliaRegistries/General.git"])
+const biopath = joinpath(DEPOT_PATH[1], "registries", "BioJuliaRegistry")
+RegistryCI.test(biopath, ["https://github.com/JuliaRegistries/General.git"])
