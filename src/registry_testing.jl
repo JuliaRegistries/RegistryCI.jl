@@ -16,7 +16,7 @@ end
 function load_registry_dep_uuids(registry_deps_urls::Vector{<:AbstractString} = String[])
     # Get the registries!
     for url in registry_deps_urls
-        Pkg.Registry.add(url)
+        Pkg.Registry.add(Pkg.RegistrySpec(url = url))
     end
     # Now use the RegistrySpec's to find the Project.toml's. I know
     # .julia/registires/XYZ/ABC is the most likely place, but this way the
