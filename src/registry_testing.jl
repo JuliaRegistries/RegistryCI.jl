@@ -14,33 +14,25 @@ end
 # another dependency registry. For example, packages registered at the BioJuliaRegistry
 # that have General dependencies. BJW.
 function load_registry_dep_uuids(registry_deps_urls::Vector{<:AbstractString} = String[])
-    temp_depot = mktempdir() # make a temp depot
-    atexit(() -> rm(temp_depot; force = true, recursive = true))
-    original_depot_path = deepcopy(Base.DEPOT_PATH)
-    empty!(Base.DEPOT_PATH)
-    push!(Base.DEPOT_PATH, temp_depot) # use the temp depot
-    # Get the registries!
-    for url in registry_deps_urls
-        Pkg.Registry.add(Pkg.RegistrySpec(url = url))
-    end
-    # Now use the RegistrySpec's to find the Project.toml's. I know
-    # .julia/registires/XYZ/ABC is the most likely place, but this way the
-    # function never has to assume. BJW.
-    extrauuids = Set{Base.UUID}()
-    for spec in Pkg.Types.collect_registries()
-        if spec.url ∈ registry_deps_urls
-            reg = Pkg.TOML.parsefile(joinpath(spec.path, "/Registry.toml"))
-            for x in keys(reg["packages"])
-                push!(extrauuids, Base.UUID(x))
+    return with_temp_depot() do
+        # Get the registries!
+        for url in registry_deps_urls
+            Pkg.Registry.add(Pkg.RegistrySpec(url = url))
+        end
+        # Now use the RegistrySpec's to find the Project.toml's. I know
+        # .julia/registires/XYZ/ABC is the most likely place, but this way the
+        # function never has to assume. BJW.
+        extrauuids = Set{Base.UUID}()
+        for spec in Pkg.Types.collect_registries()
+            if spec.url ∈ registry_deps_urls
+                reg = Pkg.TOML.parsefile(joinpath(spec.path, "Registry.toml"))
+                for x in keys(reg["packages"])
+                    push!(extrauuids, Base.UUID(x))
+                end
             end
         end
+        return extrauuids
     end
-    empty!(Base.DEPOT_PATH)
-    for x in original_depot_path
-        push!(Base.DEPOT_PATH, x) # restore the original DEPOT_PATH
-    end
-    rm(temp_depot; force = true, recursive = true)
-    return extrauuids
 end
 
 #########################
