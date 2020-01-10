@@ -124,7 +124,7 @@ function meets_normal_capitalization(pkg)
     if meets_this_guideline
         return true, ""
     else
-        return false, "Name does not meet all of the following: starts with a capital letter, ASCII alphanumerics only, ends in lowercase"
+        return false, "Name does not meet all of the following: starts with an uppercase letter, ASCII alphanumerics only, ends in a lowercase letter. **Important note: It is okay to have a package name that ends in an uppercase letter. However, you will need to wait until a registry maintainer manually approves the name.**"
     end
 end
 
