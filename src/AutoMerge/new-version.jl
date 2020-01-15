@@ -7,7 +7,8 @@ function pull_request_build(::NewVersion,
                             registry_head::String,
                             registry_master::String,
                             suggest_onepointzero::Bool,
-                            whoami::String)::Nothing
+                            whoami::String;
+                            registry_deps::Vector{<:AbstractString} = String[])::Nothing
     # first check if the PR is open, and the author is authorized - if not, then quit
     # then, delete ALL reviews by me
     # then check rules 1-6. if fail, post comment.
@@ -120,13 +121,15 @@ function pull_request_build(::NewVersion,
             end
             g6, m6 = meets_version_can_be_pkg_added(registry_head,
                                                     pkg,
-                                                    version)
+                                                    version;
+                                                    registry_deps = registry_deps)
             @info("Version can be `Pkg.add`ed",
                   meets_this_guideline = g6,
                   message = m6)
             g7, m7 = meets_version_can_be_imported(registry_head,
                                                    pkg,
-                                                   version)
+                                                   version;
+                                                   registry_deps = registry_deps)
             @info("Version can be `import`ed",
                   meets_this_guideline = g7,
                   message = m7)
