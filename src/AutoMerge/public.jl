@@ -15,6 +15,7 @@ function run(env = ENV,
              master_branch::String = "master",
              master_branch_is_default_branch::Bool = true,
              suggest_onepointzero::Bool = true,
+             #
              registry_deps::Vector{<:AbstractString} = String[])::Nothing
     all_statuses = deepcopy(additional_statuses)
     all_check_runs = deepcopy(additional_check_runs)
