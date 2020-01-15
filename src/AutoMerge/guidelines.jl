@@ -205,9 +205,14 @@ function meets_version_can_be_pkg_added(working_directory::String,
                                         registry_deps::Vector{<:AbstractString} = String[])
     pkg_add_command = _generate_pkg_add_command(pkg,
                                                 version)
+    _registry_deps = convert(Vector{String}, registry_deps)
     code = """
         import Pkg;
         Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));
+        _registry_deps = $(_registry_deps);
+        for regdep in _registry_deps
+            Pkg.Registry.add(Pkg.RegistrySpec(url = regdep))
+        end
         @info("Attempting to `Pkg.add` package...");
         $(pkg_add_command)
         @info("Successfully `Pkg.add`ed package");
@@ -240,9 +245,14 @@ function meets_version_can_be_imported(working_directory::String,
                                        registry_deps::Vector{<:AbstractString} = String[])
     pkg_add_command = _generate_pkg_add_command(pkg,
                                                 version)
+    _registry_deps = convert(Vector{String}, registry_deps)
     code = """
         import Pkg;
         Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));
+        _registry_deps = $(_registry_deps);
+        for regdep in _registry_deps
+            Pkg.Registry.add(Pkg.RegistrySpec(url = regdep))
+        end
         @info("Attempting to `Pkg.add` package...");
         $(pkg_add_command)
         @info("Successfully `Pkg.add`ed package");
