@@ -201,7 +201,8 @@ end
 
 function meets_version_can_be_pkg_added(working_directory::String,
                                         pkg::String,
-                                        version::VersionNumber)
+                                        version::VersionNumber;
+                                        registry_deps::Vector{<:AbstractString} = String[])
     pkg_add_command = _generate_pkg_add_command(pkg,
                                                 version)
     code = """
@@ -235,7 +236,8 @@ end
 
 function meets_version_can_be_imported(working_directory::String,
                                        pkg::String,
-                                       version::VersionNumber)
+                                       version::VersionNumber;
+                                       registry_deps::Vector{<:AbstractString} = String[])
     pkg_add_command = _generate_pkg_add_command(pkg,
                                                 version)
     code = """
