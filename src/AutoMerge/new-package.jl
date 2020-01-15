@@ -7,7 +7,7 @@ function pull_request_build(::NewPackage,
                             registry_head::String,
                             registry_master::String,
                             suggest_onepointzero::Bool,
-                            whoami::String;
+                            whoami::String,
                             registry_deps::Vector{<:AbstractString} = String[])::Nothing
     # first check if the PR is open, and the author is authorized - if not, then quit
     # then, delete ALL reviews by me
