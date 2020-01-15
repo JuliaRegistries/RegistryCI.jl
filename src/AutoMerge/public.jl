@@ -53,7 +53,8 @@ function run(env = ENV,
                            master_branch = master_branch,
                            master_branch_is_default_branch = master_branch_is_default_branch,
                            suggest_onepointzero = suggest_onepointzero,
-                           whoami = whoami)
+                           whoami = whoami,
+                           registry_deps = registry_deps)
         return nothing
     else
         always_assert(run_merge_build)
