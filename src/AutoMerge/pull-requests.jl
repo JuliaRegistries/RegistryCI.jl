@@ -31,7 +31,8 @@ function pull_request_build(pr_number::Integer,
                             authorized_authors::Vector{String},
                             master_branch::String,
                             master_branch_is_default_branch::Bool,
-                            suggest_onepointzero::Bool)::Nothing
+                            suggest_onepointzero::Bool,
+                            registry_deps::Vector{<:AbstractString} = String[])::Nothing
     pr = my_retry(() -> GitHub.pull_request(registry, pr_number; auth=auth))
     _github_api_pr_head_commit_sha = pull_request_head_sha(pr)
     if current_pr_head_commit_sha != _github_api_pr_head_commit_sha
@@ -46,7 +47,8 @@ function pull_request_build(pr_number::Integer,
                                 master_branch=master_branch,
                                 master_branch_is_default_branch=master_branch_is_default_branch,
                                 suggest_onepointzero=suggest_onepointzero,
-                                whoami=whoami)
+                                whoami=whoami,
+                                registry_deps=registry_deps)
     return result
 end
 
@@ -59,7 +61,8 @@ function pull_request_build(pr::GitHub.PullRequest,
                             master_branch::String,
                             master_branch_is_default_branch::Bool,
                             suggest_onepointzero::Bool,
-                            whoami::String)::Nothing
+                            whoami::String,
+                            registry_deps::Vector{<:AbstractString} = String[])::Nothing
     if is_new_package(pr)
         registry_master = clone_repo(registry)
         if !master_branch_is_default_branch
@@ -74,7 +77,8 @@ function pull_request_build(pr::GitHub.PullRequest,
                            registry_head = registry_head,
                            registry_master = registry_master,
                            suggest_onepointzero = suggest_onepointzero,
-                           whoami=whoami)
+                           whoami=whoami,
+                           registry_deps = registry_deps)
         rm(registry_master; force = true, recursive = true)
     elseif is_new_version(pr)
         registry_master = clone_repo(registry)
@@ -90,7 +94,8 @@ function pull_request_build(pr::GitHub.PullRequest,
                            registry_head = registry_head,
                            registry_master = registry_master,
                            suggest_onepointzero = suggest_onepointzero,
-                           whoami=whoami)
+                           whoami=whoami,
+                           registry_deps = registry_deps)
         rm(registry_master; force = true, recursive = true)
     else
         throw(AutoMergeNeitherNewPackageNorNewVersion("Neither a new package nor a new version. Exiting..."))

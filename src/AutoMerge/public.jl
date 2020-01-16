@@ -15,6 +15,7 @@ function run(env = ENV,
              master_branch::String = "master",
              master_branch_is_default_branch::Bool = true,
              suggest_onepointzero::Bool = true,
+             #
              registry_deps::Vector{<:AbstractString} = String[])::Nothing
     all_statuses = deepcopy(additional_statuses)
     all_check_runs = deepcopy(additional_check_runs)
@@ -53,7 +54,8 @@ function run(env = ENV,
                            master_branch = master_branch,
                            master_branch_is_default_branch = master_branch_is_default_branch,
                            suggest_onepointzero = suggest_onepointzero,
-                           whoami = whoami)
+                           whoami = whoami,
+                           registry_deps = registry_deps)
         return nothing
     else
         always_assert(run_merge_build)
