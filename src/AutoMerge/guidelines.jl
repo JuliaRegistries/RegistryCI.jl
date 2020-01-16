@@ -191,12 +191,7 @@ end
 
 function _generate_pkg_add_command(pkg::String,
                                    version::VersionNumber)::String
-    if is_jll_name(pkg)
-        return "Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\"));"
-    else
-        return "Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\", version=\"$(string(version))\"));"
-    end
-    
+    return "Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\", version=v\"$(string(version))\"));"
 end
 
 function meets_version_can_be_pkg_added(working_directory::String,
