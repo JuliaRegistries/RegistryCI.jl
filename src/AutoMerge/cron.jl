@@ -112,7 +112,7 @@ end
 function _get_all_pr_statuses(repo::GitHub.Repo,
                               pr::GitHub.PullRequest;
                               auth::GitHub.Authorization)
-    combined_status = GitHub.status(repo, pr.head.sha)
+    combined_status = GitHub.status(repo, pr.head.sha; auth=auth)
     all_statuses = combined_status.statuses
     return all_statuses
 end
