@@ -1,7 +1,7 @@
 name = "RegistryCI"
 uuid = "0c95cc5f-2f7e-43fe-82dd-79dbcba86b32"
 authors = ["Dilum Aluthge <dilum@aluthge.com>", "Fredrik Ekre <ekrefredrik@gmail.com>"]
-version = "0.11.5"
+version = "0.11.6"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
@@ -19,6 +19,7 @@ GitCommand = "1"
 GitHub = "5.1.1"
 HTTP = "0.8"
 JSON = "0.19, 0.20, 0.21"
+RegistryTools = "d1eb7eb1-105f-429d-abf5-b0f65cb9e2c4"
 TimeZones = "0.10"
 julia = "1.3"
 
