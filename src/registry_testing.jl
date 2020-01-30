@@ -1,13 +1,10 @@
 import Pkg
 import GitCommand
+import RegistryTools
 import Test
 
 function gather_stdlib_uuids()
-    if VERSION < v"1.1"
-        return Set{Base.UUID}(x for x in keys(Pkg.Types.gather_stdlib_uuids()))
-    else
-        return Set{Base.UUID}(x for x in keys(Pkg.Types.stdlib()))
-    end
+    return Set{Base.UUID}(x for x in keys(RegistryTools.stdlibs()))
 end
 
 # For when you have a registry that has packages with dependencies obtained from
