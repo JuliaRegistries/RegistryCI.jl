@@ -90,7 +90,7 @@ function meets_patch_release_does_not_narrow_julia_compat(pkg::String,
     if meets_this_guideline
         return true, ""
     else
-        if (old_version >= v"1") | (new_version >= v"1")
+        if (old_version >= v"1") || (new_version >= v"1")
             msg = string("A patch release is not allowed to narrow the ",
                          "supported ranges of Julia versions. ",
                          "The ranges have changed from ",
