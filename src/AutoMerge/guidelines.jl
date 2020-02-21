@@ -90,14 +90,19 @@ function meets_patch_release_does_not_narrow_julia_compat(pkg::String,
     if meets_this_guideline
         return true, ""
     else
-        msg = string("A patch release is not allowed to narrow the ",
-                     "supported ranges of Julia versions. ",
-                     "The ranges have changed from ",
-                     "$(julia_compats_for_old_version) ",
-                     "(in $(old_version)) ",
-                     "to $(julia_compats_for_new_version) ",
-                     "(in $(new_version)).")
-        return false, msg
+        if (old_version >= v"1") || (new_version >= v"1")
+            msg = string("A patch release is not allowed to narrow the ",
+                         "supported ranges of Julia versions. ",
+                         "The ranges have changed from ",
+                         "$(julia_compats_for_old_version) ",
+                         "(in $(old_version)) ",
+                         "to $(julia_compats_for_new_version) ",
+                         "(in $(new_version)).")
+            return false, msg
+        else
+            @info("Narrows Julia compat, but it's OK since package is pre-1.0")
+            return true, ""
+        end
     end
 end
 
