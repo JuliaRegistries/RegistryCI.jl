@@ -124,6 +124,12 @@ function meets_jll_name_length(pkg)
     end
 end
 
+function meets_jll_normal_capitalization(pkg)
+    # we allow JLL packages to start with a lowercase letter
+    _pkg = Base.Unicode.uppercasefirst(pkg)
+    return meets_normal_capitalization(_pkg)
+end
+
 function meets_normal_capitalization(pkg)
     meets_this_guideline = occursin(r"^[A-Z]\w*[a-z][0-9]?$", pkg)
     if meets_this_guideline
