@@ -68,10 +68,11 @@ function pull_request_build(::NewPackage,
                                                    auth = auth)
             g2 = true
             m2 = ""
-            g3, m3 = meets_normal_capitalization(pkg)
             if this_is_jll_package
+                g3, m3 = meets_jll_normal_capitalization(pkg)
                 g4, m4 = meets_jll_name_length(pkg)
             else
+                g3, m3 = meets_normal_capitalization(pkg)
                 g4, m4 = meets_name_length(pkg)
             end
             if this_is_jll_package
