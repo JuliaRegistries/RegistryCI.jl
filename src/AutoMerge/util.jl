@@ -62,7 +62,7 @@ function comment_text_pass(::NewPackage,
                            version::VersionNumber)
     result = string("Your `new package` pull request met all of the ",
                     "guidelines for auto-merging and is scheduled to ",
-                    "be merged when the mandatory waiting period has elapsed.",
+                    "be merged when the mandatory waiting period (3 days) has elapsed.",
                     "\n\n",
                     "Since you are registering a new package, ",
                     "please make sure that you have read the ",
