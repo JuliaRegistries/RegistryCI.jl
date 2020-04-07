@@ -25,7 +25,7 @@ function _clone_repo_into_dir(url::AbstractString, repo_dir)
     LibGit2.clone(url, repo_dir)
     return repo_dir
 end
-      
+
 function _comment_disclaimer()
     result = string("\n\n",
                     "Note that the guidelines are only required for the pull request ",
@@ -126,10 +126,8 @@ function julia_stdlib_list()
 end
 
 function now_utc()
-    # my_local_timezone = TimeZones.localzone()
-    utc_timezone = TimeZones.TimeZone("UTC")
-    _now_utc = Dates.now(utc_timezone)
-    return _now_utc
+    utc = TimeZones.tz"UTC"
+    return Dates.now(utc)
 end
 
 function _onepointzero_suggestion(suggest_onepointzero::Bool,
@@ -154,8 +152,6 @@ function _onepointzero_suggestion(suggest_onepointzero::Bool,
 end
 
 function time_is_already_in_utc(dt::Dates.DateTime)
-    # my_local_timezone = TimeZones.localzone()
-    utc_timezone = TimeZones.TimeZone("UTC")
-    result = TimeZones.ZonedDateTime(dt, utc_timezone; from_utc = true)
-    return result
+    utc = TimeZones.tz"UTC"
+    return TimeZones.ZonedDateTime(dt, utc; from_utc = true)
 end
