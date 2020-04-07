@@ -49,39 +49,34 @@ function get_random_number_from_system()
 end
 
 function my_two_datetimes_now()
-    _now_zdt = now_localzone()
-    _now_utc = astimezone(_now_zdt, tz"UTC")
+    _now_utc = now(tz"UTC")
     _now_et = astimezone(_now_zdt, tz"America/New_York")
     return _now_utc, _now_et
 end
 
 function my_two_times_now()
     _now_utc, _now_et = my_two_datetimes_now()
-    utc_string = @sprintf "%02d:%02d UTC" Hour(_now_utc).value Minute(_now_utc).value
-    et_string = @sprintf "%02d:%02d %s" Hour(_now_et).value Minute(_now_et).value _now_et.zone.name
+    utc_string = @sprintf "%02d:%02d UTC" hour(_now_utc) minute(_now_utc)
+    et_string = @sprintf "%02d:%02d %s" hour(_now_et) minute(_now_et) _now_et.zone.name
     result = "$(et_string) ($(utc_string))"
 end
 
-@inline now_localzone() = now(localzone())
-
 function utc_to_string(zdt::ZonedDateTime)
     zdt_as_utc = astimezone(zdt, tz"UTC")
-    year = Year(zdt_as_utc.utc_datetime).value
-    month = Month(zdt_as_utc.utc_datetime).value
-    day = Day(zdt_as_utc.utc_datetime).value
-    hour = Hour(zdt_as_utc.utc_datetime).value
-    minute = Minute(zdt_as_utc.utc_datetime).value
-    second = Second(zdt_as_utc.utc_datetime).value
-    millisecond = Millisecond(zdt_as_utc.utc_datetime).value
-    result = @sprintf "%04d-%02d-%02d-%02d-%02d-%02d-%03d" year month day hour minute second millisecond
+    y = year(zdt_as_utc)
+    m = month(zdt_as_utc)
+    d = day(zdt_as_utc)
+    h = hour(zdt_as_utc)
+    mi = minute(zdt_as_utc)
+    s = second(zdt_as_utc)
+    ms = millisecond(zdt_as_utc)
+    result = @sprintf "%04d-%02d-%02d-%02d-%02d-%02d-%03d" y m d h mi s ms
     return result
 end
 
 function string_to_utc(s::AbstractString)
-    df = DateFormat("yyyy-mm-dd-HH-MM-SS-sss")
-    dt = DateTime(s, df)
-    zdt = ZonedDateTime(dt, tz"UTC")
-    return zdt
+    dt = parse(DateTime, s, dateformat"yyyy-mm-dd-HH-MM-SS-sss")
+    return ZonedDateTime(dt, tz"UTC")
 end
 
 function list_all_origin_branches(git_repo_dir; GIT)
@@ -199,8 +194,8 @@ end
 
 function _generate_branch_name(name::AbstractString)
     sleep(0.1)
-    _now = now_localzone()
-    _now_utc_string = utc_to_string(_now)
+    _now_utc = now(tz"UTC")
+    _now_utc_string = utc_to_string(_now_utc)
     b = "integration/$(_now_utc_string)/$(rand(UInt32))/$(name)"
     sleep(0.1)
     return b
