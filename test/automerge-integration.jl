@@ -27,15 +27,15 @@ close_all_pull_requests(repo; auth = auth, state = "open")
 delete_stale_branches(repo_url_with_auth; GIT = GIT)
 
 @testset "Integration tests" begin
-    for (master_dir, feature_dir, title, pass) in [
-            ("master_1", "feature_1", "New package: Requires v1.0.0", true),            # OK: new package
-            ("master_2", "feature_2", "New version: Requires v2.0.0", true),            # OK: new version
-            ("master_1", "feature_3", "New package: Req v1.0.0", false),                # FAIL: name too short
-            ("master_2", "feature_4", "New version: Requires v2.0.1", false),           # FAIL: skips v2.0.0
-            ("master_3", "feature_5", "New version: Requires v2.0.0", false),           # FAIL: modifies extra file
-            ("master_1", "feature_6", "New package: HelloWorldC_jll v1.0.6+0", true),   # OK: new JLL package
-            ("master_4", "feature_7", "New version: HelloWorldC_jll v1.0.8+0", true),   # OK: new JLL version
-            ("master_1", "feature_8", "New package: HelloWorldC_jll v1.0.6+0", false),  # FAIL: unallowed dependency
+    for (test_number, master_dir, feature_dir, title, pass) in [
+            (1, "master_1", "feature_1", "New package: Requires v1.0.0", true),            # OK: new package
+            (2, "master_2", "feature_2", "New version: Requires v2.0.0", true),            # OK: new version
+            (3, "master_1", "feature_3", "New package: Req v1.0.0", false),                # FAIL: name too short
+            (4, "master_2", "feature_4", "New version: Requires v2.0.1", false),           # FAIL: skips v2.0.0
+            (5, "master_3", "feature_5", "New version: Requires v2.0.0", false),           # FAIL: modifies extra file
+            (6, "master_1", "feature_6", "New package: HelloWorldC_jll v1.0.6+0", true),   # OK: new JLL package
+            (7, "master_4", "feature_7", "New version: HelloWorldC_jll v1.0.8+0", true),   # OK: new JLL version
+            (8, "master_1", "feature_8", "New package: HelloWorldC_jll v1.0.6+0", false),  # FAIL: unallowed dependency
         ]
         with_master_branch(templates(master_dir), "master"; GIT = GIT, repo_url = repo_url_with_auth) do master
             with_feature_branch(templates(feature_dir), master; GIT = GIT, repo_url = repo_url_with_auth) do feature
@@ -64,15 +64,16 @@ delete_stale_branches(repo_url_with_auth; GIT = GIT)
                                       new_jll_version_waiting_period = Minute(typemax(Int32)),
                                       registry = AUTOMERGE_INTEGRATION_TEST_REPO,
                                       authorized_authors = String[whoami],
+                                      authorized_authors_special_jll_exceptions = String[whoami],
                                       master_branch = master,
                                       master_branch_is_default_branch = false)
-                        @info "Running integration test for " master_dir feature_dir title pass
+                        @info "Running integration test for " test_number master_dir feature_dir title pass
                         if pass
                             run_thunk()
                         else
                             @test_throws(RegistryCI.AutoMerge.AutoMergeGuidelinesNotMet, run_thunk())
                         end
-        
+
                     end
                     withenv("AUTOMERGE_GITHUB_TOKEN" => TEST_USER_GITHUB_TOKEN,
                             "TRAVIS_BRANCH" => master,
@@ -90,6 +91,7 @@ delete_stale_branches(repo_url_with_auth; GIT = GIT)
                                       new_jll_version_waiting_period = Minute(typemax(Int32)),
                                       registry = AUTOMERGE_INTEGRATION_TEST_REPO,
                                       authorized_authors = String[whoami],
+                                      authorized_authors_special_jll_exceptions = String[whoami],
                                       master_branch = master,
                                       master_branch_is_default_branch = false)
                         AutoMerge.run(;
@@ -101,6 +103,7 @@ delete_stale_branches(repo_url_with_auth; GIT = GIT)
                                       new_jll_version_waiting_period = Minute(0),
                                       registry = AUTOMERGE_INTEGRATION_TEST_REPO,
                                       authorized_authors = String[whoami],
+                                      authorized_authors_special_jll_exceptions = String[whoami],
                                       master_branch = master,
                                       master_branch_is_default_branch = false)
                     end

@@ -36,6 +36,14 @@ end
 # Testing of registries #
 #########################
 
+function parse_compat_entry(s::AbstractString)::Pkg.Types.VersionSpec
+    return Pkg.Types.VersionSpec([Pkg.Types.VersionRange(s)])
+end
+
+function parse_compat_entry(r::AbstractArray{T})::Pkg.Types.VersionSpec where T <: AbstractString
+    return Pkg.Types.VersionSpec(Pkg.Types.VersionRange.(r))
+end
+
 """
     test(path)
 
@@ -82,8 +90,10 @@ function test(path = pwd();
                 depuuids = Set{Base.UUID}(Base.UUID(x) for (_, d) in deps for (_, x) in d)
                 Test.@test depuuids ⊆ alluuids
                 # Test that the way Pkg loads this data works
-                Test.@test Pkg.Operations.load_package_data_raw(Base.UUID, depsfile) isa
-                    Dict{Pkg.Types.VersionRange,Dict{String,Base.UUID}}
+                T1 = Dict{VersionNumber,Dict{String,Any}}
+                T2 = Dict{VersionNumber,Dict{String,Base.UUID}}
+                T = Union{T1, T2}
+                Test.@test Pkg.Operations.load_package_data(Base.UUID, depsfile, VersionNumber.(collect(keys(vers)))) isa T
             end
 
             # Compat.toml testing
@@ -98,8 +108,10 @@ function test(path = pwd();
                     @assert compatnames ⊆ depnames
                 end
                 # Test that the way Pkg loads this data works
-                Test.@test Pkg.Operations.load_package_data_raw(Pkg.Types.VersionSpec, compatfile) isa
-                    Dict{Pkg.Types.VersionRange,Dict{String,Pkg.Types.VersionSpec}}
+                T1 = Dict{VersionNumber,Dict{String,Any}}
+                T2 = Dict{VersionNumber,Dict{String,Base.UUID}}
+                T = Union{T1, T2}
+                Test.@test Pkg.Operations.load_package_data(parse_compat_entry, compatfile, VersionNumber.(collect(keys(vers)))) isa T
             end
         end
     end end

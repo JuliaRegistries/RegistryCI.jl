@@ -4,24 +4,23 @@ function pull_request_build(::NewPackage,
                             registry::GitHub.Repo;
                             auth::GitHub.Authorization,
                             authorized_authors::Vector{String},
+                            authorized_authors_special_jll_exceptions::Vector{String},
                             registry_head::String,
                             registry_master::String,
                             suggest_onepointzero::Bool,
                             whoami::String,
                             registry_deps::Vector{<:AbstractString} = String[])::Nothing
     # first check if the PR is open, and the author is authorized - if not, then quit
-    # then, delete ALL reviews by me
-    # then check rules 1-8. if fail, post comment.
-    # if everything passed, add an approving review by me
-    #
+    # if the PR is open and the author is authorized, then check rules 0 through 10.
     # Rules:
+    # 0. A JLL-only author (e.g. `jlbuild`) is not allowed to register non-JLL packages.
     # 1. Only changes a subset of the following files:
     #     - `Registry.toml`,
     #     - `E/Example/Compat.toml`
     #     - `E/Example/Deps.toml`
     #     - `E/Example/Package.toml`
     #     - `E/Example/Versions.toml`
-    # 2. TODO: implement this check.
+    # 2. TODO: implement this check. When implemented, this check will make sure that the changes to `Registry.toml` only modify the specified package.
     # 3. Normal capitalization
     #     - name should match r"^[A-Z]\w*[a-z][0-9]?$"
     #     - i.e. starts with a capital letter, ASCII alphanumerics only, ends in lowercase
@@ -52,7 +51,7 @@ function pull_request_build(::NewPackage,
     @info("This is a new package pull request", pkg, version, this_is_jll_package)
     pr_author_login = author_login(pr)
     if is_open(pr)
-        if pr_author_login in authorized_authors
+        if pr_author_login in vcat(authorized_authors, authorized_authors_special_jll_exceptions)
             description = "New package. Pending."
             params = Dict("state" => "pending",
                           "context" => "automerge/decision",
@@ -61,6 +60,30 @@ function pull_request_build(::NewPackage,
                                                 current_pr_head_commit_sha;
                                                 auth = auth,
                                                 params = params))
+
+            if this_is_jll_package
+                if pr_author_login in authorized_authors_special_jll_exceptions
+                    this_pr_can_use_special_jll_exceptions = true
+                else
+                    this_pr_can_use_special_jll_exceptions = false
+                end
+            else
+                this_pr_can_use_special_jll_exceptions = false
+            end
+
+            if this_is_jll_package
+                g0 = true
+                m0 = ""
+            else
+                if pr_author_login in authorized_authors
+                    g0 = true
+                    m0 = ""
+                else
+                    g0 = false
+                    m0 = "This package is not a JLL package. The author of this pull request is not authorized to register non-JLL packages."
+                end
+            end
+
             g1, m1 = pr_only_changes_allowed_files(NewPackage(),
                                                    registry,
                                                    pr,
@@ -68,14 +91,16 @@ function pull_request_build(::NewPackage,
                                                    auth = auth)
             g2 = true
             m2 = ""
-            if this_is_jll_package
-                g3, m3 = meets_jll_normal_capitalization(pkg)
-                g4, m4 = meets_jll_name_length(pkg)
+            if this_pr_can_use_special_jll_exceptions
+                g3 = true
+                g4 = true
+                m3 = ""
+                m4 = ""
             else
                 g3, m3 = meets_normal_capitalization(pkg)
                 g4, m4 = meets_name_length(pkg)
             end
-            if this_is_jll_package
+            if this_pr_can_use_special_jll_exceptions
                 g5 = true
                 m5 = ""
             else
@@ -96,6 +121,10 @@ function pull_request_build(::NewPackage,
                 g8 = true
                 m8 = ""
             end
+
+            @info("JLL-only authors cannot register non-JLL packages.",
+                  meets_this_guideline = g0,
+                  message = m0)
             @info("Only modifies the files that it's allowed to modify",
                   meets_this_guideline = g1,
                   message = m1)
@@ -120,8 +149,16 @@ function pull_request_build(::NewPackage,
             @info("If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
                   meets_this_guideline = g8,
                   message = m8)
-            g1through8 = Bool[g1, g2, g3, g4, g5, g6, g7, g8]
-            if !all(g1through8)
+            g0through8 = Bool[g0,
+                              g1,
+                              g2,
+                              g3,
+                              g4,
+                              g5,
+                              g6,
+                              g7,
+                              g8]
+            if !all(g0through8)
                 description = "New package. Failed."
                 params = Dict("state" => "failure",
                               "context" => "automerge/decision",
@@ -145,9 +182,29 @@ function pull_request_build(::NewPackage,
             @info("Version can be `import`ed",
                   meets_this_guideline = g9,
                   message = m9)
-            g1through10 = Bool[g1, g2, g3, g4, g5, g6, g7, g8, g9, g10]
-            allmessages1through10 = String[m1, m2, m3, m4, m5, m6, m7, m8, m9, m10]
-            if all(g1through10) # success
+            g0through10 = Bool[g0,
+                               g1,
+                               g2,
+                               g3,
+                               g4,
+                               g5,
+                               g6,
+                               g7,
+                               g8,
+                               g9,
+                               g10]
+            allmessages0through10 = String[m0,
+                                           m1,
+                                           m2,
+                                           m3,
+                                           m4,
+                                           m5,
+                                           m6,
+                                           m7,
+                                           m8,
+                                           m9,
+                                           m10]
+            if all(g0through10) # success
                 description = "New package. Approved. name=\"$(pkg)\". sha=\"$(current_pr_head_commit_sha)\""
                 params = Dict("state" => "success",
                               "context" => "automerge/decision",
@@ -174,9 +231,9 @@ function pull_request_build(::NewPackage,
                                                     current_pr_head_commit_sha;
                                                     auth = auth,
                                                     params = params))
-                failingmessages1through10 = allmessages1through10[.!g1through10]
+                failingmessages0through10 = allmessages0through10[.!g0through10]
                 this_pr_comment_fail = comment_text_fail(NewPackage(),
-                                                         failingmessages1through10,
+                                                         failingmessages0through10,
                                                          suggest_onepointzero,
                                                          version)
                 my_retry(() -> update_automerge_comment!(registry,
@@ -187,7 +244,7 @@ function pull_request_build(::NewPackage,
                 throw(AutoMergeGuidelinesNotMet("The automerge guidelines were not met."))
             end
         else
-            throw(AutoMergeAuthorNotAuthorized("Author $(pr_author_login) is not authorized to automerge. Exiting...")) 
+            throw(AutoMergeAuthorNotAuthorized("Author $(pr_author_login) is not authorized to automerge. Exiting..."))
         end
     else
         throw(AutoMergePullRequestNotOpen("The pull request is not open. Exiting..."))

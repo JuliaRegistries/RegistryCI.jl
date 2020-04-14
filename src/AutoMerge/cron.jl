@@ -89,8 +89,23 @@ function pr_is_old_enough(pr_type::Symbol,
                           new_package_waiting_period::Dates.Period,
                           new_jll_package_waiting_period::Dates.Period,
                           new_version_waiting_period::Dates.Period,
-                          new_jll_version_waiting_period::Dates.Period)
-    if is_jll_name(pkg)
+                          new_jll_version_waiting_period::Dates.Period,
+                          pr_author,
+                          authorized_authors,
+                          authorized_authors_special_jll_exceptions)
+    this_is_jll_package = is_jll_name(pkg)
+
+    if this_is_jll_package
+        if pr_author in authorized_authors_special_jll_exceptions
+            this_pr_can_use_special_jll_exceptions = true
+        else
+            this_pr_can_use_special_jll_exceptions = false
+        end
+    else
+        this_pr_can_use_special_jll_exceptions = false
+    end
+
+    if this_pr_can_use_special_jll_exceptions
         if pr_type == :NewPackage
             return pr_age > new_jll_package_waiting_period
         elseif pr_type == :NewVersion
@@ -172,6 +187,7 @@ end
 function cron_or_api_build(registry::GitHub.Repo;
                            auth::GitHub.Authorization,
                            authorized_authors::Vector{String},
+                           authorized_authors_special_jll_exceptions::Vector{String},
                            merge_new_packages::Bool,
                            merge_new_versions::Bool,
                            new_package_waiting_period,
@@ -196,6 +212,7 @@ function cron_or_api_build(registry::GitHub.Repo;
                                                  registry::GitHub.Repo;
                                                  auth = auth,
                                                  authorized_authors = authorized_authors,
+                                                 authorized_authors_special_jll_exceptions = authorized_authors_special_jll_exceptions,
                                                  merge_new_packages = merge_new_packages,
                                                  merge_new_versions = merge_new_versions,
                                                  new_package_waiting_period = new_package_waiting_period,
@@ -224,6 +241,7 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                            registry::GitHub.Repo;
                            auth::GitHub.Authorization,
                            authorized_authors::Vector{String},
+                           authorized_authors_special_jll_exceptions::Vector{String},
                            merge_new_packages::Bool,
                            merge_new_versions::Bool,
                            new_package_waiting_period,
@@ -245,7 +263,7 @@ function cron_or_api_build(pr::GitHub.PullRequest,
     pr_number = number(pr)
     @info("Now examining pull request $(pr_number)")
     pr_author = author_login(pr)
-    if pr_author in authorized_authors
+    if pr_author in vcat(authorized_authors, authorized_authors_special_jll_exceptions)
         if is_new_package(pr) || is_new_version(pr)
             if is_new_package(pr) # it is a new package
                 pr_type = :NewPackage
@@ -261,7 +279,10 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                                                      new_package_waiting_period = new_package_waiting_period,
                                                      new_jll_package_waiting_period = new_jll_package_waiting_period,
                                                      new_version_waiting_period = new_version_waiting_period,
-                                                     new_jll_version_waiting_period = new_jll_version_waiting_period)
+                                                     new_jll_version_waiting_period = new_jll_version_waiting_period,
+                                                     pr_author = pr_author,
+                                                     authorized_authors = authorized_authors,
+                                                     authorized_authors_special_jll_exceptions = authorized_authors_special_jll_exceptions)
             if this_pr_is_old_enough
                 i_passed_this_pr,
                     passed_pkg_name,
@@ -368,7 +389,10 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                       new_package_waiting_period,
                       new_jll_package_waiting_period,
                       new_version_waiting_period,
-                      new_jll_version_waiting_period)
+                      new_jll_version_waiting_period,
+                      pr_author,
+                      authorized_authors,
+                      authorized_authors_special_jll_exceptions)
             end
         else
             @info(string("Pull request: $(pr_number). ",
@@ -381,7 +405,8 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                      "Decision: do not merge. ",
                      "Reason: pull request author is not authorized to automerge."),
               pr_author,
-              authorized_authors)
+              authorized_authors,
+              authorized_authors_special_jll_exceptions)
     end
     return nothing
 end
