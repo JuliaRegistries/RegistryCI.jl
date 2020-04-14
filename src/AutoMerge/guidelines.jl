@@ -115,21 +115,6 @@ function meets_name_length(pkg)
     end
 end
 
-function meets_jll_name_length(pkg)
-    meets_this_guideline = length(pkg) >= 9
-    if meets_this_guideline
-        return true, ""
-    else
-        return false, "Name (excluding the `_jll` suffix) is not at least five characters long"
-    end
-end
-
-function meets_jll_normal_capitalization(pkg)
-    # we allow JLL packages to start with a lowercase letter
-    _pkg = Base.Unicode.uppercasefirst(pkg)
-    return meets_normal_capitalization(_pkg)
-end
-
 function meets_normal_capitalization(pkg)
     meets_this_guideline = occursin(r"^[A-Z]\w*[a-z][0-9]?$", pkg)
     if meets_this_guideline
@@ -202,12 +187,7 @@ end
 
 function _generate_pkg_add_command(pkg::String,
                                    version::VersionNumber)::String
-    if is_jll_name(pkg)
-        return "Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\"));"
-    else
-        return "Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\", version=\"$(string(version))\"));"
-    end
-    
+    return "Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\", version=v\"$(string(version))\"));"
 end
 
 function meets_version_can_be_pkg_added(working_directory::String,

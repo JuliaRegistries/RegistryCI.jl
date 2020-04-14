@@ -4,17 +4,16 @@ function pull_request_build(::NewVersion,
                             registry::GitHub.Repo;
                             auth::GitHub.Authorization,
                             authorized_authors::Vector{String},
+                            authorized_authors_special_jll_exceptions::Vector{String},
                             registry_head::String,
                             registry_master::String,
                             suggest_onepointzero::Bool,
                             whoami::String,
                             registry_deps::Vector{<:AbstractString} = String[])::Nothing
     # first check if the PR is open, and the author is authorized - if not, then quit
-    # then, delete ALL reviews by me
-    # then check rules 1-6. if fail, post comment.
-    # if everything passed, add an approving review by me
-    #
+    # if the PR is open and the author is authorized, then check rules 0 through 7.
     # Rules:
+    # 0. A JLL-only author (e.g. `jlbuild`) is not allowed to register non-JLL packages.
     # 1. Only changes a subset of the following files:
     #     - `E/Example/Compat.toml`
     #     - `E/Example/Deps.toml`
@@ -44,7 +43,7 @@ function pull_request_build(::NewVersion,
     @info("This is a new package pull request", pkg, version, this_is_jll_package)
     pr_author_login = author_login(pr)
     if is_open(pr)
-        if pr_author_login in authorized_authors
+        if pr_author_login in vcat(authorized_authors, authorized_authors_special_jll_exceptions)
             description = "New version. Pending."
             params = Dict("state" => "pending",
                           "context" => "automerge/decision",
@@ -53,12 +52,36 @@ function pull_request_build(::NewVersion,
                                                 current_pr_head_commit_sha;
                                                 auth = auth,
                                                 params=params))
+
+            if this_is_jll_package
+                if pr_author_login in authorized_authors_special_jll_exceptions
+                    this_pr_can_use_special_jll_exceptions = true
+                else
+                    this_pr_can_use_special_jll_exceptions = false
+                end
+            else
+                this_pr_can_use_special_jll_exceptions = false
+            end
+
+            if this_is_jll_package
+                g0 = true
+                m0 = ""
+            else
+                if pr_author_login in authorized_authors
+                    g0 = true
+                    m0 = ""
+                else
+                    g0 = false
+                    m0 = "This package is not a JLL package. The author of this pull request is not authorized to register non-JLL packages."
+                end
+            end
+
             g1, m1 = pr_only_changes_allowed_files(NewVersion(),
                                                    registry,
                                                    pr,
                                                    pkg;
                                                    auth = auth)
-            if this_is_jll_package
+            if this_pr_can_use_special_jll_exceptions
                 g2 = true
                 m2 = ""
                 release_type = :jll_release
@@ -68,7 +91,6 @@ function pull_request_build(::NewVersion,
                                                                        registry_head = registry_head,
                                                                        registry_master = registry_master)
             end
-
             g3, m3 = meets_compat_for_all_deps(registry_head,
                                                pkg,
                                                version)
@@ -93,6 +115,10 @@ function pull_request_build(::NewVersion,
                 g5 = true
                 m5 = ""
             end
+
+            @info("JLL-only authors cannot register non-JLL packages.",
+                  meets_this_guideline = g0,
+                  message = m0)
             @info("Only modifies the files that it's allowed to modify",
                   meets_this_guideline = g1,
                   message = m1)
@@ -108,8 +134,13 @@ function pull_request_build(::NewVersion,
             @info("If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
                   meets_this_guideline = g5,
                   message = m5)
-            g1through5 = Bool[g1, g2, g3, g4, g5]
-            if !all(g1through5)
+            g0through5 = Bool[g0,
+                              g1,
+                              g2,
+                              g3,
+                              g4,
+                              g5]
+            if !all(g0through5)
                 description = "New version. Failed."
                 params = Dict("state" => "failure",
                               "context" => "automerge/decision",
@@ -133,9 +164,23 @@ function pull_request_build(::NewVersion,
             @info("Version can be `import`ed",
                   meets_this_guideline = g7,
                   message = m7)
-            g1through7 = Bool[g1, g2, g3, g4, g5, g6, g7]
-            allmessages1through7 = String[m1, m2, m3, m4, m5, m6, m7]
-            if all(g1through7) # success
+            g0through7 = Bool[g0,
+                              g1,
+                              g2,
+                              g3,
+                              g4,
+                              g5,
+                              g6,
+                              g7]
+            allmessages0through7 = String[m0,
+                                          m1,
+                                          m2,
+                                          m3,
+                                          m4,
+                                          m5,
+                                          m6,
+                                          m7]
+            if all(g0through7) # success
                 description = "New version. Approved. name=\"$(pkg)\". sha=\"$(current_pr_head_commit_sha)\""
                 params = Dict("state" => "success",
                               "context" => "automerge/decision",
@@ -162,9 +207,9 @@ function pull_request_build(::NewVersion,
                                                     current_pr_head_commit_sha;
                                                     auth=auth,
                                                     params=params))
-                failingmessages1through7 = allmessages1through7[.!g1through7]
+                failingmessages0through7 = allmessages0through7[.!g0through7]
                 this_pr_comment_fail = comment_text_fail(NewVersion(),
-                                                         failingmessages1through7,
+                                                         failingmessages0through7,
                                                          suggest_onepointzero,
                                                          version)
                 my_retry(() -> update_automerge_comment!(registry,
