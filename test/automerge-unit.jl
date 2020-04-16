@@ -33,7 +33,13 @@ const AutoMerge = RegistryCI.AutoMerge
         @test !AutoMerge.meets_standard_initial_version_number(v"1.0.1")[1]
         @test !AutoMerge.meets_standard_initial_version_number(v"1.1.0")[1]
         @test !AutoMerge.meets_standard_initial_version_number(v"1.1.1")[1]
-        @test !AutoMerge.meets_standard_initial_version_number(v"2.0.0")[1]
+        @test AutoMerge.meets_standard_initial_version_number(v"2.0.0")[1]
+        @test !AutoMerge.meets_standard_initial_version_number(v"2.0.1")[1]
+        @test !AutoMerge.meets_standard_initial_version_number(v"2.1.0")[1]
+        @test !AutoMerge.meets_standard_initial_version_number(v"2.1.1")[1]
+        @test AutoMerge.meets_standard_initial_version_number(v"3.0.0")[1]
+        @test !AutoMerge.meets_standard_initial_version_number(v"3.0.1")[1]
+        @test !AutoMerge.meets_standard_initial_version_number(v"3.1.0")[1]
     end
     @testset "Repo URL ends with /name.jl.git where name is the package name" begin
         @test AutoMerge.url_has_correct_ending("https://github.com/FluxML/Flux.jl.git", "Flux")[1]

@@ -168,21 +168,47 @@ function meets_sequential_version_number(existing::Vector{VersionNumber}, ver::V
     return _valid_change(prv, ver)
 end
 
+function _has_no_prerelease_data(version)
+    result = version.prerelease == ()
+    return result
+end
+function _has_no_build_data(version)
+    result = version.build == ()
+    return result
+end
+_has_prerelease_data(version) = !( _has_no_prerelease_data(version) )
+_has_build_data(version) = !( _has_no_build_data(version) )
+_has_prerelease_andor_build_data(version) = _has_prerelease_data(version) || _has_build_data(version)
+
 function meets_sequential_version_number(pkg::String,
                                          new_version::VersionNumber;
                                          registry_head::String,
                                          registry_master::String)
+    if _has_prerelease_andor_build_data(new_version)
+        return false, "Version number is not allowed to contain prerelease or build data"
+    end
     _all_versions = all_versions(pkg, registry_master)
     return meets_sequential_version_number(_all_versions, new_version)
 end
 
 function meets_standard_initial_version_number(version)
-    meets_this_guideline = version == v"0.0.1" || version == v"0.1.0" || version == v"1.0.0"
+    if _has_prerelease_andor_build_data(version)
+        return false, "Version number is not allowed to contain prerelease or build data"
+    end
+    meets_this_guideline = version == v"0.0.1" || version == v"0.1.0" || version == v"1.0.0" || _is_x_0_0(version)
     if meets_this_guideline
         return true, ""
     else
-        return false, "Version number is not 0.0.1, 0.1.0, or 1.0.0"
+        return false, "Version number is not 0.0.1, 0.1.0, 1.0.0, or X.0.0"
     end
+end
+
+function _is_x_0_0(version::VersionNumber)
+    if _has_prerelease_andor_build_data(version)
+        return false
+    end
+    result = (version.major >= 1) && (version.minor == 0) && (version.patch == 0)
+    return result
 end
 
 function _generate_pkg_add_command(pkg::String,
