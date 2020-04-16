@@ -184,7 +184,7 @@ function meets_sequential_version_number(pkg::String,
                                          new_version::VersionNumber;
                                          registry_head::String,
                                          registry_master::String)
-    if _has_prerelease_andor_build_data(version)
+    if _has_prerelease_andor_build_data(new_version)
         return false, "Version number is not allowed to contain prerelease or build data"
     end
     _all_versions = all_versions(pkg, registry_master)
