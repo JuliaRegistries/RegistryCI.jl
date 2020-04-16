@@ -169,11 +169,11 @@ function meets_sequential_version_number(existing::Vector{VersionNumber}, ver::V
 end
 
 function _has_no_prerelease_data(version)
-    result = ( new_version.prerelease == () ) && ( isempty(new_version.prerelease) )
+    result = version.prerelease == ()
     return result
 end
 function _has_no_build_data(version)
-    result = ( new_version.build == () ) && ( isempty(new_version.build) )
+    result = version.build == ()
     return result
 end
 _has_prerelease_data(version) = !( _has_no_prerelease_data(version) )
