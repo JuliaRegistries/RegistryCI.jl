@@ -1,7 +1,7 @@
 module AutoMerge
 
 import Dates
-import GitCommand
+# import GitCommand
 import GitHub
 import HTTP
 import LibGit2

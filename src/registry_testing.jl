@@ -1,5 +1,5 @@
 import Pkg
-import GitCommand
+# import GitCommand
 import RegistryTools
 import Test
 
