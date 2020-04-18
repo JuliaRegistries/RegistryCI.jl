@@ -1,5 +1,5 @@
 using Dates
-using GitCommand
+# using GitCommand
 using GitHub
 using JSON
 using Pkg

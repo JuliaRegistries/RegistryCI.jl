@@ -1,6 +1,6 @@
 module RegistryCI
 
-import GitCommand
+# import GitCommand
 
 include("AutoMerge/AutoMerge.jl")
 include("registry_testing.jl")

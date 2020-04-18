@@ -1,6 +1,6 @@
 module RememberToUpdateRegistryCI
 
-using GitCommand
+# using GitCommand
 using GitHub
 using Pkg
 
