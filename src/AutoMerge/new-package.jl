@@ -29,7 +29,7 @@ function pull_request_build(::NewPackage,
     #     - you can register names shorter than this, but doing so requires someone to approve
     # 5. Standard initial version number - one of 0.0.1, 0.1.0, 1.0.0
     #     - does not apply to JLL packages
-    # 6. Repo URL ends with /$name.jl.git where name is the package name
+    # 6. DISABLED. Repo URL ends with /$name.jl.git where name is the package name. Now that we have support for multiple packages in different subdirectories of a repo, we have disabled this check.
     # 7. Compat for all dependencies
     #     - there should be a [compat] entry for Julia
     #     - all [deps] should also have [compat] entries
@@ -106,8 +106,11 @@ function pull_request_build(::NewPackage,
             else
                 g5, m5 = meets_standard_initial_version_number(version)
             end
-            g6, m6 = meets_repo_url_requirement(pkg;
-                                                registry_head = registry_head)
+
+            # g6, m6 = meets_repo_url_requirement(pkg; registry_head = registry_head)
+            g6 = true
+            m6 = ""
+ 
             g7, m7 = meets_compat_for_all_deps(registry_head,
                                                pkg,
                                                version)
