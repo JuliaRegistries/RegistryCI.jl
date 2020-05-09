@@ -20,8 +20,8 @@ const AutoMerge = RegistryCI.AutoMerge
         @test AutoMerge.meets_normal_capitalization("ForwardDiff2")[1]
         @test !AutoMerge.meets_normal_capitalization("JSON2")[1]
         @test !AutoMerge.meets_normal_capitalization("JSON2")[1]
-        @test AutoMerge.meets_normal_capitalization("LightXML")[1]
-        @test AutoMerge.meets_normal_capitalization("LightXML")[1]
+        @test AutoMerge.meets_normal_capitalization("RegistryCI")[1]
+        @test AutoMerge.meets_normal_capitalization("RegistryCI")[1]
     end
     @testset "Not too short - at least five letters" begin
         @test AutoMerge.meets_name_length("Zygote")[1]
