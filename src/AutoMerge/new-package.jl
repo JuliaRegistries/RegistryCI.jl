@@ -22,8 +22,8 @@ function pull_request_build(::NewPackage,
     #     - `E/Example/Versions.toml`
     # 2. TODO: implement this check. When implemented, this check will make sure that the changes to `Registry.toml` only modify the specified package.
     # 3. Normal capitalization
-    #     - name should match r"^[A-Z]\w*[a-z][0-9]?$"
-    #     - i.e. starts with a capital letter, ASCII alphanumerics only, ends in lowercase
+    #     - name should match r"^[A-Z]\w*[a-z]\w*[0-9]?$"
+    #     - i.e. starts with a capital letter, ASCII alphanumerics only, contains at least 1 lowercase letter
     # 4. Not too short
     #     - at least five letters
     #     - you can register names shorter than this, but doing so requires someone to approve
@@ -110,7 +110,7 @@ function pull_request_build(::NewPackage,
             # g6, m6 = meets_repo_url_requirement(pkg; registry_head = registry_head)
             g6 = true
             m6 = ""
- 
+
             g7, m7 = meets_compat_for_all_deps(registry_head,
                                                pkg,
                                                version)

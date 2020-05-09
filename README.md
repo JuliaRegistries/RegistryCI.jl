@@ -19,7 +19,7 @@ Note that commenting on a pull request will automatically disable automerging on
 
 1. Normal capitalization
 
-    The package name should match `r"^[A-Z]\w*[a-z][0-9]?$"`, i.e. start with a capital letter, contain ASCII alphanumerics only, end in lowercase.
+    The package name should match `r"^[A-Z]\w*[a-z]\w*[0-9]?$"`, i.e. start with a capital letter, contain ASCII alphanumerics only, contain at 1 lowercase letter.
 
 2. Not too short
 
@@ -49,7 +49,7 @@ Note that commenting on a pull request will automatically disable automerging on
 4. Version can be loaded
 
     Once it's been installed (and built?), can we load the code?
-    
+
 ## RegistryCI.jl integration tests
 
 For instructions on how to run the RegistryCI.jl integration tests on your local machine, see [`INTEGRATION_TESTS.md`](INTEGRATION_TESTS.md).
