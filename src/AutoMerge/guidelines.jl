@@ -116,11 +116,11 @@ function meets_name_length(pkg)
 end
 
 function meets_normal_capitalization(pkg)
-    meets_this_guideline = occursin(r"^[A-Z]\w*[a-z][0-9]?$", pkg)
+    meets_this_guideline = occursin(r"^[A-Z]\w*[a-z]\w*[0-9]?$", pkg)
     if meets_this_guideline
         return true, ""
     else
-        return false, "Name does not meet all of the following: starts with an uppercase letter, ASCII alphanumerics only, ends in a lowercase letter. **Important note: It is okay to have a package name that ends in an uppercase letter. However, you will need to wait until a registry maintainer manually approves the name.**"
+        return false, "Name does not meet all of the following: starts with an uppercase letter, ASCII alphanumerics only, not all letters are uppercase.**"
     end
 end
 

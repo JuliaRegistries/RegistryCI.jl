@@ -12,10 +12,16 @@ const AutoMerge = RegistryCI.AutoMerge
 
 @testset "Guidelines for new packages" begin
     @testset "Normal capitalization" begin
+        @test AutoMerge.meets_normal_capitalization("Zygote")[1]  # Regular name
         @test AutoMerge.meets_normal_capitalization("Zygote")[1]
-        @test AutoMerge.meets_normal_capitalization("Zygote")[1]
+        @test !AutoMerge.meets_normal_capitalization("HTTP")[1]  # All uppercase
         @test !AutoMerge.meets_normal_capitalization("HTTP")[1]
-        @test !AutoMerge.meets_normal_capitalization("HTTP")[1]
+        @test AutoMerge.meets_normal_capitalization("ForwardDiff2")[1]  # Ends with a number
+        @test AutoMerge.meets_normal_capitalization("ForwardDiff2")[1]
+        @test !AutoMerge.meets_normal_capitalization("JSON2")[1]  # All uppercase and ends with number
+        @test !AutoMerge.meets_normal_capitalization("JSON2")[1]
+        @test AutoMerge.meets_normal_capitalization("RegistryCI")[1]  # Ends with uppercase
+        @test AutoMerge.meets_normal_capitalization("RegistryCI")[1]
     end
     @testset "Not too short - at least five letters" begin
         @test AutoMerge.meets_name_length("Zygote")[1]
