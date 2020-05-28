@@ -16,7 +16,8 @@ function allowed_changed_files(::NewVersion, pkg::String)
     return result
 end
 
-function pr_only_changes_allowed_files(t::Union{NewPackage, NewVersion},
+function pr_only_changes_allowed_files(api::GitHub.GitHubAPI,
+                                       t::Union{NewPackage, NewVersion},
                                        registry::GitHub.Repo,
                                        pr::GitHub.PullRequest,
                                        pkg::String;
@@ -29,7 +30,7 @@ function pr_only_changes_allowed_files(t::Union{NewPackage, NewVersion},
         m0 = "This PR is allowed to modify at most $(_num_allowed_changed_files) files, but it actually modified $(this_pr_num_changed_files) files."
         return g0, m0
     else
-        this_pr_changed_files = get_changed_filenames(registry, pr; auth = auth)
+        this_pr_changed_files = get_changed_filenames(api, registry, pr; auth = auth)
         if length(this_pr_changed_files) != this_pr_num_changed_files
             g0 = false
             m0 = "Something weird happened when I tried to get the list of changed files"

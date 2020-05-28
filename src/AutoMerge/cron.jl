@@ -1,6 +1,7 @@
 import GitHub
 
-function all_specified_statuses_passed(registry::GitHub.Repo,
+function all_specified_statuses_passed(api::GitHub.GitHubAPI,
+                                       registry::GitHub.Repo,
                                        pr::GitHub.PullRequest,
                                        sha::AbstractString,
                                        specified_status_context_list::AbstractVector{<:AbstractString};
@@ -9,7 +10,7 @@ function all_specified_statuses_passed(registry::GitHub.Repo,
     for context in specified_status_context_list
         specified_status_context_did_fail[context] = true
     end
-    combined_status = GitHub.status(registry, sha; auth = auth)
+    combined_status = GitHub.status(api, registry, sha; auth = auth)
     all_statuses = combined_status.statuses
     for status in all_statuses
         context = status.context
@@ -25,7 +26,8 @@ function all_specified_statuses_passed(registry::GitHub.Repo,
     return true
 end
 
-function all_specified_check_runs_passed(registry::GitHub.Repo,
+function all_specified_check_runs_passed(api::GitHub.GitHubAPI,
+                                         registry::GitHub.Repo,
                                          pr::GitHub.PullRequest,
                                          sha::AbstractString,
                                          specified_check_run_name_list::AbstractVector{<:AbstractString};
@@ -35,7 +37,7 @@ function all_specified_check_runs_passed(registry::GitHub.Repo,
         specified_check_run_name_did_fail[context] = true
     end
     endpoint = "/repos/$(registry.full_name)/commits/$(sha)/check-runs"
-    check_runs = GitHub.gh_get_json(GitHub.DEFAULT_API,
+    check_runs = GitHub.gh_get_json(api,
                                     endpoint;
                                     auth = auth,
                                     headers = Dict("Accept" =>
@@ -63,10 +65,11 @@ function pr_comment_is_blocking(c::GitHub.Comment)
     end
 end
 
-function pr_has_no_blocking_comments(registry::GitHub.Repo,
+function pr_has_no_blocking_comments(api::GitHub.GitHubAPI,
+                                     registry::GitHub.Repo,
                                      pr::GitHub.PullRequest;
                                      auth::GitHub.Authorization)
-    all_pr_comments = get_all_pull_request_comments(registry, pr; auth = auth)
+    all_pr_comments = get_all_pull_request_comments(api, registry, pr; auth = auth)
     if isempty(all_pr_comments)
         return true
     else
@@ -124,10 +127,11 @@ function pr_is_old_enough(pr_type::Symbol,
     end
 end
 
-function _get_all_pr_statuses(repo::GitHub.Repo,
+function _get_all_pr_statuses(api::GitHub.GitHubAPI,
+                              repo::GitHub.Repo,
                               pr::GitHub.PullRequest;
                               auth::GitHub.Authorization)
-    combined_status = GitHub.status(repo, pr.head.sha; auth=auth)
+    combined_status = GitHub.status(api, repo, pr.head.sha; auth=auth)
     all_statuses = combined_status.statuses
     return all_statuses
 end
@@ -170,11 +174,12 @@ function _postprocess_automerge_decision_status(status::GitHub.Status;
     return false, "", "", :failing
 end
 
-function pr_has_passing_automerge_decision_status(repo::GitHub.Repo,
+function pr_has_passing_automerge_decision_status(api::GitHub.GitHubAPI,
+                                                  repo::GitHub.Repo,
                                                   pr::GitHub.PullRequest;
                                                   auth::GitHub.Authorization,
                                                   whoami)
-    all_statuses = _get_all_pr_statuses(repo, pr; auth = auth)
+    all_statuses = _get_all_pr_statuses(api, repo, pr; auth = auth)
     for status in all_statuses
         if status.context == "automerge/decision"
             return _postprocess_automerge_decision_status(status;
@@ -184,7 +189,8 @@ function pr_has_passing_automerge_decision_status(repo::GitHub.Repo,
     return false, "", "", :failing
 end
 
-function cron_or_api_build(registry::GitHub.Repo;
+function cron_or_api_build(api::GitHub.GitHubAPI,
+                           registry::GitHub.Repo;
                            auth::GitHub.Authorization,
                            authorized_authors::Vector{String},
                            authorized_authors_special_jll_exceptions::Vector{String},
@@ -199,7 +205,7 @@ function cron_or_api_build(registry::GitHub.Repo;
                            all_check_runs::AbstractVector{<:AbstractString})
     # first, get a list of ALL open pull requests on this repository
     # then, loop through each of them.
-    all_currently_open_pull_requests = my_retry(() -> get_all_pull_requests(registry, "open"; auth = auth))
+    all_currently_open_pull_requests = my_retry(() -> get_all_pull_requests(api, registry, "open"; auth = auth))
     reverse!(all_currently_open_pull_requests)
     at_least_one_exception_was_thrown = false
     num_retries = 0
@@ -208,7 +214,8 @@ function cron_or_api_build(registry::GitHub.Repo;
     else
         for pr in all_currently_open_pull_requests
             try
-                my_retry(() -> cron_or_api_build(pr,
+                my_retry(() -> cron_or_api_build(api,
+                                                 pr,
                                                  registry::GitHub.Repo;
                                                  auth = auth,
                                                  authorized_authors = authorized_authors,
@@ -237,7 +244,8 @@ function cron_or_api_build(registry::GitHub.Repo;
     return nothing
 end
 
-function cron_or_api_build(pr::GitHub.PullRequest,
+function cron_or_api_build(api::GitHub.GitHubAPI,
+                           pr::GitHub.PullRequest,
                            registry::GitHub.Repo;
                            auth::GitHub.Authorization,
                            authorized_authors::Vector{String},
@@ -287,25 +295,27 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                 i_passed_this_pr,
                     passed_pkg_name,
                     passed_pr_head_sha,
-                    status_pr_type = pr_has_passing_automerge_decision_status(registry,
+                    status_pr_type = pr_has_passing_automerge_decision_status(api,
+                                                                              registry,
                                                                               pr;
                                                                               auth = auth,
                                                                               whoami = whoami)
                 if i_passed_this_pr
                     always_assert(pkg == passed_pkg_name)
                     always_assert(pr.head.sha == passed_pr_head_sha)
-                    _statuses_good = all_specified_statuses_passed(registry,
+                    _statuses_good = all_specified_statuses_passed(api,
+                                                                   registry,
                                                                    pr,
                                                                    passed_pr_head_sha,
                                                                    all_statuses;
                                                                    auth = auth)
-                    _checkruns_good = all_specified_check_runs_passed(registry,
+                    _checkruns_good = all_specified_check_runs_passed(api, registry,
                                                                       pr,
                                                                       passed_pr_head_sha,
                                                                       all_check_runs;
                                                                       auth = auth)
                     if _statuses_good && _checkruns_good
-                        if pr_has_no_blocking_comments(registry, pr; auth = auth)
+                        if pr_has_no_blocking_comments(api, registry, pr; auth = auth)
                             "Pull request: $(pr_number). "
                             "Type: $(pr_type). "
                             "Decision: merge. "
@@ -316,7 +326,7 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                                     @info(string("Pull request: $(pr_number). ",
                                                  "Type: $(pr_type). ",
                                                  "Decision: merge now."))
-                                    my_retry(() -> merge!(registry, pr, passed_pr_head_sha; auth = auth))
+                                    my_retry(() -> merge!(api, registry, pr, passed_pr_head_sha; auth = auth))
                                 else
                                     @info(string("Pull request: $(pr_number). ",
                                                  "Type: $(pr_type). ",
@@ -339,7 +349,7 @@ function cron_or_api_build(pr::GitHub.PullRequest,
                                     @info(string("Pull request: $(pr_number). ",
                                                  "Type: $(pr_type). ",
                                                  "Decision: merge now."))
-                                    my_retry(() -> merge!(registry, pr, passed_pr_head_sha; auth = auth))
+                                    my_retry(() -> merge!(api, registry, pr, passed_pr_head_sha; auth = auth))
                                 else
                                     @info(string("Pull request: $(pr_number). ",
                                                  "Type: $(pr_type). ",

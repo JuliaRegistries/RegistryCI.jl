@@ -12,23 +12,24 @@ const AutoMerge = RegistryCI.AutoMerge
 
 const timestamp_regex = r"integration\/(\d\d\d\d-\d\d-\d\d-\d\d-\d\d-\d\d-\d\d\d)\/"
 
-function wait_pr_compute_mergeability(repo::GitHub.Repo, pr::GitHub.PullRequest; auth::GitHub.Authorization)
+function wait_pr_compute_mergeability(api::GitHub.GitHubAPI, repo::GitHub.Repo, pr::GitHub.PullRequest; auth::GitHub.Authorization)
     while !(pr.mergeable isa Bool)
         sleep(5)
-        pr = GitHub.pull_request(repo, pr.number; auth = auth)
+        pr = GitHub.pull_request(api, repo, pr.number; auth = auth)
     end
     return pr
 end
 
-function close_all_pull_requests(repo::GitHub.Repo;
+function close_all_pull_requests(api::GitHub.GitHubAPI,
+                                 repo::GitHub.Repo;
                                  auth::GitHub.Authorization,
                                  state::String)
-    all_pull_requests = AutoMerge.get_all_pull_requests(repo,
+    all_pull_requests = AutoMerge.get_all_pull_requests(api, repo,
                                                         state;
                                                         auth = auth)
     for pr in all_pull_requests
         try
-            GitHub.close_pull_request(repo, pr; auth = auth)
+            GitHub.close_pull_request(api, repo, pr; auth = auth)
         catch
         end
     end

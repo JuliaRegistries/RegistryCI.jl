@@ -9,25 +9,26 @@ function created_at(pull_request::GitHub.PullRequest)
     return result
 end
 
-function delete_comment!(repo::GitHub.Repo,
+function delete_comment!(api::GitHub.GitHubAPI,
+                         repo::GitHub.Repo,
                          pr::GitHub.PullRequest,
                          comment_to_delete::GitHub.Comment;
                          auth::GitHub.Authorization)
-    GitHub.delete_comment(repo,
+    GitHub.delete_comment(api, repo,
                           comment_to_delete,
                           :pr;
                           auth = auth)
     return nothing
 end
 
-function delete_merged_branch!(repo::GitHub.Repo, pr::GitHub.PullRequest; auth::GitHub.Authorization)
-    updated_pr = _get_updated_pull_request(pr; auth=auth)
+function delete_merged_branch!(api::GitHub.GitHubAPI, repo::GitHub.Repo, pr::GitHub.PullRequest; auth::GitHub.Authorization)
+    updated_pr = _get_updated_pull_request(api, pr; auth=auth)
     if is_merged(updated_pr)
         try
             head_branch = pull_request_head_branch(updated_pr)
             repo = head_branch.repo
             ref = "heads/$(head_branch.ref)"
-            GitHub.delete_reference(repo, ref; auth=auth)
+            GitHub.delete_reference(api, repo, ref; auth=auth)
         catch ex
             showerror(stderr, ex)
             Base.show_backtrace(stderr, catch_backtrace())
@@ -37,30 +38,32 @@ function delete_merged_branch!(repo::GitHub.Repo, pr::GitHub.PullRequest; auth::
     return nothing
 end
 
-function edit_comment!(repo::GitHub.Repo,
+function edit_comment!(api::GitHub.GitHubAPI,
+                       repo::GitHub.Repo,
                        pr::GitHub.PullRequest,
                        comment::GitHub.Comment,
                        body::String;
                        auth::GitHub.Authorization)
     myparams = Dict("body" => body)
-    GitHub.edit_comment(repo, comment, :pr; auth=auth, params = myparams)
+    GitHub.edit_comment(api, repo, comment, :pr; auth=auth, params = myparams)
     return nothing
 end
 
 full_name(repo::GitHub.Repo) = repo.full_name
 
-function _get_updated_pull_request(pull_request::GitHub.PullRequest; auth::GitHub.Authorization)
+function _get_updated_pull_request(api::GitHub.GitHubAPI, pull_request::GitHub.PullRequest; auth::GitHub.Authorization)
     pr_base_repo = base_repo(pull_request)
     pr_number = number(pull_request)
-    updated_pr = GitHub.pull_request(pr_base_repo, pr_number; auth=auth)
+    updated_pr = GitHub.pull_request(api, pr_base_repo, pr_number; auth=auth)
     return updated_pr
 end
 
-function get_all_my_pull_request_comments(repo::GitHub.Repo,
+function get_all_my_pull_request_comments(api::GitHub.GitHubAPI,
+                                          repo::GitHub.Repo,
                                           pr::GitHub.PullRequest;
                                           auth::GitHub.Authorization,
                                           whoami)
-    all_comments = get_all_pull_request_comments(repo,
+    all_comments = get_all_pull_request_comments(api, repo,
                                                  pr;
                                                  auth = auth)
     my_comments = Vector{GitHub.Comment}(undef, 0)
@@ -74,15 +77,16 @@ function get_all_my_pull_request_comments(repo::GitHub.Repo,
     return my_comments
 end
 
-function get_all_pull_request_comments(repo::GitHub.Repo,
+function get_all_pull_request_comments(api::GitHub.GitHubAPI,
+                                       repo::GitHub.Repo,
                                        pr::GitHub.PullRequest;
                                        auth::GitHub.Authorization)
     all_comments = Vector{GitHub.Comment}(undef, 0)
     myparams = Dict("per_page" => 100, "page" => 1)
-    cs, page_data = GitHub.comments(repo, pr, :pr; auth=auth, params = myparams, page_limit = 100)
+    cs, page_data = GitHub.comments(api, repo, pr, :pr; auth=auth, params = myparams, page_limit = 100)
     append!(all_comments, cs)
     while haskey(page_data, "next")
-        cs, page_data =  GitHub.comments(repo, pr, :pr; auth=auth, page_limit = 100, start_page = page_data["next"])
+        cs, page_data =  GitHub.comments(api, repo, pr, :pr; auth=auth, page_limit = 100, start_page = page_data["next"])
         append!(all_comments, cs)
     end
     unique!(all_comments)
@@ -90,23 +94,24 @@ function get_all_pull_request_comments(repo::GitHub.Repo,
     return all_comments
 end
 
-function get_all_pull_requests(repo::GitHub.Repo,
+function get_all_pull_requests(api::GitHub.GitHubAPI,
+                               repo::GitHub.Repo,
                                state::String;
                                auth::GitHub.Authorization)
     all_pull_requests = Vector{GitHub.PullRequest}(undef, 0)
     myparams = Dict("state" => state, "per_page" => 100, "page" => 1)
-    prs, page_data = GitHub.pull_requests(repo; auth=auth, params = myparams, page_limit = 100)
+    prs, page_data = GitHub.pull_requests(api, repo; auth=auth, params = myparams, page_limit = 100)
     append!(all_pull_requests, prs)
     while haskey(page_data, "next")
-        prs, page_data = GitHub.pull_requests(repo; auth=auth, page_limit = 100, start_page = page_data["next"])
+        prs, page_data = GitHub.pull_requests(api, repo; auth=auth, page_limit = 100, start_page = page_data["next"])
         append!(all_pull_requests, prs)
     end
     unique!(all_pull_requests)
     return all_pull_requests
 end
 
-function get_changed_filenames(repo::GitHub.Repo, pull_request::GitHub.PullRequest; auth::GitHub.Authorization)
-    files = GitHub.pull_request_files(repo, pull_request; auth=auth)
+function get_changed_filenames(api::GitHub.GitHubAPI, repo::GitHub.Repo, pull_request::GitHub.PullRequest; auth::GitHub.Authorization)
+    files = GitHub.pull_request_files(api, repo, pull_request; auth=auth)
     n = length(files)
     filenames = Vector{String}(undef, n)
     for i = 1:n
@@ -123,11 +128,12 @@ function is_open(pull_request::GitHub.PullRequest)
     return result
 end
 
-function merge!(registry_repo::GitHub.Repo,
+function merge!(api::GitHub.GitHubAPI,
+                registry_repo::GitHub.Repo,
                 pr::GitHub.PullRequest,
                 approved_pr_head_sha::AbstractString;
                 auth::GitHub.Authorization)
-    pr = wait_pr_compute_mergeability(registry_repo, pr; auth = auth)
+    pr = wait_pr_compute_mergeability(api, registry_repo, pr; auth = auth)
     _approved_pr_head_sha = convert(String, strip(approved_pr_head_sha))::String
     pr_number = number(pr)
     @info("Attempting to squash-merge pull request #$(pr_number)")
@@ -135,7 +141,7 @@ function merge!(registry_repo::GitHub.Repo,
     @debug("pr.mergeable = $(pr.mergeable)")
     params = Dict("sha" => _approved_pr_head_sha, "merge_method" => "squash")
     try
-        GitHub.merge_pull_request(registry_repo,
+        GitHub.merge_pull_request(api, registry_repo,
                                   pr_number;
                                   auth=auth,
                                   params=params)
@@ -145,23 +151,24 @@ function merge!(registry_repo::GitHub.Repo,
         println(stderr)
     end
     try
-        delete_merged_branch!(registry_repo, pr; auth=auth)
+        delete_merged_branch!(api, registry_repo, pr; auth=auth)
     catch
     end
     return nothing
 end
 
-function wait_pr_compute_mergeability(repo::GitHub.Repo,
+function wait_pr_compute_mergeability(api::GitHub.GitHubAPI,
+                                      repo::GitHub.Repo,
                                       pr::GitHub.PullRequest;
                                       auth::GitHub.Authorization)
     sleep(5)
     max_tries = 10
     num_tries = 0
-    pr = GitHub.pull_request(repo, pr.number; auth = auth)
+    pr = GitHub.pull_request(api, repo, pr.number; auth = auth)
     while !(pr.mergeable isa Bool) && num_tries <= max_tries
         num_tries = num_tries + 1
         sleep(5)
-        pr = GitHub.pull_request(repo, pr.number; auth = auth)
+        pr = GitHub.pull_request(api, repo, pr.number; auth = auth)
     end
     return pr
 end
@@ -170,12 +177,13 @@ num_changed_files(pull_request::GitHub.PullRequest) = pull_request.changed_files
 
 number(pull_request::GitHub.PullRequest) = pull_request.number
 
-function post_comment!(repo::GitHub.Repo,
+function post_comment!(api::GitHub.GitHubAPI,
+                       repo::GitHub.Repo,
                        pr::GitHub.PullRequest,
                        body::String;
                        auth::GitHub.Authorization)
     myparams = Dict("body" => body)
-    GitHub.create_comment(repo, pr, :pr; auth=auth, params = myparams)
+    GitHub.create_comment(api, repo, pr, :pr; auth=auth, params = myparams)
     return nothing
 end
 
@@ -196,8 +204,8 @@ end
 
 title(pull_request::GitHub.PullRequest) = pull_request.title
 
-function username(auth::GitHub.Authorization)
-    user_information = GitHub.gh_get_json(GitHub.DEFAULT_API,
+function username(api::GitHub.GitHubAPI, auth::GitHub.Authorization)
+    user_information = GitHub.gh_get_json(api,
                                           "/user";
                                           auth = auth)
     return user_information["login"]::String

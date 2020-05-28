@@ -225,10 +225,17 @@ function meets_version_can_be_pkg_added(working_directory::String,
     _registry_deps = convert(Vector{String}, registry_deps)
     code = """
         import Pkg;
+        Pkg.pkg"add HTTP";
+        using HTTP;
+        is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str));
         Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));
         _registry_deps = $(_registry_deps);
         for regdep in _registry_deps
-            Pkg.Registry.add(Pkg.RegistrySpec(url = regdep))
+            if is_valid_url(regdep)
+                Pkg.Registry.add(Pkg.RegistrySpec(url = regdep))
+            else
+                Pkg.Registry.add(regdep)
+            end
         end
         @info("Attempting to `Pkg.add` package...");
         $(pkg_add_command)
@@ -265,10 +272,17 @@ function meets_version_can_be_imported(working_directory::String,
     _registry_deps = convert(Vector{String}, registry_deps)
     code = """
         import Pkg;
+        Pkg.pkg"add HTTP";
+        using HTTP;
+        is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str));
         Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));
         _registry_deps = $(_registry_deps);
         for regdep in _registry_deps
-            Pkg.Registry.add(Pkg.RegistrySpec(url = regdep))
+            if is_valid_url(regdep)
+                Pkg.Registry.add(Pkg.RegistrySpec(url = regdep))
+            else
+                Pkg.Registry.add(regdep)
+            end
         end
         @info("Attempting to `Pkg.add` package...");
         $(pkg_add_command)
@@ -320,7 +334,7 @@ function _run_pkg_commands(working_directory::String,
     # process. For example, we don't want to pass an environment variable containing
     # our GitHub token to the child process. Because if the Julia package that we are
     # testing has malicious code in its __init__() function, it could try to steal
-    # our token. So we only pass four environment variables:
+    # our token. So we only pass five environment variables:
     # 1. PATH. If we don't pass PATH, things break. And PATH should not contain any
     #    sensitive information.
     # 2. PYTHON. We set PYTHON to the empty string. This forces any packages that use
@@ -330,11 +344,23 @@ function _run_pkg_commands(working_directory::String,
     #    we created. This is because we don't want the child process using our
     #    real Julia depot. So we set up a fake depot for the child process to use.
     # 4. R_HOME. We set R_HOME to "*".
+    # 5. JULIA_PKG_SERVER. If it's set, it is delegated to the child process.
+    env = Dict("PATH" => ENV["PATH"],
+               "PYTHON" => "",
+               "JULIA_DEPOT_PATH" => tmp_dir_2,
+               "R_HOME" => "*",
+    )
+    if haskey(ENV, "JULIA_PKG_SERVER")
+        env["JULIA_PKG_SERVER"] = ENV["JULIA_PKG_SERVER"]
+    end
+    if haskey(ENV, "HTTPS_PROXY")
+        env["HTTPS_PROXY"] = ENV["HTTPS_PROXY"]
+    end
+    if haskey(ENV, "HTTP_PROXY")
+        env["HTTP_PROXY"] = ENV["HTTP_PROXY"]
+    end
     cmd = Cmd(`$(Base.julia_cmd()) -e $(code)`;
-              env = Dict("PATH" => ENV["PATH"],
-                         "PYTHON" => "",
-                         "JULIA_DEPOT_PATH" => tmp_dir_2,
-                         "R_HOME" => "*"))
+              env = env)
     # GUI toolkits may need a display just to load the package
     xvfb = Sys.which("xvfb-run")
     @info("xvfb: ", xvfb)

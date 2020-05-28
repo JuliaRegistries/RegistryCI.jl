@@ -22,7 +22,8 @@ function parse_pull_request_title(::NewPackage,
     return pkg, version
 end
 
-function pull_request_build(pr_number::Integer,
+function pull_request_build(api::GitHub.GitHubAPI,
+                            pr_number::Integer,
                             current_pr_head_commit_sha::String,
                             registry::GitHub.Repo,
                             registry_head::String;
@@ -34,12 +35,13 @@ function pull_request_build(pr_number::Integer,
                             master_branch_is_default_branch::Bool,
                             suggest_onepointzero::Bool,
                             registry_deps::Vector{<:AbstractString} = String[])::Nothing
-    pr = my_retry(() -> GitHub.pull_request(registry, pr_number; auth=auth))
+    pr = my_retry(() -> GitHub.pull_request(api, registry, pr_number; auth=auth))
     _github_api_pr_head_commit_sha = pull_request_head_sha(pr)
     if current_pr_head_commit_sha != _github_api_pr_head_commit_sha
         throw(AutoMergeShaMismatch("Current commit sha (\"$(current_pr_head_commit_sha)\") does not match what the GitHub API tells us (\"$(_github_api_pr_head_commit_sha)\")"))
     end
-    result = pull_request_build(pr,
+    result = pull_request_build(api,
+                                pr,
                                 current_pr_head_commit_sha,
                                 registry,
                                 registry_head;
@@ -54,7 +56,8 @@ function pull_request_build(pr_number::Integer,
     return result
 end
 
-function pull_request_build(pr::GitHub.PullRequest,
+function pull_request_build(api::GitHub.GitHubAPI,
+                            pr::GitHub.PullRequest,
                             current_pr_head_commit_sha::String,
                             registry::GitHub.Repo,
                             registry_head::String;
@@ -71,7 +74,8 @@ function pull_request_build(pr::GitHub.PullRequest,
         if !master_branch_is_default_branch
             checkout_branch(registry_master, master_branch)
         end
-        pull_request_build(NewPackage(),
+        pull_request_build(api,
+                           NewPackage(),
                            pr,
                            current_pr_head_commit_sha,
                            registry;
@@ -89,7 +93,8 @@ function pull_request_build(pr::GitHub.PullRequest,
         if !master_branch_is_default_branch
             checkout_branch(registry_master, master_branch)
         end
-        pull_request_build(NewVersion(),
+        pull_request_build(api,
+                           NewVersion(),
                            pr,
                            current_pr_head_commit_sha,
                            registry;

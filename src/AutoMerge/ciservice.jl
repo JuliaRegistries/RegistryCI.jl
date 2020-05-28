@@ -32,8 +32,8 @@ end
 function directory_of_cloned_registry(cfg::TravisCI; env=ENV, kwargs...)
     return env["TRAVIS_BUILD_DIR"]
 end
-function username(cfg::TravisCI; auth)
-    return username(auth) # use /user endpoint
+function username(api::GitHub.GitHubAPI, cfg::TravisCI; auth)
+    return username(api, auth) # use /user endpoint
 end
 
 ####################
@@ -74,11 +74,51 @@ end
 function directory_of_cloned_registry(cfg::GitHubActions; env=ENV, kwargs...)
     return get(env, "GITHUB_WORKSPACE", nothing)
 end
-function username(cfg::GitHubActions; auth)
+function username(api::GitHub.GitHubAPI, cfg::GitHubActions; auth)
     # /user endpoint of GitHub API not available
     # with the GITHUB_TOKEN authentication
     return "github-actions[bot]"
 end
+
+##############
+## TeamCity ##
+##############
+struct TeamCity <: CIService
+end
+
+function conditions_met_for_pr_build(cfg::TeamCity; env=ENV, kwargs...)
+    pr_number_ok = tryparse(Int, get(env, "teamcity_pullRequest_number", "")) !== nothing
+    return haskey(env, "teamcity_pullRequest_title") && pr_number_ok
+end
+
+function conditions_met_for_merge_build(cfg::TeamCity; env=ENV, master_branch, kwargs...)
+    pr_number_ok = tryparse(Int, get(env, "teamcity_pullRequest_number", "")) !== nothing
+    haskey(env, "teamcity_pullRequest_title") && pr_number_ok && return false
+    ## Check that we are on the correct branch
+    m = match(r"^refs\/heads\/(.*)$", get(env, "vcsroot_branch", ""))
+    branch_ok = m !== nothing && m.captures[1] == master_branch
+    return branch_ok
+end
+
+function pull_request_number(cfg::TeamCity; env=ENV, kwargs...)
+    pr_number = tryparse(Int, get(env, "teamcity_pullRequest_number", ""))
+    always_assert(pr_number !== nothing)
+    return pr_number
+end
+
+function current_pr_head_commit_sha(cfg::TeamCity; env=ENV, kwargs...)
+    # black magic relying on TC build parameter teamcity.git.fetchAllHeads=true
+    tc_pr_branch_name = get(env, "teamcity_pullRequest_source_branch", nothing)
+    always_assert(!isnothing(tc_pr_branch_name))
+    git_info = read(pipeline(`git show-ref`, `grep $tc_pr_branch_name`), String)
+    git_info_row = split(git_info, "\n")[1]
+    pr_sha = split(git_info_row, " ")[1]
+    return string(pr_sha)
+end
+
+directory_of_cloned_registry(cfg::TeamCity; env=ENV, kwargs...) = get(env, "PWD", nothing)
+
+username(api::GitHub.GitHubAPI, cfg::TeamCity; auth) = "svc-aivision-reg"
 
 ####################
 ## Auto detection ##
@@ -88,6 +128,8 @@ function auto_detect_ci_service(; env=ENV)
         return TravisCI()
     elseif haskey(env, "GITHUB_REPOSITORY")
         return GitHubActions()
+    elseif haskey(env, "TEAMCITY_PROJECT_NAME")
+        return TeamCity()
     else
         error("Could not detect system.")
     end
