@@ -1,6 +1,6 @@
 import Pkg
 # import GitCommand
-using HTTP
+import HTTP
 import RegistryTools
 import Test
 
