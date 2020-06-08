@@ -226,7 +226,7 @@ function meets_version_can_be_pkg_added(working_directory::String,
     code = """
         import Pkg;
         Pkg.pkg"add HTTP";
-        using HTTP;
+        import HTTP;
         is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str));
         Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));
         _registry_deps = $(_registry_deps);
@@ -273,7 +273,7 @@ function meets_version_can_be_imported(working_directory::String,
     code = """
         import Pkg;
         Pkg.pkg"add HTTP";
-        using HTTP;
+        import HTTP;
         is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str));
         Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));
         _registry_deps = $(_registry_deps);
