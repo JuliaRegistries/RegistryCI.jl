@@ -95,11 +95,6 @@ function test(path = pwd();
                 # Require all deps to exist in the General registry or be a stdlib
                 depuuids = Set{Base.UUID}(Base.UUID(x) for (_, d) in deps for (_, x) in d)
                 Test.@test depuuids ⊆ alluuids
-                # Test that the way Pkg loads this data works
-                T1 = Dict{VersionNumber,Dict{String,Any}}
-                T2 = Dict{VersionNumber,Dict{String,Base.UUID}}
-                T = Union{T1, T2}
-                Test.@test Pkg.Operations.load_package_data(Base.UUID, depsfile, VersionNumber.(collect(keys(vers)))) isa T
             end
 
             # Compat.toml testing
@@ -113,11 +108,6 @@ function test(path = pwd();
                     push!(depnames, "julia") # All packages has an implicit dependency on julia
                     @assert compatnames ⊆ depnames
                 end
-                # Test that the way Pkg loads this data works
-                T1 = Dict{VersionNumber,Dict{String,Any}}
-                T2 = Dict{VersionNumber,Dict{String,Base.UUID}}
-                T = Union{T1, T2}
-                Test.@test Pkg.Operations.load_package_data(parse_compat_entry, compatfile, VersionNumber.(collect(keys(vers)))) isa T
             end
         end
     end end
