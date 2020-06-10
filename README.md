@@ -54,6 +54,12 @@ Note that commenting on a pull request will automatically disable automerging on
 
 For instructions on how to run the RegistryCI.jl integration tests on your local machine, see [`INTEGRATION_TESTS.md`](INTEGRATION_TESTS.md).
 
+## TeamCity support
+
+There is support also for TeamCity, but it does not work out-of the box, it requires Pull Request build feature to be added, and passing few build variables as environment variables.
+
+To make it work in TeamCity, see [this Kotlin DSL snippet](teamcity_settings.kts) and put following parts into your DSL/add them in GUI.
+
 ## Acknowledgements
 
 Dilum Aluthge would like to acknowledge the following:

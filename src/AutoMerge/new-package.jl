@@ -1,4 +1,5 @@
-function pull_request_build(::NewPackage,
+function pull_request_build(api::GitHub.GitHubAPI,
+                            ::NewPackage,
                             pr::GitHub.PullRequest,
                             current_pr_head_commit_sha::String,
                             registry::GitHub.Repo;
@@ -56,7 +57,8 @@ function pull_request_build(::NewPackage,
             params = Dict("state" => "pending",
                           "context" => "automerge/decision",
                           "description" => description)
-            my_retry(() -> GitHub.create_status(registry,
+            my_retry(() -> GitHub.create_status(api,
+                                                registry,
                                                 current_pr_head_commit_sha;
                                                 auth = auth,
                                                 params = params))
@@ -84,7 +86,8 @@ function pull_request_build(::NewPackage,
                 end
             end
 
-            g1, m1 = pr_only_changes_allowed_files(NewPackage(),
+            g1, m1 = pr_only_changes_allowed_files(api,
+                                                   NewPackage(),
                                                    registry,
                                                    pr,
                                                    pkg;
@@ -166,7 +169,8 @@ function pull_request_build(::NewPackage,
                 params = Dict("state" => "failure",
                               "context" => "automerge/decision",
                               "description" => description)
-                my_retry(() -> GitHub.create_status(registry,
+                my_retry(() -> GitHub.create_status(api,
+                                                    registry,
                                                     current_pr_head_commit_sha;
                                                     auth = auth,
                                                     params = params))
@@ -212,14 +216,16 @@ function pull_request_build(::NewPackage,
                 params = Dict("state" => "success",
                               "context" => "automerge/decision",
                               "description" => description)
-                my_retry(() -> GitHub.create_status(registry,
+                my_retry(() -> GitHub.create_status(api,
+                                                    registry,
                                                     current_pr_head_commit_sha;
                                                     auth = auth,
                                                     params = params))
                 this_pr_comment_pass = comment_text_pass(NewPackage(),
                                                          suggest_onepointzero,
                                                          version)
-                my_retry(() -> update_automerge_comment!(registry,
+                my_retry(() -> update_automerge_comment!(api,
+                                                         registry,
                                                          pr;
                                                          auth = auth,
                                                          body = this_pr_comment_pass,
@@ -230,7 +236,8 @@ function pull_request_build(::NewPackage,
                 params = Dict("state" => "failure",
                               "context" => "automerge/decision",
                               "description" => description)
-                my_retry(() -> GitHub.create_status(registry,
+                my_retry(() -> GitHub.create_status(api,
+                                                    registry,
                                                     current_pr_head_commit_sha;
                                                     auth = auth,
                                                     params = params))
@@ -239,7 +246,8 @@ function pull_request_build(::NewPackage,
                                                          failingmessages0through10,
                                                          suggest_onepointzero,
                                                          version)
-                my_retry(() -> update_automerge_comment!(registry,
+                my_retry(() -> update_automerge_comment!(api,
+                                                         registry,
                                                          pr;
                                                          body = this_pr_comment_fail,
                                                          auth = auth,

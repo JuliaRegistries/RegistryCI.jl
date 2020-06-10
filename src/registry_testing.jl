@@ -1,5 +1,6 @@
 import Pkg
 # import GitCommand
+import HTTP
 import RegistryTools
 import Test
 
@@ -7,21 +8,26 @@ function gather_stdlib_uuids()
     return Set{Base.UUID}(x for x in keys(RegistryTools.stdlibs()))
 end
 
+is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str))
 # For when you have a registry that has packages with dependencies obtained from
 # another dependency registry. For example, packages registered at the BioJuliaRegistry
 # that have General dependencies. BJW.
-function load_registry_dep_uuids(registry_deps_urls::Vector{<:AbstractString} = String[])
+function load_registry_dep_uuids(registry_deps_names::Vector{<:AbstractString} = String[])
     return with_temp_depot() do
         # Get the registries!
-        for url in registry_deps_urls
-            Pkg.Registry.add(Pkg.RegistrySpec(url = url))
+        for repo_spec in registry_deps_names
+            if is_valid_url(repo_spec)
+                Pkg.Registry.add(Pkg.RegistrySpec(url = repo_spec))
+            else
+                Pkg.Registry.add(repo_spec)
+            end
         end
         # Now use the RegistrySpec's to find the Project.toml's. I know
         # .julia/registires/XYZ/ABC is the most likely place, but this way the
         # function never has to assume. BJW.
         extrauuids = Set{Base.UUID}()
         for spec in Pkg.Types.collect_registries()
-            if spec.url ∈ registry_deps_urls
+            if spec.url ∈ registry_deps_names || spec.name ∈ registry_deps_names
                 reg = Pkg.TOML.parsefile(joinpath(spec.path, "Registry.toml"))
                 for x in keys(reg["packages"])
                     push!(extrauuids, Base.UUID(x))
@@ -89,11 +95,6 @@ function test(path = pwd();
                 # Require all deps to exist in the General registry or be a stdlib
                 depuuids = Set{Base.UUID}(Base.UUID(x) for (_, d) in deps for (_, x) in d)
                 Test.@test depuuids ⊆ alluuids
-                # Test that the way Pkg loads this data works
-                T1 = Dict{VersionNumber,Dict{String,Any}}
-                T2 = Dict{VersionNumber,Dict{String,Base.UUID}}
-                T = Union{T1, T2}
-                Test.@test Pkg.Operations.load_package_data(Base.UUID, depsfile, VersionNumber.(collect(keys(vers)))) isa T
             end
 
             # Compat.toml testing
@@ -107,11 +108,6 @@ function test(path = pwd();
                     push!(depnames, "julia") # All packages has an implicit dependency on julia
                     @assert compatnames ⊆ depnames
                 end
-                # Test that the way Pkg loads this data works
-                T1 = Dict{VersionNumber,Dict{String,Any}}
-                T2 = Dict{VersionNumber,Dict{String,Base.UUID}}
-                T = Union{T1, T2}
-                Test.@test Pkg.Operations.load_package_data(parse_compat_entry, compatfile, VersionNumber.(collect(keys(vers)))) isa T
             end
         end
     end end

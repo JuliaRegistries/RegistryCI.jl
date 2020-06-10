@@ -12,12 +12,3 @@ const AutoMerge = RegistryCI.AutoMerge
 
 const path = joinpath(DEPOT_PATH[1], "registries", "General")
 RegistryCI.test(path)
-
-# Test the BioJuliaRegistry
-RegistryCI.with_temp_depot() do
-    Pkg.Registry.add(Pkg.RegistrySpec(url = "https://github.com/BioJulia/BioJuliaRegistry.git"))
-    # Test this will validate the BioJuliaRegistry, when providing General as an
-    # optional dependency. BJW.
-    biopath = joinpath(DEPOT_PATH[1], "registries", "BioJuliaRegistry")
-    RegistryCI.test(biopath, registry_deps = ["https://github.com/JuliaRegistries/General.git"])
-end

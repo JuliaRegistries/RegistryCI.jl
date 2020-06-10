@@ -18,12 +18,14 @@ function run(env = ENV,
              master_branch_is_default_branch::Bool = true,
              suggest_onepointzero::Bool = true,
              #
-             registry_deps::Vector{<:AbstractString} = String[])::Nothing
+             registry_deps::Vector{<:AbstractString} = String[],
+             api_url::String="https://api.github.com")::Nothing
     all_statuses = deepcopy(additional_statuses)
     all_check_runs = deepcopy(additional_check_runs)
     push!(all_statuses, "automerge/decision")
     unique!(all_statuses)
     unique!(all_check_runs)
+    api = GitHub.GitHubWebAPI(HTTP.URI(api_url))
 
     registry_head = directory_of_cloned_registry(cicfg; env=env)
 
@@ -39,15 +41,16 @@ function run(env = ENV,
     end
 
     # Authentication
-    auth = my_retry(() -> GitHub.authenticate(env["AUTOMERGE_GITHUB_TOKEN"]))
-    whoami = my_retry(() -> username(cicfg; auth=auth))
+    auth = my_retry(() -> GitHub.authenticate(api, env["AUTOMERGE_GITHUB_TOKEN"]))
+    whoami = my_retry(() -> username(api, cicfg; auth=auth))
     @info("Authenticated to GitHub as \"$(whoami)\"")
-    registry_repo = my_retry(() -> GitHub.repo(registry; auth=auth))
+    registry_repo = my_retry(() -> GitHub.repo(api, registry; auth=auth))
 
     if run_pr_build
         pr_number = pull_request_number(cicfg; env=env)
         pr_head_commit_sha = current_pr_head_commit_sha(cicfg; env=env)
-        pull_request_build(pr_number,
+        pull_request_build(api,
+                           pr_number,
                            pr_head_commit_sha,
                            registry_repo,
                            registry_head;
@@ -62,7 +65,8 @@ function run(env = ENV,
         return nothing
     else
         always_assert(run_merge_build)
-        cron_or_api_build(registry_repo;
+        cron_or_api_build(api,
+                          registry_repo;
                           auth = auth,
                           authorized_authors = authorized_authors,
                           authorized_authors_special_jll_exceptions = authorized_authors_special_jll_exceptions,

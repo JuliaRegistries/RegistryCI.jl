@@ -16,14 +16,14 @@ AUTOMERGE_INTEGRATION_TEST_REPO = ENV["AUTOMERGE_INTEGRATION_TEST_REPO"]::String
 TEST_USER_GITHUB_TOKEN = ENV["BCBI_TEST_USER_GITHUB_TOKEN"]::String
 GIT = "git"
 auth = GitHub.authenticate(TEST_USER_GITHUB_TOKEN)
-whoami = RegistryCI.AutoMerge.username(auth)
+whoami = RegistryCI.AutoMerge.username(GitHub.DEFAULT_API, auth)
 repo_url_without_auth = "https://github.com/$(AUTOMERGE_INTEGRATION_TEST_REPO)"
 repo_url_with_auth = "https://$(whoami):$(TEST_USER_GITHUB_TOKEN)@github.com/$(AUTOMERGE_INTEGRATION_TEST_REPO)"
 repo = GitHub.repo(AUTOMERGE_INTEGRATION_TEST_REPO; auth = auth)
 @test success(`$(GIT) --version`)
 @info("Authenticated to GitHub as \"$(whoami)\"")
 
-close_all_pull_requests(repo; auth = auth, state = "open")
+close_all_pull_requests(GitHub.DEFAULT_API, repo; auth = auth, state = "open")
 delete_stale_branches(repo_url_with_auth; GIT = GIT)
 
 @testset "Integration tests" begin
@@ -45,7 +45,7 @@ delete_stale_branches(repo_url_with_auth; GIT = GIT)
                               "head" => head,
                               "base" => base)
                 pr = GitHub.create_pull_request(repo; auth = auth, params = params)
-                pr = wait_pr_compute_mergeability(repo, pr; auth = auth)
+                pr = wait_pr_compute_mergeability(GitHub.DEFAULT_API, repo, pr; auth = auth)
                 @test pr.mergeable
                 with_pr_merge_commit(pr, repo_url_without_auth; GIT = GIT) do build_dir
                     withenv("AUTOMERGE_GITHUB_TOKEN" => TEST_USER_GITHUB_TOKEN,
