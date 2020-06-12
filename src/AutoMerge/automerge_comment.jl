@@ -1,9 +1,11 @@
-function update_automerge_comment!(repo::GitHub.Repo,
+function update_automerge_comment!(api::GitHub.GitHubAPI,
+                                   repo::GitHub.Repo,
                                    pr::GitHub.PullRequest;
                                    body::AbstractString,
                                    auth::GitHub.Authorization,
                                    whoami)::Nothing
-    my_comments = my_retry(() -> get_all_my_pull_request_comments(repo,
+    my_comments = my_retry(() -> get_all_my_pull_request_comments(api,
+                                                                  repo,
                                                                   pr;
                                                                   auth = auth,
                                                                   whoami = whoami))
@@ -18,7 +20,7 @@ function update_automerge_comment!(repo::GitHub.Repo,
         for i = 2:num_comments
             comment_to_delete = my_comments[i]
             try
-                my_retry(() -> delete_comment!(repo,
+                my_retry(() -> delete_comment!(api, repo,
                                                pr,
                                                comment_to_delete;
                                                auth = auth))
@@ -28,7 +30,7 @@ function update_automerge_comment!(repo::GitHub.Repo,
         end
         comment_to_update = my_comments[1]
         if strip(comment_to_update.body) != strip(_body)
-            my_retry(() -> edit_comment!(repo,
+            my_retry(() -> edit_comment!(api, repo,
                                          pr,
                                          comment_to_update,
                                          _body;
@@ -37,7 +39,7 @@ function update_automerge_comment!(repo::GitHub.Repo,
     elseif num_comments == 1
         comment_to_update = my_comments[1]
         if strip(comment_to_update.body) != strip(_body)
-            my_retry(() -> edit_comment!(repo,
+            my_retry(() -> edit_comment!(api, repo,
                                          pr,
                                          comment_to_update,
                                          _body;
@@ -45,7 +47,7 @@ function update_automerge_comment!(repo::GitHub.Repo,
         end
     else
         always_assert(num_comments < 1)
-        my_retry(() -> post_comment!(repo,
+        my_retry(() -> post_comment!(api, repo,
                                      pr,
                                      _body;
                                      auth = auth))

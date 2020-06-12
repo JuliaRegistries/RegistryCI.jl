@@ -1,7 +1,7 @@
 name = "RegistryCI"
 uuid = "0c95cc5f-2f7e-43fe-82dd-79dbcba86b32"
 authors = ["Dilum Aluthge <dilum@aluthge.com>", "Fredrik Ekre <ekrefredrik@gmail.com>"]
-version = "2.4.0"
+version = "2.5.0"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
@@ -15,7 +15,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TimeZones = "f269a46b-ccf7-5d73-abea-4c690281aa53"
 
 [compat]
-GitHub = "5.1.1"
+GitHub = "5.1.6"
 HTTP = "0.8"
 JSON = "0.19, 0.20, 0.21"
 RegistryTools = "1.2"
