@@ -1,3 +1,5 @@
+import HTTP
+
 function meets_compat_for_all_deps(working_directory::AbstractString, pkg, version)
     deps = Pkg.TOML.parsefile(joinpath(working_directory, uppercase(pkg[1:1]), pkg, "Deps.toml"))
     compat = Pkg.TOML.parsefile(joinpath(working_directory, uppercase(pkg[1:1]), pkg, "Compat.toml"))
@@ -120,7 +122,7 @@ function meets_normal_capitalization(pkg)
     if meets_this_guideline
         return true, ""
     else
-        return false, "Name does not meet all of the following: starts with an uppercase letter, ASCII alphanumerics only, not all letters are uppercase.**"
+        return false, "Name does not meet all of the following: starts with an uppercase letter, ASCII alphanumerics only, not all letters are uppercase."
     end
 end
 
@@ -216,6 +218,8 @@ function _generate_pkg_add_command(pkg::String,
     return "Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\", version=v\"$(string(version))\"));"
 end
 
+is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str))
+
 function meets_version_can_be_pkg_added(working_directory::String,
                                         pkg::String,
                                         version::VersionNumber;
@@ -223,15 +227,18 @@ function meets_version_can_be_pkg_added(working_directory::String,
     pkg_add_command = _generate_pkg_add_command(pkg,
                                                 version)
     _registry_deps = convert(Vector{String}, registry_deps)
+    _registry_deps_is_valid_url = Vector{Bool}(undef, length(_registry_deps))
+    for i = 1:length(_registry_deps)
+        _registry_deps_is_valid_url[i] = is_valid_url(_registry_deps[i])
+    end
     code = """
         import Pkg;
-        Pkg.pkg"add HTTP";
-        import HTTP;
-        is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str));
         Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));
         _registry_deps = $(_registry_deps);
-        for regdep in _registry_deps
-            if is_valid_url(regdep)
+        _registry_deps_is_valid_url = $(_registry_deps_is_valid_url);
+        for i = 1:length(_registry_deps)
+            regdep = _registry_deps[i]
+            if _registry_deps_is_valid_url[i]
                 Pkg.Registry.add(Pkg.RegistrySpec(url = regdep))
             else
                 Pkg.Registry.add(regdep)
@@ -270,15 +277,18 @@ function meets_version_can_be_imported(working_directory::String,
     pkg_add_command = _generate_pkg_add_command(pkg,
                                                 version)
     _registry_deps = convert(Vector{String}, registry_deps)
+    _registry_deps_is_valid_url = Vector{Bool}(undef, length(_registry_deps))
+    for i = 1:length(_registry_deps)
+        _registry_deps_is_valid_url[i] = is_valid_url(_registry_deps[i])
+    end
     code = """
         import Pkg;
-        Pkg.pkg"add HTTP";
-        import HTTP;
-        is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str));
         Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));
         _registry_deps = $(_registry_deps);
-        for regdep in _registry_deps
-            if is_valid_url(regdep)
+        _registry_deps_is_valid_url = $(_registry_deps_is_valid_url);
+        for i = 1:length(_registry_deps)
+            regdep = _registry_deps[i]
+            if _registry_deps_is_valid_url[i]
                 Pkg.Registry.add(Pkg.RegistrySpec(url = regdep))
             else
                 Pkg.Registry.add(regdep)
