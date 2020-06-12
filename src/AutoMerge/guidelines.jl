@@ -371,10 +371,19 @@ function _run_pkg_commands(working_directory::String,
     @info(before_message)
     cmd_ran_successfully = success(pipeline(cmd, stdout=stdout, stderr=stderr))
     cd(original_directory)
-    chmod(tmp_dir_1, 0o700, recursive=true)
+
+    try
+        chmod(tmp_dir_1, 0o700, recursive = true)
+    catch
+    end
     rm(tmp_dir_1; force = true, recursive = true)
-    chmod(tmp_dir_2, 0o700, recursive=true)
+
+    try
+        chmod(tmp_dir_2, 0o700, recursive = true)
+    catch
+    end
     rm(tmp_dir_2; force = true, recursive = true)
+
     if cmd_ran_successfully
         @info(success_message)
         return success_return_1, success_return_2
