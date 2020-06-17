@@ -110,6 +110,13 @@ function test(path = pwd();
                 end
             end
         end
+        # Make sure all paths are unique
+        path_parts = [splitpath(data["path"]) for (_, data) in reg["packages"]]
+        for i in 1:maximum(length, path_parts)
+            i_parts = Set(joinpath(x[1:i]...) for x in path_parts if get(x, i, nothing) !== nothing)
+            i_parts′ = Set(joinpath(lowercase.(x[1:i])...) for x in path_parts if get(x, i, nothing) !== nothing)
+            Test.@test length(i_parts) == length(i_parts′)
+        end
     end end
     return
 end
