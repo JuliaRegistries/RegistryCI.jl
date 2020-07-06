@@ -344,31 +344,36 @@ function _run_pkg_commands(working_directory::String,
     # process. For example, we don't want to pass an environment variable containing
     # our GitHub token to the child process. Because if the Julia package that we are
     # testing has malicious code in its __init__() function, it could try to steal
-    # our token. So we only pass five environment variables:
-    # 1. PATH. If we don't pass PATH, things break. And PATH should not contain any
-    #    sensitive information.
-    # 2. PYTHON. We set PYTHON to the empty string. This forces any packages that use
-    #    PyCall to install their own version of Python instead of using the system
-    #    Python.
+    # our token. So we only pass eight environment variables:
+    # 1. HTTP_PROXY. If it's set, it is delegated to the child process.
+    # 2. HTTPS_PROXY. If it's set, it is delegated to the child process.
     # 3. JULIA_DEPOT_PATH. We set JULIA_DEPOT_PATH to the temporary directory that
     #    we created. This is because we don't want the child process using our
     #    real Julia depot. So we set up a fake depot for the child process to use.
-    # 4. R_HOME. We set R_HOME to "*".
-    # 5. JULIA_PKG_SERVER. If it's set, it is delegated to the child process.
-    env = Dict("PATH" => ENV["PATH"],
-               "PYTHON" => "",
-               "JULIA_DEPOT_PATH" => tmp_dir_2,
-               "R_HOME" => "*",
-    )
-    if haskey(ENV, "JULIA_PKG_SERVER")
-        env["JULIA_PKG_SERVER"] = ENV["JULIA_PKG_SERVER"]
+    # 4. JULIA_PKG_SERVER. If it's set, it is delegated to the child process.
+    # 5. JULIA_REGISTRYCI_AUTOMERGE. We set JULIA_REGISTRYCI_AUTOMERGE to "true".
+    # 6. PATH. If we don't pass PATH, things break. And PATH should not contain any
+    #    sensitive information.
+    # 7. PYTHON. We set PYTHON to the empty string. This forces any packages that use
+    #    PyCall to install their own version of Python instead of using the system
+    #    Python.
+    # 8. R_HOME. We set R_HOME to "*".
+    env = Dict{String, String}()
+    if haskey(ENV, "HTTP_PROXY")
+        env["HTTP_PROXY"] = deepcopy(ENV["HTTP_PROXY"])
     end
     if haskey(ENV, "HTTPS_PROXY")
-        env["HTTPS_PROXY"] = ENV["HTTPS_PROXY"]
+        env["HTTPS_PROXY"] = deepcopy(ENV["HTTPS_PROXY"])
     end
-    if haskey(ENV, "HTTP_PROXY")
-        env["HTTP_PROXY"] = ENV["HTTP_PROXY"]
+    env["JULIA_DEPOT_PATH"] = deepcopy(tmp_dir_2)
+    if haskey(ENV, "JULIA_PKG_SERVER")
+        env["JULIA_PKG_SERVER"] = deepcopy(ENV["JULIA_PKG_SERVER"])
     end
+    env["JULIA_REGISTRYCI_AUTOMERGE"] = "true"
+    env["PATH"] = deepcopy(ENV["PATH"])
+    env["PYTHON"] = ""
+    env["R_HOME"] = "*"
+
     cmd = Cmd(`$(Base.julia_cmd()) -e $(code)`;
               env = env)
     # GUI toolkits may need a display just to load the package
