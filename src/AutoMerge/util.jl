@@ -64,18 +64,13 @@ function comment_text_pass(::NewPackage,
     if is_jll
       result = string("Your `new _jll package` pull request met all of the ",
                       "guidelines for auto-merging and is scheduled to ",
-                      "be merged in the next round."
+                      "be merged in the next round.",
                       "\n\n",
                       _comment_noblock(),
                       _onepointzero_suggestion(suggest_onepointzero, version),
                       "\n<!-- [noblock] -->")
     else
-      result = string(is_jll ?
-                      "Your `new version` pull request met all of the ",
-                      "guidelines for auto-merging and is scheduled to ",
-                      "be merged in the next round." :
-
-                      "Your `new package` pull request met all of the ",
+      result = string("Your `new package` pull request met all of the ",
                       "guidelines for auto-merging and is scheduled to ",
                       "be merged when the mandatory waiting period (3 days) has elapsed.",
                       "\n\n",
