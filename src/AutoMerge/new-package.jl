@@ -223,7 +223,8 @@ function pull_request_build(api::GitHub.GitHubAPI,
                                                     params = params))
                 this_pr_comment_pass = comment_text_pass(NewPackage(),
                                                          suggest_onepointzero,
-                                                         version)
+                                                         version,
+                                                         this_pr_can_use_special_jll_exceptions)
                 my_retry(() -> update_automerge_comment!(api,
                                                          registry,
                                                          pr;

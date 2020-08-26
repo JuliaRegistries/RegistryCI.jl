@@ -59,19 +59,30 @@ end
 
 function comment_text_pass(::NewPackage,
                            suggest_onepointzero::Bool,
-                           version::VersionNumber)
-    result = string("Your `new package` pull request met all of the ",
-                    "guidelines for auto-merging and is scheduled to ",
-                    "be merged when the mandatory waiting period (3 days) has elapsed.",
-                    "\n\n",
-                    "Since you are registering a new package, ",
-                    "please make sure that you have read the ",
-                    "package naming guidelines: ",
-                    "https://julialang.github.io/Pkg.jl/dev/creating-packages/#Package-naming-guidelines-1",
-                    "\n\n",
-                    _comment_noblock(),
-                    _onepointzero_suggestion(suggest_onepointzero, version),
-                    "\n<!-- [noblock] -->")
+                           version::VersionNumber,
+                           is_jll::Bool)
+    if is_jll
+      result = string("Your `new _jll package` pull request met all of the ",
+                      "guidelines for auto-merging and is scheduled to ",
+                      "be merged in the next round.",
+                      "\n\n",
+                      _comment_noblock(),
+                      _onepointzero_suggestion(suggest_onepointzero, version),
+                      "\n<!-- [noblock] -->")
+    else
+      result = string("Your `new package` pull request met all of the ",
+                      "guidelines for auto-merging and is scheduled to ",
+                      "be merged when the mandatory waiting period (3 days) has elapsed.",
+                      "\n\n",
+                      "Since you are registering a new package, ",
+                      "please make sure that you have read the ",
+                      "package naming guidelines: ",
+                      "https://julialang.github.io/Pkg.jl/dev/creating-packages/#Package-naming-guidelines-1",
+                      "\n\n",
+                      _comment_noblock(),
+                      _onepointzero_suggestion(suggest_onepointzero, version),
+                      "\n<!-- [noblock] -->")
+    end
     return result
 end
 
