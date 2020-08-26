@@ -42,12 +42,24 @@ end
 # Testing of registries #
 #########################
 
-function parse_compat_entry(s::AbstractString)::Pkg.Types.VersionSpec
-    return Pkg.Types.VersionSpec([Pkg.Types.VersionRange(s)])
+function load_deps(depsfile, versions)
+    rtype = if VERSION < v"1.5.0"
+        Dict{VersionNumber,Dict{String,Any}}
+    else
+        Dict{VersionNumber,Dict{String,Base.UUID}}
+    end
+    r = Pkg.Operations.load_package_data(Base.UUID, depsfile, versions) isa rtype
+    return r
 end
 
-function parse_compat_entry(r::AbstractArray{T})::Pkg.Types.VersionSpec where T <: AbstractString
-    return Pkg.Types.VersionSpec(Pkg.Types.VersionRange.(r))
+function load_compat(compatfile, versions)
+    rtype = if VERSION < v"1.5.0"
+        Dict{VersionNumber,Dict{String,Any}}
+    else
+        Dict{VersionNumber,Dict{String,Pkg.Types.VersionSpec}}
+    end
+    r = Pkg.Operations.load_package_data(Pkg.Types.VersionSpec, compatfile, versions) isa rtype
+    return r
 end
 
 """
@@ -83,6 +95,7 @@ function test(path = pwd();
 
             # Versions.toml testing
             vers = Pkg.TOML.parsefile(abspath(data["path"], "Versions.toml"))
+            vnums = VersionNumber.(keys(vers))
             for (v, data) in vers
                 Test.@test VersionNumber(v) isa VersionNumber
                 Test.@test haskey(data, "git-tree-sha1")
@@ -95,6 +108,8 @@ function test(path = pwd();
                 # Require all deps to exist in the General registry or be a stdlib
                 depuuids = Set{Base.UUID}(Base.UUID(x) for (_, d) in deps for (_, x) in d)
                 Test.@test depuuids ⊆ alluuids
+                # Test that the way Pkg loads this data works
+                Test.@test load_deps(depsfile, vnums)
             end
 
             # Compat.toml testing
@@ -108,6 +123,8 @@ function test(path = pwd();
                     push!(depnames, "julia") # All packages has an implicit dependency on julia
                     @assert compatnames ⊆ depnames
                 end
+                # Test that the way Pkg loads this data works
+                Test.@test load_compat(compatfile, vnums)
             end
         end
         # Make sure all paths are unique
