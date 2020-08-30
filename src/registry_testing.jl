@@ -110,6 +110,10 @@ function test(path = pwd();
                 Test.@test depuuids ⊆ alluuids
                 # Test that the way Pkg loads this data works
                 Test.@test load_deps(depsfile, vnums)
+                # Make sure the content roundtrips through decompression/compression
+                compressed = RegistryTools.Compress.compress(depsfile,
+                    RegistryTools.Compress.load(depsfile))
+                Test.@test compressed == deps
             end
 
             # Compat.toml testing
@@ -125,6 +129,10 @@ function test(path = pwd();
                 end
                 # Test that the way Pkg loads this data works
                 Test.@test load_compat(compatfile, vnums)
+                # Make sure the content roundtrips through decompression/compression
+                compressed = RegistryTools.Compress.compress(compatfile,
+                    RegistryTools.Compress.load(compatfile))
+                Test.@test compressed == compat
             end
         end
         # Make sure all paths are unique
