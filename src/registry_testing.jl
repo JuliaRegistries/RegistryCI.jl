@@ -85,7 +85,7 @@ function test(path = pwd();
 
         # Test that each entry in Registry.toml has a corresponding Package.toml
         # at the expected path with the correct uuid and name
-        for (uuid, data) in reg["packages"]
+        Test.@testset "$(get(data, "name", uuid))" for (uuid, data) in reg["packages"]
             # Package.toml testing
             pkg = Pkg.TOML.parsefile(abspath(data["path"], "Package.toml"))
             Test.@test Base.UUID(uuid) == Base.UUID(pkg["uuid"])
