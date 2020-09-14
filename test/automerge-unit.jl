@@ -184,6 +184,16 @@ end
         @test AutoMerge.difference(v"1", v"2") == v"1"
         @test_throws ArgumentError AutoMerge.difference(v"1", v"1")
         @test_throws ArgumentError AutoMerge.difference(v"2", v"1")
+        @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("0"))
+        @test AutoMerge._has_upper_bound(Pkg.Types.VersionRange("1"))
+        @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("*"))
+        @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("0-1"))
+        @test AutoMerge._has_upper_bound(Pkg.Types.VersionRange("1-2"))
+        @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("1-*"))
+        @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("0-0"))
+        @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("0-*"))
+        @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("0.2-0"))
+        @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("0.2-*"))
     end
 end
 

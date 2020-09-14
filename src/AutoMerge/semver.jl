@@ -97,7 +97,13 @@ function julia_compat(pkg::String, version::VersionNumber, registry_path::String
 end
 
 function _has_upper_bound(r::Pkg.Types.VersionRange)
-    return r.upper != Pkg.Types.VersionBound("*")
+    a = r.upper != Pkg.Types.VersionBound("*")
+    b = r.upper != Pkg.Types.VersionBound("0")
+    c = !(Base.VersionNumber(0, typemax(Base.VInt), typemax(Base.VInt)) in r)
+    d = !(Base.VersionNumber(typemax(Base.VInt), typemax(Base.VInt), typemax(Base.VInt)) in r)
+    e = !(typemax(Base.VersionNumber) in r)
+    result = a && b && c && d && e
+    return result
 end
 
 function range_did_not_narrow(r1::Pkg.Types.VersionRange, r2::Pkg.Types.VersionRange)
