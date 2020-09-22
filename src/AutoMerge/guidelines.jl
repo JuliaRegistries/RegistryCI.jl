@@ -73,7 +73,11 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
                          "then a compat entry `foo = x.y.z` implies a compatibility upper bound ",
                          "for packages following semver. You can additionally include earlier versions ",
                          "your package is compatible with. ",
-                         "See https://julialang.github.io/Pkg.jl/v1/compatibility/ for details.")
+                         "See https://julialang.github.io/Pkg.jl/v1/compatibility/ for details. ",
+                         "Please note: in order to satisfy this guideline, each compat entry ",
+                         "must only include a finite number of breaking releases. ",
+                         "Compat entries of the form `PkgA = \"0\"` include an infinite number of ",
+                         "breaking releases and therefore do not meet this guideline.")
         return false, message
     end
 end
