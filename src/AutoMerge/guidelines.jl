@@ -57,27 +57,12 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
             end
         end
         sort!(bad_dependencies)
-        message = string("The following dependencies ",
-                         "do not have a ",
-                         "compat entry that has ",
-                         "an upper bound: ",
-                         join(bad_dependencies,
-                              ", "),
-                         ". You may find ",
-                         "[CompatHelper]",
-                         "(https://github.com/bcbi/CompatHelper.jl) ",
-                         "helpful for keeping ",
-                         "your compat entries ",
-                         "up-to-date.",
-                         "Note: If your package works for the current version `x.y.z` of a dependency `foo`, ",
-                         "then a compat entry `foo = x.y.z` implies a compatibility upper bound ",
-                         "for packages following semver. You can additionally include earlier versions ",
-                         "your package is compatible with. ",
-                         "See https://julialang.github.io/Pkg.jl/v1/compatibility/ for details. ",
-                         "Please note: in order to satisfy this guideline, each compat entry ",
-                         "must only include a finite number of breaking releases. ",
-                         "Compat entries of the form `PkgA = \"0\"` include an infinite number of ",
-                         "breaking releases and therefore do not meet this guideline.")
+        message = string(
+            "The following dependencies do not have a `[compat]` entry ",
+            "that is upper-bounded and only includes a finite number ",
+            "of breaking releases: ",
+            join(bad_dependencies, ", ")
+        )
         return false, message
     end
 end
