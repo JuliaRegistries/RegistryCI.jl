@@ -37,6 +37,7 @@ delete_stale_branches(repo_url_with_auth; GIT = GIT)
             (7, "master_4", "feature_7", "New version: HelloWorldC_jll v1.0.8+0", true),   # OK: new JLL version
             (8, "master_1", "feature_8", "New package: HelloWorldC_jll v1.0.6+0", false),  # FAIL: unallowed dependency
         ]
+        @info "Performing integration tests with settings" test_number master_dir feature_dir title pass
         with_master_branch(templates(master_dir), "master"; GIT = GIT, repo_url = repo_url_with_auth) do master
             with_feature_branch(templates(feature_dir), master; GIT = GIT, repo_url = repo_url_with_auth) do feature
                 head = feature

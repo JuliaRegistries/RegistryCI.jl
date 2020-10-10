@@ -180,3 +180,10 @@ function time_is_already_in_utc(dt::Dates.DateTime)
     utc = TimeZones.tz"UTC"
     return TimeZones.ZonedDateTime(dt, utc; from_utc = true)
 end
+
+function get_all_non_jll_package_names(registry_dir::AbstractString)
+    packages = [x["name"] for x in values(TOML.parsefile(joinpath(registry_dir, "Registry.toml"))["packages"])]
+    filter!(x -> !endswith(x, "_jll"), packages)
+    unique!(packages)
+    return packages
+end

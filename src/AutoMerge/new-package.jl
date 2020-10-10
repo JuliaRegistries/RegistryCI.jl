@@ -41,10 +41,17 @@ function pull_request_build(api::GitHub.GitHubAPI,
     #     - Pkg
     #     - Libdl
     #     - other JLL packages
-    # 9. Version can be installed
+    # 9. Package's name is sufficiently far from existing package names in the registry
+    #     - We exclude JLL packages from the "existing names"
+    #     - We use three checks:
+    #         - that the lowercased name is at least 1 away in Damerau Levenshtein distance from any other lowercased name
+    #         - that the name is at least 2 away in Damerau Levenshtein distance from any other name
+    #         - that the name is sufficiently far in a visual distance from any other name
+    # 10. Package's name has only ASCII characters
+    # 11. Version can be installed
     #     - given the proposed changes to the registry, can we resolve and install the new version of the package?
     #     - i.e. can we run `Pkg.add("Foo")`
-    # 10. Version can be loaded
+    # 12. Version can be loaded
     #     - once it's been installed (and built?), can we load the code?
     #     - i.e. can we run `import Foo`
     pkg, version = parse_pull_request_title(NewPackage(), pr)
@@ -130,6 +137,11 @@ function pull_request_build(api::GitHub.GitHubAPI,
                 m8 = ""
             end
 
+            all_pkg_names = get_all_non_jll_package_names(registry_master)
+            g9, m9 = meets_distance_check(pkg, all_pkg_names)
+
+            g10, m10 = meets_name_ascii(pkg)
+
             @info("JLL-only authors cannot register non-JLL packages.",
                   meets_this_guideline = g0,
                   message = m0)
@@ -157,7 +169,13 @@ function pull_request_build(api::GitHub.GitHubAPI,
             @info("If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
                   meets_this_guideline = g8,
                   message = m8)
-            g0through8 = Bool[g0,
+            @info("Name is not too similar to existing package names",
+                  meets_this_guideline = g9,
+                  message = m9)
+            @info("Name is composed of ASCII characters only",
+                  meets_this_guideline = g10,
+                  message = m10)
+            g0through10 = Bool[g0,
                               g1,
                               g2,
                               g3,
@@ -165,8 +183,10 @@ function pull_request_build(api::GitHub.GitHubAPI,
                               g5,
                               g6,
                               g7,
-                              g8]
-            if !all(g0through8)
+                              g8,
+                              g9,
+                              g10]
+            if !all(g0through10)
                 description = "New package. Failed."
                 params = Dict("state" => "failure",
                               "context" => "automerge/decision",
@@ -177,21 +197,21 @@ function pull_request_build(api::GitHub.GitHubAPI,
                                                     auth = auth,
                                                     params = params))
             end
-            g9, m9 = meets_version_can_be_pkg_added(registry_head,
+            g11, m11 = meets_version_can_be_pkg_added(registry_head,
                                                     pkg,
                                                     version;
                                                     registry_deps = registry_deps)
             @info("Version can be `Pkg.add`ed",
-                  meets_this_guideline = g9,
-                  message = m9)
-            g10, m10 = meets_version_can_be_imported(registry_head,
+                  meets_this_guideline = g11,
+                  message = m11)
+            g12, m12 = meets_version_can_be_imported(registry_head,
                                                      pkg,
                                                      version;
                                                      registry_deps = registry_deps)
             @info("Version can be `import`ed",
-                  meets_this_guideline = g9,
-                  message = m9)
-            g0through10 = Bool[g0,
+                  meets_this_guideline = g12,
+                  message = m12)
+            g0through12 = Bool[g0,
                                g1,
                                g2,
                                g3,
@@ -201,8 +221,10 @@ function pull_request_build(api::GitHub.GitHubAPI,
                                g7,
                                g8,
                                g9,
-                               g10]
-            allmessages0through10 = String[m0,
+                               g10,
+                               g11,
+                               g12]
+            allmessages0through12 = String[m0,
                                            m1,
                                            m2,
                                            m3,
@@ -212,8 +234,10 @@ function pull_request_build(api::GitHub.GitHubAPI,
                                            m7,
                                            m8,
                                            m9,
-                                           m10]
-            if all(g0through10) # success
+                                           m10,
+                                           m11,
+                                           m12]
+            if all(g0through12) # success
                 description = "New package. Approved. name=\"$(pkg)\". sha=\"$(current_pr_head_commit_sha)\""
                 params = Dict("state" => "success",
                               "context" => "automerge/decision",
@@ -244,9 +268,9 @@ function pull_request_build(api::GitHub.GitHubAPI,
                                                     current_pr_head_commit_sha;
                                                     auth = auth,
                                                     params = params))
-                failingmessages0through10 = allmessages0through10[.!g0through10]
+                failingmessages0through12 = allmessages0through12[.!g0through12]
                 this_pr_comment_fail = comment_text_fail(NewPackage(),
-                                                         failingmessages0through10,
+                                                         failingmessages0through12,
                                                          suggest_onepointzero,
                                                          version)
                 my_retry(() -> update_automerge_comment!(api,

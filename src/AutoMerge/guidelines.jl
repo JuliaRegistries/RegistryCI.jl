@@ -106,6 +106,63 @@ function meets_name_length(pkg)
     end
 end
 
+function meets_name_ascii(pkg)
+    if isascii(pkg)
+        return true, ""
+    else
+        return false, "Name is not ASCII"
+    end
+end
+
+damerau_levenshtein(name1, name2) = StringDistances.DamerauLevenshtein()(name1, name2)
+sqrt_normalized_vd(name1, name2) = VisualStringDistances.visual_distance(name1, name2; normalize=x -> 5 + sqrt(x))
+
+function meets_distance_check(pkg_name, other_packages; DL_lowercase_cutoff = 1, DL_cutoff = 2, sqrt_normalized_vd_cutoff = 2.5)
+    problem_messages = String[]
+    for other_pkg in other_packages
+        if pkg_name == other_pkg
+            # We short-circuit in this case; more information doesn't help.
+            return  (false, "Package name already exists in the registry.")
+        elseif lowercase(pkg_name) == lowercase(other_pkg)
+            push!(problem_messages, "Package name matches existing package name $(other_pkg) up to case.")
+        else
+            msg = ""
+
+            # Distance check 1: DL distance
+            dl = damerau_levenshtein(pkg_name, other_pkg)
+            if dl <= DL_cutoff
+                msg = string(msg, " Damerau-Levenshtein distance $dl is at or below cutoff of $(DL_cutoff).")
+            end
+
+            # Distance check 2: lowercase DL distance
+            dl_lowercase = damerau_levenshtein(lowercase(pkg_name), lowercase(other_pkg))
+            if dl <= DL_lowercase_cutoff
+                msg = string(msg, " Damerau-Levenshtein distance $(dl_lowercase) between lowercased names is at or below cutoff of $(DL_lowercase_cutoff).")
+            end
+            
+            # Distance check 3: normalized visual distance,
+            # gated by a `dl` check for speed.
+            if (sqrt_normalized_vd_cutoff > 0 && dl <= 4)
+                nrm_vd = sqrt_normalized_vd(pkg_name, other_pkg)
+                if nrm_vd <= sqrt_normalized_vd_cutoff
+                    msg = string(msg, " Normalized visual distance ", Printf.@sprintf("%.2f", nrm_vd), " is at or below cutoff of ", Printf.@sprintf("%.2f", sqrt_normalized_vd_cutoff), ".")
+                end
+            end
+
+            if msg != ""
+                # We must have found a clash.
+                push!(problem_messages, string("Similar to $(other_pkg).", msg))
+            end
+        end
+    end
+    
+    isempty(problem_messages) && return (true, "")
+    header = string("Package name similar to $(length(problem_messages)) existing package",
+                    length(problem_messages) > 1 ? "s" : "", ".\n")
+    numbered_list_string = join(join.(zip(1:length(problem_messages), problem_messages), Ref(". ")), '\n')
+    return (false, string(header, numbered_list_string))
+end
+
 function meets_normal_capitalization(pkg)
     meets_this_guideline = occursin(r"^[A-Z]\w*[a-z]\w*[0-9]?$", pkg)
     if meets_this_guideline

@@ -27,7 +27,29 @@ Note that commenting on a pull request will automatically disable automerging on
 
 3. Standard initial version number: one of `0.0.1`, `0.1.0`, `1.0.0`.
 
-4. Repo URL ends with `/$name.jl.git` where `name` is the package name.
+4. Package name is not too similar to an existing package's name.
+
+    We currently test this via three checks:
+    
+    - requiring that the [Damerau–Levenshtein distance](https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance) between the package name and the name of any existing package is at least 3
+    - requiring that the Damerau–Levenshtein distance between the lowercased version of a package name and the lowercased version of the name of any existing package is at least 2
+    - requiring that a visual distance from [VisualStringDistances.jl](https://github.com/ericphanson/VisualStringDistances.jl) between the package name and any existing package exceeds a certain a hand-chosen threshold.
+
+    These tolerances and methodology are subject to change in order to improve the process.
+
+    To test yourself that a tentative package name, say `MyPackage` meets these checks, you can use the following code (after adding the RegistryCI package to your Julia environment):
+
+    ```julia
+    using RegistryCI
+    using RegistryCI.AutoMerge
+    all_pkg_names = AutoMerge.get_all_non_jll_package_names(path_to_registry)
+    AutoMerge.meets_distance_check("MyPackage", all_pkg_names)
+    ```
+
+    where `path_to_registry` is a path to the folder containing the registry of interest. For the General Julia registry, usually `path_to_registry = joinpath(DEPOT_PATH[1], "registries", "General")` if you haven't changed your `DEPOT_PATH`. This will return a boolean, indicating whether or not your tentative package name passed the check, as well as a string, indicating what the problem is in the event the check did not pass.
+
+
+Reminder: these automerge guidelines are deliberately conservative: it is very possible for a perfectly good name to not pass the automatic checks and require manually merging. They simply exist to provide a fast path so that manual review is not required for every new package.
 
 ### New version of an existing package
 
