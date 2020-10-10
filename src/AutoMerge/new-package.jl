@@ -28,7 +28,7 @@ function pull_request_build(api::GitHub.GitHubAPI,
     # 4. Not too short
     #     - at least five letters
     #     - you can register names shorter than this, but doing so requires someone to approve
-    # 5. Standard initial version number - one of 0.0.1, 0.1.0, 1.0.0
+    # 5. DISABLED. Standard initial version number - one of 0.0.1, 0.1.0, 1.0.0, X.0.0
     #     - does not apply to JLL packages
     # 6. DISABLED. Repo URL ends with /$name.jl.git where name is the package name. Now that we have support for multiple packages in different subdirectories of a repo, we have disabled this check.
     # 7. Compat for all dependencies
@@ -107,7 +107,9 @@ function pull_request_build(api::GitHub.GitHubAPI,
                 g5 = true
                 m5 = ""
             else
-                g5, m5 = meets_standard_initial_version_number(version)
+                # g5, m5 = meets_standard_initial_version_number(version)
+                g5 = true
+                m5 = ""
             end
 
             # g6, m6 = meets_repo_url_requirement(pkg; registry_head = registry_head)
