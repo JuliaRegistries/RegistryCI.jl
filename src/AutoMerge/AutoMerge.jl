@@ -8,7 +8,10 @@ import LibGit2
 import Pkg
 import TimeZones
 import JSON
-
+import VisualStringDistances
+import StringDistances
+import TOML
+import Printf
 import ..RegistryCI
 
 include("assert.jl")
