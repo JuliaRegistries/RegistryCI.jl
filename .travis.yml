@@ -1,4 +1,8 @@
-## Documentation: http://docs.travis-ci.com/user/languages/julia/
+## Important note:
+## If you want to run the integration tests, make sure that you go into the
+## Travis settings for your repository, enable the "Limit concurrent jobs"
+## option, and set the number of concurrent jobs to one (1).
+## For more details, see https://docs.travis-ci.com/user/customizing-the-build/#limiting-concurrent-jobs
 
 branches:
   only:
@@ -12,15 +16,17 @@ env:
   global:
     - AUTOMERGE_INTEGRATION_TEST_REPO="bcbi-test/automerge-integration-test-repo"
     # - JULIA_DEBUG="all"
+  jobs:
+    - AUTOMERGE_RUN_INTEGRATION_TESTS="false"
+    - AUTOMERGE_RUN_INTEGRATION_TESTS="true"
 
 git:
   depth: 99999999
 
 julia:
   - "1.3"
-  - "1.4"
   - "1" # "1" expands to the latest 1.y.z release of Julia
-  - nightly
+  # - nightly
 
 language: julia
 
@@ -33,32 +39,3 @@ os:
 script: julia --code-coverage -e 'using Pkg; Pkg.build(); Pkg.test(coverage=true)'
 
 after_success: julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; get(ENV, "AUTOMERGE_RUN_INTEGRATION_TESTS", "") == "true" && Codecov.submit(process_folder())'
-
-## Important note:
-## If you want to run the integration tests, make sure that you go into the
-## Travis settings for your repository, enable the "Limit concurrent jobs"
-## option, and set the number of concurrent jobs to one (1).
-## For more details, see https://docs.travis-ci.com/user/customizing-the-build/#limiting-concurrent-jobs
-
-jobs:
-  include:
-  
-    - stage: "AutoMerge Integration Tests"
-      env:
-        - AUTOMERGE_RUN_INTEGRATION_TESTS="true"
-      julia: "1.3"
-      
-    - stage: "AutoMerge Integration Tests"
-      env:
-        - AUTOMERGE_RUN_INTEGRATION_TESTS="true"
-      julia: "1.4"
-
-    - stage: "AutoMerge Integration Tests"
-      env:
-        - AUTOMERGE_RUN_INTEGRATION_TESTS="true"
-      julia: "1" # "1" expands to the latest 1.y.z release of Julia
-
-    - stage: "AutoMerge Integration Tests"
-      env:
-        - AUTOMERGE_RUN_INTEGRATION_TESTS="true"
-      julia: "nightly"
