@@ -33,21 +33,14 @@ const AutoMerge = RegistryCI.AutoMerge
         @test !AutoMerge.meets_name_ascii("ábc")[1]
         @test AutoMerge.meets_name_ascii("abc")[1]
     end
-    @info "Starting distance checks..."
-    @time @testset "Package name distance" begin
-        @info "Starting distance check 1..."
-        @time @test AutoMerge.meets_distance_check("Flux", ["Abc", "Def"])[1]
-        @info "Starting distance check 2..."
-        @time @test !AutoMerge.meets_distance_check("Flux", ["FIux", "Abc", "Def"])[1]
-        @info "Starting distance check 3..."
-        @time @test !AutoMerge.meets_distance_check("Websocket", ["WebSockets"])[1]
-        @info "Starting distance check 4..."
-        @time @test !AutoMerge.meets_distance_check("ThreabTooIs", ["ThreadTools"])[1]
-        @info "Starting distance check 5..."
-        @time @test !AutoMerge.meets_distance_check("JiII", ["Jill"])[1]
-        @info "Starting distance check 6..."
-        @time @test !AutoMerge.meets_distance_check("ReallyLooooongNameCD", ["ReallyLooooongNameAB"])[1]
-        @info "Completed distance checks."
+    @testset "Package name distance" begin
+        @test AutoMerge.meets_distance_check("Flux", ["Abc", "Def"])[1]
+        @test !AutoMerge.meets_distance_check("Flux", ["FIux", "Abc", "Def"])[1]
+        @test !AutoMerge.meets_distance_check("Websocket", ["WebSockets"])[1]
+        @test !AutoMerge.meets_distance_check("ThreabTooIs", ["ThreadTools"])[1]
+        @test !AutoMerge.meets_distance_check("JiII", ["Jill"])[1]
+        @test !AutoMerge.meets_distance_check("FooBar", ["FOO8ar"], DL_cutoff=0, sqrt_normalized_vd_cutoff=0, DL_lowercase_cutoff=1)[1]
+        @test !AutoMerge.meets_distance_check("ReallyLooooongNameCD", ["ReallyLooooongNameAB"])[1]
     end
     @testset "Standard initial version number" begin
         @test AutoMerge.meets_standard_initial_version_number(v"0.0.1")[1]
