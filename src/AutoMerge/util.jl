@@ -181,8 +181,16 @@ function time_is_already_in_utc(dt::Dates.DateTime)
     return TimeZones.ZonedDateTime(dt, utc; from_utc = true)
 end
 
+"""
+    get_all_non_jll_package_names(registry_dir::AbstractString) -> Vector{String}
+
+Given a path to the directory holding a registry, returns the names of all the non-JLL packages
+defined in that registry, along with the names of Julia's standard libraries.
+"""
 function get_all_non_jll_package_names(registry_dir::AbstractString)
     packages = [x["name"] for x in values(TOML.parsefile(joinpath(registry_dir, "Registry.toml"))["packages"])]
+    sort!(packages)
+    append!(packages, values(RegistryTools.stdlibs()))
     filter!(x -> !endswith(x, "_jll"), packages)
     unique!(packages)
     return packages

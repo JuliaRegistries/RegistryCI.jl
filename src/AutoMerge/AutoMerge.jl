@@ -12,6 +12,7 @@ import VisualStringDistances
 import StringDistances
 import TOML
 import Printf
+import RegistryTools
 import ..RegistryCI
 
 include("assert.jl")
