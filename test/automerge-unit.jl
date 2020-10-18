@@ -42,6 +42,13 @@ const AutoMerge = RegistryCI.AutoMerge
         @test !AutoMerge.meets_distance_check("FooBar", ["FOO8ar"], DL_cutoff=0, sqrt_normalized_vd_cutoff=0, DL_lowercase_cutoff=1)[1]
         @test !AutoMerge.meets_distance_check("ReallyLooooongNameCD", ["ReallyLooooongNameAB"])[1]
     end
+    @testset "`get_all_non_jll_package_names`" begin
+        registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
+        packages = AutoMerge.get_all_non_jll_package_names(registry_path)
+        @test "RegistryCI" ∈ packages
+        @test "Logging" ∈ packages
+        @test "Poppler_jll" ∉ packages
+    end
     @testset "Standard initial version number" begin
         @test AutoMerge.meets_standard_initial_version_number(v"0.0.1")[1]
         @test AutoMerge.meets_standard_initial_version_number(v"0.1.0")[1]
