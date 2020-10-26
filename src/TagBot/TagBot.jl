@@ -36,10 +36,10 @@ function repo_and_version_of_pull_request_body(body)
         return nothing, nothing
     end
     m = match(r"Repository: .*github\.com[:/](.*)", body)
-    repo = m === nothing ? nothing : m[1]
+    repo = m === nothing ? nothing : strip(m[1])
     m = match(r"Version: (.*)", body)
-    version = m === nothing ? nothing : m[1]
-    return strip(repo), strip(version)
+    version = m === nothing ? nothing : strip(m[1])
+    return repo, version
 end
 
 function clone_repo(repo)
@@ -62,7 +62,7 @@ function is_tagbot_enabled(repo)
 end
 
 function get_repo_notification_issue(repo)
-    # TODO: Populate `USER` (how?) and use it as `creator`.
+    # TODO: Get the authenticated user (how?) and use it as `creator`.
     params = (; creator="JuliaTagBot", state="closed")
     issues, _ = GH.issues(repo; auth=AUTH[], params=params)
     return if isempty(issues)
@@ -94,14 +94,7 @@ function handle_merged_pull_request(event)
         @info "Failed to parse GitHub repository from pull request"
         return
     end
-    @info "Processing version $version of $repo"
-    if !is_tagbot_enabled(repo)
-        @info "TagBot is not enabled on $repo"
-        return
-    end
-    issue = get_repo_notification_issue(repo)
-    body = notification_body(event)
-    notify(repo, issue, body)
+    maybe_notify(repo, version)
 end
 
 function collect_pulls(repo)
@@ -143,25 +136,27 @@ end
 
 function handle_cron(event)
     pulls = collect_pulls(event["repository"]["full_name"])
-    for pull in pulls
-        repo, version = repo_and_version_of_pull_request_body(pull.body)
-        if repo === nothing
-            @info "Failed to parse GitHub repository from pull reqest"
-            continue
-        end
-        @info "Processing version $version of $repo"
-        if !is_tagbot_enabled(repo)
-            @info "TagBot is not enabled on $repo"
-            continue
-        end
-        if tag_exists(repo, version)
-            @info "Tag $version already exists for $repo"
-            continue
-        end
-        issue = get_repo_notification_issue(repo)
-        body = notification_body(event)
-        notify(repo, issue, body)
+    repos_versions = map(pull -> repo_and_version_of_pull_request_body(pull.body), pulls)
+    filter!(rv -> first(rv) !== nothing, repos_versions)
+    unique!(first, repos_versions)  # Send at most one notification per repo.
+    for (repo, version) in repos_versions
+        maybe_notify(repo, version; check_tag=true)
     end
+end
+
+function maybe_notify(repo, version; check_tag=false)
+    @info "Processing version $version of $repo"
+    if !is_tagbot_enabled(repo)
+        @info "TagBot is not enabled on $repo"
+        return
+    end
+    if check_tag && tag_exists(repo, version)
+        @info "Tag $version already exists for $repo"
+        return
+    end
+    issue = get_repo_notification_issue(repo)
+    body = notification_body(event)
+    notify(repo, issue, body)
 end
 
 end
