@@ -9,7 +9,12 @@ const GH = GitHub
 
 const AUTH = Ref{GH.OAuth2}()
 const ISSUE_TITLE = "TagBot trigger issue"
-const ISSUE_BODY = "This issue is used to trigger TagBot; feel free to unsubscribe."
+const ISSUE_BODY = """
+This issue is used to trigger TagBot; feel free to unsubscribe.
+
+If you haven't already, you should update your `TagBot.yml` to include issue comment triggers.
+Please see [this post on Discourse](TODO: Discourse URL) for instructions and more details.
+"""
 
 function main()
     AUTH[] = GH.authenticate(ENV["GITHUB_TOKEN"])
@@ -34,7 +39,7 @@ function repo_and_version_of_pull_request_body(body)
     repo = m === nothing ? nothing : m[1]
     m = match(r"Version: (.*)", body)
     version = m === nothing ? nothing : m[1]
-    return repo, version
+    return strip(repo), strip(version)
 end
 
 function clone_repo(repo)
@@ -85,7 +90,6 @@ function handle_merged_pull_request(event)
     number = event["pull_request"]["number"]
     @info "Processing pull request $number"
     repo, version = repo_and_version_of_pull_request_body(event["pull_request"]["body"])
-    @info "Release $version of $repo"
     if repo === nothing
         @info "Failed to parse GitHub repository from pull request"
         return
