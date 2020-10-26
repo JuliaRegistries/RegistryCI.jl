@@ -32,7 +32,7 @@ function repo_and_version_of_pull_request_body(body)
     end
     m = match(r"Repository: .*github\.com[:/](.*)", body)
     repo = m === nothing ? nothing : m[1]
-    version = match(r"Version: (.*)", body)
+    m = match(r"Version: (.*)", body)
     version = m === nothing ? nothing : m[1]
     return repo, version
 end
@@ -43,10 +43,10 @@ function clone_repo(repo)
     return dir
 end
 
-function is_tagbot_enabled(repo; dir=nothing)
-    if dir === nothing
-        dir = clone_repo(repo)
-    end
+function is_tagbot_enabled(repo)
+    # TODO: Traversing the file tree should be possible via GitHub API,
+    # but GitHub.jl doesn't seem capable.
+    dir = clone_repo(repo)
     workflows = joinpath(dir, ".github", "workflows")
     isdir(workflows) || return false
     for workflow in readdir(workflows)
@@ -90,7 +90,7 @@ function handle_merged_pull_request(event)
         @info "Failed to parse GitHub repository from pull request"
         return
     end
-    @info "Processing merged PR for $repo"
+    @info "Processing version $version of $repo"
     if !is_tagbot_enabled(repo)
         @info "TagBot is not enabled on $repo"
         return
@@ -146,6 +146,10 @@ function handle_cron(event)
             continue
         end
         @info "Processing version $version of $repo"
+        if !is_tagbot_enabled(repo)
+            @info "TagBot is not enabled on $repo"
+            continue
+        end
         if tag_exists(repo, version)
             @info "Tag $version already exists for $repo"
             continue
