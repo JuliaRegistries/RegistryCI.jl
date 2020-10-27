@@ -26,7 +26,7 @@ function main()
     end
 end
 
-is_merged_pull_request(event) = event["pull_request"]["merged"]
+is_merged_pull_request(event) = get(get(event, "pull_request", Dict()), "merged", false)
 
 is_cron(event) = get(ENV, "GITHUB_EVENT_NAME", "") == "schedule"
 
@@ -37,6 +37,7 @@ function repo_and_version_of_pull_request_body(body)
     end
     m = match(r"Repository: .*github\.com[:/](.*)", body)
     repo = m === nothing ? nothing : strip(m[1])
+    repo !== nothing && endswith(repo, ".git") && (repo = repo[1:end-4])
     m = match(r"Version: (.*)", body)
     version = m === nothing ? nothing : strip(m[1])
     return repo, version
@@ -78,8 +79,9 @@ function get_repo_notification_issue(repo)
 end
 
 function notification_body(event)
-    url = event["pull_request"]["html_url"]
-    return "Triggering TagBot for merged registry pull request: $url"
+    url = get(get(event, "pull_request", Dict()), "html_url", "")
+    body = "Triggering TagBot for merged registry pull request"
+    return isempty(url) ? body : "$body: $url"
 end
 
 function notify(repo, issue, body)
@@ -94,7 +96,7 @@ function handle_merged_pull_request(event)
         @info "Failed to parse GitHub repository from pull request"
         return
     end
-    maybe_notify(repo, version)
+    maybe_notify(event, repo, version)
 end
 
 function collect_pulls(repo)
@@ -140,11 +142,11 @@ function handle_cron(event)
     filter!(rv -> first(rv) !== nothing, repos_versions)
     unique!(first, repos_versions)  # Send at most one notification per repo.
     for (repo, version) in repos_versions
-        maybe_notify(repo, version; check_tag=true)
+        maybe_notify(event, repo, version; check_tag=true)
     end
 end
 
-function maybe_notify(repo, version; check_tag=false)
+function maybe_notify(event, repo, version; check_tag=false)
     @info "Processing version $version of $repo"
     if !is_tagbot_enabled(repo)
         @info "TagBot is not enabled on $repo"
