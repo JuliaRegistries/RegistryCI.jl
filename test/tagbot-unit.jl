@@ -104,17 +104,25 @@ end
 end
 
 @testset "maybe_notify" begin
-    # mock(
-    #     TB.clone_repo => repo -> joinpath(@__DIR__, "repos", repo),
-    #     TB.tag_exists => (r, v) -> true,
-    #     TB.get_repo_notification_issue,
-    #     TB.notify,
-    # ) do _clone, tag_exists, get_issue, notify
-    #     @test_logs match_mode=:any (:info, r"not enabled") TB.maybe_notify((), "no_tagbot", "0")
-    #     @test ncalls(get_issue) == 0
-    #     @test_logs match_mode=:any (:info, r"already exists") TB.maybe_notify((), "yes_tagbot", "1"; check=true)
-    #     @test ncalls(get_issue) == 0
-    #     TB.maybe_notify(Dict(), "yes_tagbot", "2")
-    #     @test called_with(get_issue, "yes_tagbot")
-    # end
+    @test_logs match_mode=:any (:info, r"not enabled") begin
+        mock(TB.is_tagbot_enabled => Mock(false)) do _is_tagbot_enabled
+            TB.maybe_notify((), "repo", "v")
+        end
+    end
+    @test_logs match_mode=:any (:info, r"already exists") begin
+        mock(TB.is_tagbot_enabled => Mock(true), TB.tag_exists => Mock(true)) do ite, te
+            TB.maybe_notify((), "repo", "v"; check_tag=true)
+        end
+    end
+    mock(
+        TB.is_tagbot_enabled => Mock(true),
+        TB.get_repo_notification_issue => Mock(1),
+        TB.notify,
+    ) do is_enabled, get_issue, notify
+        TB.maybe_notify(Dict(), "repo", "v")
+        @test called_with(is_enabled, "repo")
+        @test called_with(get_issue, "repo")
+        msg = "Triggering TagBot for merged registry pull request"
+        @test called_with(notify, "repo", 1, msg)
+    end
 end
