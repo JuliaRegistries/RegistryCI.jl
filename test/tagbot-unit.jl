@@ -1,11 +1,17 @@
+using BrokenRecord: BrokenRecord, HTTP, playback
 using Dates: Day, UTC, now
 using RegistryCI: TagBot
-using SimpleMock: called_with, mock, ncalls
+using SimpleMock: Mock, called_with, mock
+using Test: @test, @testset, @test_logs
 
 const TB = TagBot
 const GH = TB.GH
 
-TB.AUTH[] = GH.OAuth2("abcdef")
+TB.AUTH[] = GH.OAuth2(get(ENV, "GITHUB_TOKEN", "abcdef"))
+BrokenRecord.configure!(;
+    path=joinpath(@__DIR__, "cassettes"),
+    ignore_headers=["Authorization"],
+)
 
 @testset "is_merged_pull_request" begin
     @test !TB.is_merged_pull_request(Dict())
@@ -32,6 +38,13 @@ end
     @test TB.repo_and_version_of_pull_request_body(gitlab) == (nothing, "v1.2.3")
 end
 
+@testset "clone_repo" begin
+    mock(run, mktempdir => Mock("a")) do run, _mktempdir
+        @test TB.clone_repo("A") == "a"
+        @test called_with(run, `git clone --depth=1 https://github.com/A a`)
+    end
+end
+
 @testset "is_tagbot_enabled" begin
     mock(TB.clone_repo => repo -> joinpath(@__DIR__, "repos", repo)) do _clone
         @test !TB.is_tagbot_enabled("no_actions")
@@ -41,6 +54,17 @@ end
 end
 
 @testset "get_repo_notification_issue" begin
+    repo = "christopher-dG/TestRepo"
+    playback("get_repo_notification_issue.bson") do
+        @test_logs (:info, "Creating new notification issue") begin
+            issue = TB.get_repo_notification_issue(repo)
+            @test issue.number == 4
+        end
+        @test_logs (:info, "Found existing notification issue") begin
+            issue = TB.get_repo_notification_issue(repo)
+            @test issue.number == 4
+        end
+    end
 end
 
 @testset "notification_body" begin
@@ -51,34 +75,25 @@ end
 end
 
 @testset "notify" begin
-    mock(GH.create_comment) do cc
-        TB.notify("repo", "issue", "body")
-        @test called_with(cc, "repo", "issue", :issue; auth=TB.AUTH[], params=(; body="body",))
+    playback("notify.bson") do
+        comment = TB.notify("christopher-dG/TestRepo", 4, "test notification")
+        @test comment.body == "test notification"
     end
 end
 
 @testset "collect_pulls" begin
-    pulls = [
-        GH.PullRequest(),
-        GH.PullRequest(; merged_at=now(UTC)),
-        GH.PullRequest(; merged_at=now(UTC) - Day(2)),
-    ]
-    mock(GH.pull_requests => Mock((pulls, Dict()))) do prs
-        @test TB.collect_pulls("A/B") == [pulls[2]]
-        @test ncalls(prs) == 1
+    pulls = playback("collect_pulls.bson") do
+        TB.collect_pulls("JuliaRegistries/General")
     end
-    mock(GH.pull_requests => Mock([([], Dict("next" => "a")), ([], Dict())])) do prs
-        TB.collect_pulls("A/B")
-        @test ncalls(prs) == 2
-    end
+    @test length(pulls) == 55
+    @test all(map(p -> p.merged_at !== nothing, pulls))
 end
 
 @testset "tag_exists" begin
-    mock(GH.tag) do tag
-        @test TB.tag_exists("A/B", "v1.2.3")
-        @test called_with(tag, "A/B", "v1.2.3"; auth=TB.AUTH[])
+    playback("tag_exists.bson") do
+        @test TB.tag_exists("JuliaRegistries/RegistryCI.jl", "v0.1.0")
+        @test !TB.tag_exists("JuliaRegistries/RegistryCI.jl", "v0.0.0")
     end
-    @test !TB.tag_exists("ThisWillThrow/AnError", "v4.5.6")
 end
 
 

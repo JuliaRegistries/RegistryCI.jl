@@ -70,7 +70,7 @@ function get_repo_notification_issue(repo)
         @info "Creating new notification issue"
         params = (; title=ISSUE_TITLE, body=ISSUE_BODY)
         issue = GH.create_issue(repo; auth=AUTH[], params=params)
-        GH.edit_issue(repo, issue; auth=AUTH[], params=(; state="closed",))
+        GH.edit_issue(repo, issue; auth=AUTH[], params=(; state="closed"))
         issue
     else
         @info "Found existing notification issue"
@@ -85,7 +85,7 @@ function notification_body(event)
 end
 
 function notify(repo, issue, body)
-    GH.create_comment(repo, issue, :issue; auth=AUTH[], params=(; body=body,))
+    return GH.create_comment(repo, issue, :issue; auth=AUTH[], params=(; body=body))
 end
 
 function handle_merged_pull_request(event)
@@ -101,7 +101,7 @@ end
 
 function collect_pulls(repo)
     acc = GH.PullRequest[]
-    params = (; state="closed", sort="updated", direction="desc", per_page=100)
+    params = (; state="closed", sort="updated", direction="desc")
     kwargs = Dict(:auth => AUTH[], :params => params, :page_limit => 1)
     done = false
     while !done
