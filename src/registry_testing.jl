@@ -42,23 +42,55 @@ end
 # Testing of registries #
 #########################
 
-function load_deps(depsfile, versions)
-    rtype = if VERSION < v"1.5.0"
-        Dict{VersionNumber,Dict{String,Any}}
-    else
-        Dict{VersionNumber,Dict{String,Base.UUID}}
+function load_package_data(::Type{T}, path::String, versions::Vector{VersionNumber}) where {T}
+    compressed = Pkg.TOML.parsefile(path)
+    compressed = convert(Dict{String, Dict{String, Union{String, Vector{String}}}}, compressed)
+    uncompressed = Dict{VersionNumber, Dict{String,T}}()
+    # Many of the entries are repeated so we keep a cache so there is no need to re-create
+    # a bunch of identical objects
+    cache = Dict{String, T}()
+    vsorted = sort(versions)
+    for (vers, data) in compressed
+        vs = Pkg.Types.VersionRange(vers)
+        first = length(vsorted) + 1
+        # We find the first and last version that are in the range
+        # and since the versions are sorted, all versions in between are sorted
+        for i in eachindex(vsorted)
+            v = vsorted[i]
+            v in vs && (first = i; break)
+        end
+        last = 0
+        for i in reverse(eachindex(vsorted))
+            v = vsorted[i]
+            v in vs && (last = i; break)
+        end
+        for i in first:last
+            v = vsorted[i]
+            uv = get!(() -> Dict{String, T}(), uncompressed, v)
+            for (key, value) in data
+                if haskey(uv, key)
+                    error("Overlapping ranges for $(key) in $(repr(path)) for version $v.")
+                else
+                    Tvalue = if value isa String
+                        Tvalue = get!(()->T(value), cache, value)
+                    else
+                        Tvalue = T(value)
+                    end
+                    uv[key] = Tvalue
+                end
+            end
+        end
     end
-    r = Pkg.Operations.load_package_data(Base.UUID, depsfile, versions) isa rtype
+    return uncompressed
+end
+
+function load_deps(depsfile, versions)
+    r = load_package_data(Base.UUID, depsfile, versions) isa Dict{VersionNumber,Dict{String,Base.UUID}}
     return r
 end
 
 function load_compat(compatfile, versions)
-    rtype = if VERSION < v"1.5.0"
-        Dict{VersionNumber,Dict{String,Any}}
-    else
-        Dict{VersionNumber,Dict{String,Pkg.Types.VersionSpec}}
-    end
-    r = Pkg.Operations.load_package_data(Pkg.Types.VersionSpec, compatfile, versions) isa rtype
+    r = load_package_data(Pkg.Types.VersionSpec, compatfile, versions) isa Dict{VersionNumber,Dict{String,Pkg.Types.VersionSpec}}
     return r
 end
 
