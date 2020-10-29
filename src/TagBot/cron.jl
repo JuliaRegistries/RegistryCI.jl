@@ -1,7 +1,7 @@
 is_cron(event) = get(ENV, "GITHUB_EVENT_NAME", "") == "schedule"
 
 function handle_cron(event)
-    pulls = collect_pulls(event["repository"]["full_name"])
+    pulls = collect_pulls(ENV["GITHUB_REPOSITORY"])
     repos_versions = map(pull -> repo_and_version_of_pull_request_body(pull.body), pulls)
     filter!(rv -> first(rv) !== nothing, repos_versions)
     unique!(first, repos_versions)  # Send at most one notification per repo.
