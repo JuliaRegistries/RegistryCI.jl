@@ -114,6 +114,16 @@ function meets_name_ascii(pkg)
     end
 end
 
+function meets_julia_name_check(pkg)
+    if occursin("julia", lowercase(pkg)) 
+        return false, "Lowercase package name $(lowercase(pkg)) contains the string \"julia\"."
+    elseif startswith(pkg, "Ju")
+        return false, "Package name starts with \"Ju\"."
+    else
+        return true, ""
+    end
+end
+
 damerau_levenshtein(name1, name2) = StringDistances.DamerauLevenshtein()(name1, name2)
 sqrt_normalized_vd(name1, name2) = VisualStringDistances.visual_distance(name1, name2; normalize=x -> 5 + sqrt(x))
 
