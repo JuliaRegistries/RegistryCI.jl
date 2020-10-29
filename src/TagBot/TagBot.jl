@@ -92,7 +92,7 @@ function tag_exists(repo, version)
         GH.tag(repo, version; auth=AUTH[])
         true
     catch e
-        if !occursin("404", string(e))
+        if !occursin("404", e.msg)
             @warn "Unknown error when checking for existing tag" ex=(e, catch_backtrace())
         end
         false

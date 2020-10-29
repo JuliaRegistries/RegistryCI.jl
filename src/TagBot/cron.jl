@@ -12,14 +12,17 @@ end
 
 function collect_pulls(repo)
     acc = GH.PullRequest[]
-    params = (; state="closed", sort="updated", direction="desc")
+    params = (; state="closed", sort="updated", direction="desc", per_page=100)
     kwargs = Dict(:auth => AUTH[], :params => params, :page_limit => 1)
     done = false
     while !done
-        pulls, pages = GH.pull_requests(repo; kwargs...)
+        get_pulls = retry(; check=(s, e) -> occursin("Server error", e.msg)) do
+            GH.pull_requests(repo; kwargs...)
+        end
+        pulls, pages = get_pulls()
         for pull in pulls
             pull.merged_at === nothing && continue
-            if now(UTC) - pull.merged_at < Day(1)
+            if now(UTC) - pull.merged_at < Day(3)
                 push!(acc, pull)
             else
                 done = true
