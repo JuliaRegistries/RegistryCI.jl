@@ -13,7 +13,7 @@ const ISSUE_BODY = """
 This issue is used to trigger TagBot; feel free to unsubscribe.
 
 If you haven't already, you should update your `TagBot.yml` to include issue comment triggers.
-Please see [this post on Discourse](TODO: Discourse URL) for instructions and more details.
+Please see [this post on Discourse](https://discourse.julialang.org/t/ann-required-updates-to-tagbot-yml/49249) for instructions and more details.
 """
 
 include("cron.jl")
