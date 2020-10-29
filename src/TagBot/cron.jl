@@ -19,7 +19,7 @@ function collect_pulls(repo)
         pulls, pages = GH.pull_requests(repo; kwargs...)
         for pull in pulls
             pull.merged_at === nothing && continue
-            if my_now() - pull.merged_at < Day(1)
+            if now(UTC) - pull.merged_at < Day(1)
                 push!(acc, pull)
             else
                 done = true
@@ -34,5 +34,3 @@ function collect_pulls(repo)
     end
     return acc
 end
-
-my_now() = now(UTC)  # This shouldn't be necessary, but it makes mocking faster.

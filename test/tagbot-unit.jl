@@ -1,5 +1,5 @@
 using BrokenRecord: BrokenRecord, HTTP, playback
-using Dates: DateTime
+using Dates: Day, Hour, UTC, now
 using RegistryCI: TagBot
 using SimpleMock: Mock, called_with, mock
 using Test: @test, @testset, @test_logs
@@ -82,13 +82,16 @@ end
 end
 
 @testset "collect_pulls" begin
-    pulls = playback("collect_pulls.bson") do
-        mock(TB.my_now => Mock(DateTime(2020, 10, 28, 21, 28))) do _now
-            TB.collect_pulls("JuliaRegistries/General")
-        end
+    PR = GH.PullRequest
+    prs = [
+        [PR(), PR(; merged_at=now(UTC))],
+        [PR(; merged_at=now(UTC) - Hour(23)), PR(; merged_at=now(UTC) - Day(2))],
+    ]
+    pages = [Dict("next" => "abc"), Dict()]
+    pulls = mock(GH.pull_requests => Mock(collect(zip(prs, pages)))) do _prs
+        TB.collect_pulls("JuliaRegistries/General")
     end
-    @test length(pulls) == 55
-    @test all(map(p -> p.merged_at !== nothing, pulls))
+    @test pulls == [prs[1][2], prs[2][1]]
 end
 
 @testset "tag_exists" begin
