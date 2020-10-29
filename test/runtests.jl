@@ -16,6 +16,11 @@ const AutoMerge = RegistryCI.AutoMerge
         include("registryci_registry_testing.jl")
     end
 
+    @testset "TagBot.jl unit tests" begin
+        @info("Running the TagBot.jl unit tests")
+        include("tagbot-unit.jl")
+    end
+
     @testset "AutoMerge.jl unit tests" begin
         @info("Running the AutoMerge.jl unit tests")
         include("automerge-unit.jl")
