@@ -132,7 +132,7 @@ function pull_request_build(api::GitHub.GitHubAPI,
             g8, m8 = meets_compat_for_all_deps(registry_head,
                                                pkg,
                                                version)
-            g9_if_jll, m0_if_jll = meets_allowed_jll_nonrecursive_dependencies(registry_head,
+            g9_if_jll, m9_if_jll = meets_allowed_jll_nonrecursive_dependencies(registry_head,
                                                                                pkg,
                                                                                version)
             if this_is_jll_package
