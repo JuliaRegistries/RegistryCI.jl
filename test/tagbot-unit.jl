@@ -1,4 +1,5 @@
 using BrokenRecord: BrokenRecord, HTTP, playback
+using Dates: DateTime
 using RegistryCI: TagBot
 using SimpleMock: Mock, called_with, mock
 using Test: @test, @testset, @test_logs
@@ -82,7 +83,9 @@ end
 
 @testset "collect_pulls" begin
     pulls = playback("collect_pulls.bson") do
-        TB.collect_pulls("JuliaRegistries/General")
+        mock(TB.my_now => Mock(DateTime(2020, 10, 28, 21, 28))) do _now
+            TB.collect_pulls("JuliaRegistries/General")
+        end
     end
     @test length(pulls) == 55
     @test all(map(p -> p.merged_at !== nothing, pulls))
@@ -93,13 +96,6 @@ end
         @test TB.tag_exists("JuliaRegistries/RegistryCI.jl", "v0.1.0")
         @test !TB.tag_exists("JuliaRegistries/RegistryCI.jl", "v0.0.0")
     end
-end
-
-
-@testset "handle_merged_pull_request" begin
-end
-
-@testset "handle_cron" begin
 end
 
 @testset "maybe_notify" begin
