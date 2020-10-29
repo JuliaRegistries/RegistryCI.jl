@@ -1,4 +1,4 @@
-name: TagBot
+name: TagBot Triggers
 on:
   schedule:
     - cron: 0 0 * * *
@@ -6,7 +6,7 @@ on:
     types:
       - closed
 jobs:
-  TagBot:
+  trigger:
     if: github.event_name == 'schedule' || github.event.pull_request.merged
     runs-on: ubuntu-latest
     steps:
