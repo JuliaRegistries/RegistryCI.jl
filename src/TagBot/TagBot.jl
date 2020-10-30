@@ -65,6 +65,7 @@ function get_repo_notification_issue(repo)
     # TODO: Get the authenticated user (how?) and use it as `creator`.
     params = (; creator="JuliaTagBot", state="closed")
     issues, _ = GH.issues(repo; auth=AUTH[], params=params)
+    filter!(x -> x.pull_request === nothing, issues)
     return if isempty(issues)
         @info "Creating new notification issue"
         params = (; title=ISSUE_TITLE, body=ISSUE_BODY)
