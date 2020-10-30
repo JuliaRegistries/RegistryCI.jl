@@ -17,11 +17,11 @@ const AutoMerge = RegistryCI.AutoMerge
     end
 
     @testset "TagBot.jl unit tests" begin
-        if v"1.0" <= Base.VERSION <= v"1.5"
-            @info("Running the TagBot.jl unit tests", Base.VERSION)
+        if v"1.0" <= VERSION < v"1.6"
+            @info("Running the TagBot.jl unit tests", VERSION)
             include("tagbot-unit.jl")
         else
-            @warn("Skipping the TagBot.jl unit tests", Base.VERSION)
+            @warn("Skipping the TagBot.jl unit tests", VERSION)
         end
     end
 
