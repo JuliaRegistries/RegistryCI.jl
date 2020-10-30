@@ -8,6 +8,8 @@ function run(env = ENV,
              new_jll_version_waiting_period,
              registry::String,
              #
+             tagbot_enabled::Bool=false,
+             #
              authorized_authors::Vector{String},
              authorized_authors_special_jll_exceptions::Vector{String},
              #
@@ -41,7 +43,8 @@ function run(env = ENV,
     end
 
     # Authentication
-    auth = my_retry(() -> GitHub.authenticate(api, env["AUTOMERGE_GITHUB_TOKEN"]))
+    key = run_pr_build || !tagbot_enabled ? "AUTOMERGE_GITHUB_TOKEN" : "AUTOMERGE_TAGBOT_TOKEN"
+    auth = my_retry(() -> GitHub.authenticate(api, env[key]))
     whoami = my_retry(() -> username(api, cicfg; auth=auth))
     @info("Authenticated to GitHub as \"$(whoami)\"")
     registry_repo = my_retry(() -> GitHub.repo(api, registry; auth=auth))
