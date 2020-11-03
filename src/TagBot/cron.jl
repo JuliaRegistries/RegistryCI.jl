@@ -6,14 +6,18 @@ function handle_cron(event)
     filter!(rv -> first(rv) !== nothing, repos_versions)
     unique!(first, repos_versions)  # Send at most one notification per repo.
     for (repo, version) in repos_versions
-        maybe_notify(event, repo, version; check_tag=true)
+        maybe_notify(event, repo, version; cron=true)
     end
 end
 
 function collect_pulls(repo)
     acc = GH.PullRequest[]
-    params = (; state="closed", sort="updated", direction="desc", per_page=100)
-    kwargs = Dict(:auth => AUTH[], :params => params, :page_limit => 1)
+    kwargs = Dict(:auth => AUTH[], :page_limit => 1, :params => (;
+        state="closed",
+        sort="updated",
+        direction="desc",
+        per_page=100,
+    ))
     done = false
     while !done
         get_pulls = retry(; check=(s, e) -> occursin("Server error", e.msg)) do

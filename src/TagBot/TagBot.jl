@@ -1,6 +1,8 @@
 module TagBot
 
+using Base64: base64encode
 using Dates: Day, UTC, now
+using Random: randstring
 
 using GitHub: GitHub
 using JSON: JSON
@@ -8,16 +10,26 @@ using JSON: JSON
 const GH = GitHub
 
 const AUTH = Ref{GH.OAuth2}()
+const TAGBOT_USER = "JuliaTagBot"
 const ISSUE_TITLE = "TagBot trigger issue"
 const ISSUE_BODY = """
 This issue is used to trigger TagBot; feel free to unsubscribe.
 
 If you haven't already, you should update your `TagBot.yml` to include issue comment triggers.
 Please see [this post on Discourse](https://discourse.julialang.org/t/ann-required-updates-to-tagbot-yml/49249) for instructions and more details.
+
+If you'd like for me to do this for you, comment `TagBot fix` on this issue.
+I'll open a PR within a few hours, please be patient!
+"""
+const CRON_ADDENUDM = """
+
+This extra notification is being sent because I expected a tag to exist by now, but it doesn't.
+You may want to check your TagBot configuration to ensure that it's running, and if it is, check the logs to make sure that there are no errors.
 """
 
 include("cron.jl")
 include("pull_request.jl")
+include("fixup.jl")
 
 function main()
     AUTH[] = GH.authenticate(ENV["GITHUB_TOKEN"])
@@ -48,7 +60,7 @@ function clone_repo(repo)
     return dir
 end
 
-function is_tagbot_enabled(repo)
+function tagbot_filename(repo; issue_comments=false)
     # TODO: Traversing the file tree should be possible via GitHub API,
     # but GitHub.jl doesn't seem capable.
     dir = clone_repo(repo)
@@ -56,20 +68,27 @@ function is_tagbot_enabled(repo)
     isdir(workflows) || return false
     for workflow in readdir(workflows)
         contents = read(joinpath(workflows, workflow), String)
-        occursin("JuliaRegistries/TagBot", contents) && return true
+        if occursin("JuliaRegistries/TagBot", contents)
+            return if issue_comments && !occursin("issue_comment", contents)
+                nothing
+            else
+                dir, joinpath(".github", "workflows", workflow)
+            end
+        end
     end
     return false
 end
 
 function get_repo_notification_issue(repo)
     # TODO: Get the authenticated user (how?) and use it as `creator`.
-    params = (; creator="JuliaTagBot", state="closed")
-    issues, _ = GH.issues(repo; auth=AUTH[], params=params)
+    issues, _ = GH.issues(repo; auth=AUTH[], params=(; creator=TAGBOT_USER, state="closed"))
     filter!(x -> x.pull_request === nothing, issues)
     return if isempty(issues)
         @info "Creating new notification issue"
-        params = (; title=ISSUE_TITLE, body=ISSUE_BODY)
-        issue = GH.create_issue(repo; auth=AUTH[], params=params)
+        issue = GH.create_issue(repo; auth=AUTH[], params=(;
+            title=ISSUE_TITLE,
+            body=ISSUE_BODY,
+        ))
         GH.edit_issue(repo, issue; auth=AUTH[], params=(; state="closed"))
         issue
     else
@@ -78,10 +97,12 @@ function get_repo_notification_issue(repo)
     end
 end
 
-function notification_body(event)
+function notification_body(event; cron)
     url = get(get(event, "pull_request", Dict()), "html_url", "")
     body = "Triggering TagBot for merged registry pull request"
-    return isempty(url) ? body : "$body: $url"
+    isempty(url) || (body = "$body: $url")
+    cron && (body *= CRON_ADDENDUM)
+    return body
 end
 
 function notify(repo, issue, body)
@@ -100,19 +121,22 @@ function tag_exists(repo, version)
     end
 end
 
-function maybe_notify(event, repo, version; check_tag=false)
+function maybe_notify(event, repo, version; cron=false)
     @info "Processing version $version of $repo"
-    if !is_tagbot_enabled(repo)
+    if tagbot_filename(repo) === nothing
         @info "TagBot is not enabled on $repo"
         return
     end
-    if check_tag && tag_exists(repo, version)
+    if cron && tag_exists(repo, version)
         @info "Tag $version already exists for $repo"
         return
     end
-    issue = get_repo_notification_issue(repo)
+    issue = get_repo_notification_issue(repo; cron=cron)
+    if cron && should_open_fixup_pr(repo, issue)
+        open_fixup_pr(repo)
+    end
     body = notification_body(event)
-    notify(repo, issue, body)
+    notify(repo, issue, body; cron=cron)
 end
 
 end
