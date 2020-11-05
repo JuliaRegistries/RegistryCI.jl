@@ -25,25 +25,25 @@ jobs:
           ssh: ${{ secrets.DOCUMENTER_KEY }}
 """
 
-function should_open_fixup_pr(repo, issue)
+function should_fixup(repo, issue)
     return fixup_comment_exists(repo, issue) &&
         !fixup_done(repo) &&
         tagbot_file(repo; issue_comments=true) === nothing
 end
 
 function get_fork(repo)
-    fork = GH.create_fork(r; auth=AUTH[])
+    fork = GH.create_fork(repo; auth=AUTH[])
     # Make sure the fork is new, otherwise it might be outdated.
-    if now(UTC) - fork.created_at > Minute(1)
-        delete_repo(fork; auth=AUTH[])
-        get_fork(r)
+    return if now(UTC) - fork.created_at > Minute(1)
+        GH.delete_repo(fork; auth=AUTH[])
+        get_fork(repo)
+    else
+        fork
     end
 end
 
-function open_fixup_pr(repo)
-    fork = get_fork(repo)
+function open_fixup_pr(repo; branch="tagbot/$(randstring())", fork=get_fork(repo))
     head = GH.commit(fork, "HEAD"; auth=AUTH[])
-    branch = "tagbot/$(randstring())"
     GH.create_reference(fork; auth=AUTH[], params=(;
         sha=head.sha,
         ref="refs/heads/$branch",
@@ -53,7 +53,7 @@ function open_fixup_pr(repo)
         branch=branch,
         content=base64encode(TAGBOT_YML),
         message=FIXUP_COMMIT_MESSAGE,
-        sha=bytes2hex(sha1("blob $(length(current_yml))\0$contents")),
+        sha=bytes2hex(sha1("blob $(length(contents))\0$contents")),
     ))
     return GH.create_pull_request(repo; auth=AUTH[], params=(;
         title=FIXUP_PR_TITLE,
@@ -82,7 +82,7 @@ function fixup_comment_exists(repo, issue)
 end
 
 function is_fixup_trigger(comment)
-    return c.user.login != TABGOT_USER[] && occursin(r"TagBot fix"i, c.body)
+    return comment.user.login != TAGBOT_USER[] && occursin(r"TagBot fix"i, comment.body)
 end
 
 function fixup_done(repo)

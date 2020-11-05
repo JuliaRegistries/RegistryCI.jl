@@ -1,6 +1,6 @@
 module TagBot
 
-using Base64: base64encode
+using Base64: base64decode, base64encode
 using Dates: Day, Minute, UTC, now
 using Random: randstring
 using SHA: sha1
@@ -22,7 +22,7 @@ Please see [this post on Discourse](https://discourse.julialang.org/t/ann-requir
 If you'd like for me to do this for you, comment `TagBot fix` on this issue.
 I'll open a PR within a few hours, please be patient!
 """
-const CRON_ADDENUDM = """
+const CRON_ADDENDUM = """
 
 This extra notification is being sent because I expected a tag to exist by now, but it doesn't.
 You may want to check your TagBot configuration to ensure that it's running, and if it is, check the logs to make sure that there are no errors.
@@ -129,13 +129,13 @@ function maybe_notify(event, repo, version; cron=false)
         @info "Tag $version already exists for $repo"
         return
     end
-    issue = get_repo_notification_issue(repo; cron=cron)
-    if cron && should_open_fixup_pr(repo, issue)
+    issue = get_repo_notification_issue(repo)
+    if cron && should_fixup(repo, issue)
         @info "Opening fixup PR for $repo"
         open_fixup_pr(repo)
     end
-    body = notification_body(event)
-    notify(repo, issue, body; cron=cron)
+    body = notification_body(event; cron=cron)
+    notify(repo, issue, body)
 end
 
 end
