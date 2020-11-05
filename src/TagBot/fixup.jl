@@ -28,29 +28,37 @@ jobs:
 function should_open_fixup_pr(repo, issue)
     return fixup_comment_exists(repo, issue) &&
         !fixup_done(repo) &&
-        tagbot_filename(repo; issue_comments=true) === nothing
+        tagbot_file(repo; issue_comments=true) === nothing
+end
+
+function get_fork(repo)
+    fork = GH.create_fork(r; auth=AUTH[])
+    # Make sure the fork is new, otherwise it might be outdated.
+    if now(UTC) - fork.created_at > Minute(1)
+        delete_repo(fork; auth=AUTH[])
+        get_fork(r)
+    end
 end
 
 function open_fixup_pr(repo)
-    fork = GH.create_fork(repo; auth=AUTH[])
+    fork = get_fork(repo)
     head = GH.commit(fork, "HEAD"; auth=AUTH[])
     branch = "tagbot/$(randstring())"
     GH.create_reference(fork; auth=AUTH[], params=(;
         sha=head.sha,
         ref="refs/heads/$branch",
     ))
-    dir, file = tagbot_filename(fork)
-    current_yml = read(joinpath(dir, file), String)
-    GH.update_file(fork, file; auth=AUTH[], params=(;
+    path, contents = tagbot_file(fork)
+    GH.update_file(fork, path; auth=AUTH[], params=(;
         branch=branch,
         content=base64encode(TAGBOT_YML),
         message=FIXUP_COMMIT_MESSAGE,
-        sha=bytes2hex(sha1("blob $(length(current_yml))\0$current_yml")),
+        sha=bytes2hex(sha1("blob $(length(current_yml))\0$contents")),
     ))
     return GH.create_pull_request(repo; auth=AUTH[], params=(;
         title=FIXUP_PR_TITLE,
         body=FIXUP_PR_BODY,
-        head="$TAGBOT_USER:$branch",
+        head="$(TAGBOT_USER[]):$branch",
         base=fork.default_branch,
     ))
 end
@@ -61,7 +69,7 @@ function fixup_comment_exists(repo, issue)
         comments, pages = GH.comments(repo, issue; kwargs...)
         for comment in comments
             if is_fixup_trigger(comment)
-                return turue
+                return true
             end
         end
         if haskey(pages, "next")
@@ -73,11 +81,15 @@ function fixup_comment_exists(repo, issue)
     end
 end
 
-is_fixup_trigger(comment) = c.user.login != TABGOT_USER && occursin(r"TagBot fix"i, c.body)
+function is_fixup_trigger(comment)
+    return c.user.login != TABGOT_USER[] && occursin(r"TagBot fix"i, c.body)
+end
 
 function fixup_done(repo)
-    params = (; creator=TAGBOT_USER, state="all")
-    pulls, _ = GH.pull_requests(repo; auth=AUTH[], params=params)
+    pulls, _ = GH.pull_requests(repo; auth=AUTH[], params=(;
+        creator=TAGBOT_USER[],
+        state="all",
+    ))
     for pull in pulls
         if pull.title == FIXUP_PR_TITLE
             return true

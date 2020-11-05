@@ -1,8 +1,9 @@
 module TagBot
 
 using Base64: base64encode
-using Dates: Day, UTC, now
+using Dates: Day, Minute, UTC, now
 using Random: randstring
+using SHA: sha1
 
 using GitHub: GitHub
 using JSON: JSON
@@ -10,7 +11,7 @@ using JSON: JSON
 const GH = GitHub
 
 const AUTH = Ref{GH.OAuth2}()
-const TAGBOT_USER = "JuliaTagBot"
+const TAGBOT_USER = Ref{String}()
 const ISSUE_TITLE = "TagBot trigger issue"
 const ISSUE_BODY = """
 This issue is used to trigger TagBot; feel free to unsubscribe.
@@ -33,6 +34,7 @@ include("fixup.jl")
 
 function main()
     AUTH[] = GH.authenticate(ENV["GITHUB_TOKEN"])
+    TAGBOT_USER[] = GH.whoami(; auth=AUTH[]).login
     event = JSON.parse(read(ENV["GITHUB_EVENT_PATH"], String))
     if is_merged_pull_request(event)
         handle_merged_pull_request(event)
@@ -54,34 +56,30 @@ function repo_and_version_of_pull_request_body(body)
     return repo, version
 end
 
-function clone_repo(repo)
-    dir = mktempdir()
-    run(`git clone --depth=1 https://github.com/$repo $dir`)
-    return dir
-end
-
-function tagbot_filename(repo; issue_comments=false)
-    # TODO: Traversing the file tree should be possible via GitHub API,
-    # but GitHub.jl doesn't seem capable.
-    dir = clone_repo(repo)
-    workflows = joinpath(dir, ".github", "workflows")
-    isdir(workflows) || return false
-    for workflow in readdir(workflows)
-        contents = read(joinpath(workflows, workflow), String)
+function tagbot_file(repo; issue_comments=false)
+    files, pages = try
+        GH.directory(repo, ".github/workflows"; auth=AUTH[])
+    catch e
+        occursin("404", e.msg) && return nothing
+        rethrow()
+    end
+    for f in files
+        f.typ == "file" || continue
+        file = GH.file(repo, f.path; auth=AUTH[])
+        contents = String(base64decode(file.content))
         if occursin("JuliaRegistries/TagBot", contents)
-            return if issue_comments && !occursin("issue_comment", contents)
-                nothing
-            else
-                dir, joinpath(".github", "workflows", workflow)
-            end
+            issue_comments && !occursin("issue_comment", contents) && continue
+            return f.path, contents
         end
     end
-    return false
+    return nothing
 end
 
 function get_repo_notification_issue(repo)
-    # TODO: Get the authenticated user (how?) and use it as `creator`.
-    issues, _ = GH.issues(repo; auth=AUTH[], params=(; creator=TAGBOT_USER, state="closed"))
+    issues, _ = GH.issues(repo; auth=AUTH[], params=(;
+        creator=TAGBOT_USER[],
+        state="closed",
+    ))
     filter!(x -> x.pull_request === nothing, issues)
     return if isempty(issues)
         @info "Creating new notification issue"
@@ -97,7 +95,7 @@ function get_repo_notification_issue(repo)
     end
 end
 
-function notification_body(event; cron)
+function notification_body(event; cron=false)
     url = get(get(event, "pull_request", Dict()), "html_url", "")
     body = "Triggering TagBot for merged registry pull request"
     isempty(url) || (body = "$body: $url")
@@ -123,7 +121,7 @@ end
 
 function maybe_notify(event, repo, version; cron=false)
     @info "Processing version $version of $repo"
-    if tagbot_filename(repo) === nothing
+    if tagbot_file(repo) === nothing
         @info "TagBot is not enabled on $repo"
         return
     end
@@ -133,6 +131,7 @@ function maybe_notify(event, repo, version; cron=false)
     end
     issue = get_repo_notification_issue(repo; cron=cron)
     if cron && should_open_fixup_pr(repo, issue)
+        @info "Opening fixup PR for $repo"
         open_fixup_pr(repo)
     end
     body = notification_body(event)
