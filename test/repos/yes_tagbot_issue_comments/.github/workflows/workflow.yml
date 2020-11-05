@@ -1,7 +1,0 @@
-name: TagBot
-on:
-  issue_comment:
-jobs:
-  TagBot:
-    steps:
-      - uses: JuliaRegistries/TagBot@v1
