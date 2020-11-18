@@ -1,5 +1,5 @@
 using BrokenRecord: BrokenRecord, HTTP, playback
-using Dates: Day, UTC, now
+using Dates: DateTime, Day, UTC, now
 using RegistryCI: TagBot
 using SimpleMock: Mock, called_with, mock
 using Test: @test, @testset, @test_logs
@@ -140,8 +140,10 @@ end
 
 @testset "get_fork" begin
     playback("get_fork.bson") do
-        fork = TB.get_fork("christopher-dG/TestRepo")
-        @test fork isa GH.Repo
+        mock(now => tz -> DateTime(2020, 11, 5, 19, 2)) do _now
+            fork = TB.get_fork("christopher-dG/TestRepo")
+            @test fork isa GH.Repo
+        end
     end
 end
 
