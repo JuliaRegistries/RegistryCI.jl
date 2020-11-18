@@ -20,7 +20,7 @@ VisualStringDistances = "089bb0c6-1854-47b9-96f7-327dbbe09dca"
 
 [compat]
 GitHub = "5.1.6"
-HTTP = "0.8"
+HTTP = "0.8, 0.9"
 JSON = "0.19, 0.20, 0.21"
 RegistryTools = "1.2"
 StringDistances = "0.9"
