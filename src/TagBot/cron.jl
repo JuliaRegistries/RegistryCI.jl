@@ -20,10 +20,7 @@ function collect_pulls(repo)
     ))
     done = false
     while !done
-        get_pulls = retry(; check=(s, e) -> occursin("Server error", e.msg)) do
-            GH.pull_requests(repo; kwargs...)
-        end
-        pulls, pages = get_pulls()
+        pulls, pages = get_pulls(repo)
         for pull in pulls
             pull.merged_at === nothing && continue
             if now(UTC) - pull.merged_at < Day(3)
@@ -41,3 +38,9 @@ function collect_pulls(repo)
     end
     return acc
 end
+
+get_pulls(f, args...; kwargs...) = retry(
+    () -> GH.pull_requests(args...; kwargs...);
+    check=(s, e) -> occursin("Server error", e.msg),
+    delays=ExponentialBackOff(n=5, first_delay=1, factor=2),
+)()
