@@ -1,4 +1,4 @@
-is_cron(event) = get(ENV, "GITHUB_EVENT_NAME", "") == "schedule"
+is_cron(event) = get(ENV, "GITHUB_EVENT_NAME", "") in ("schedule", "workflow_dispatch")
 
 function handle_cron(event)
     pulls = collect_pulls(ENV["GITHUB_REPOSITORY"])
