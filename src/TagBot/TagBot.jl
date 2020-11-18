@@ -24,6 +24,7 @@ I'll open a PR within a few hours, please be patient!
 """
 const CRON_ADDENDUM = """
 
+
 This extra notification is being sent because I expected a tag to exist by now, but it doesn't.
 You may want to check your TagBot configuration to ensure that it's running, and if it is, check the logs to make sure that there are no errors.
 """
