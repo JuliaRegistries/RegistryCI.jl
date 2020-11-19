@@ -56,8 +56,12 @@ function conditions_met_for_merge_build(cfg::GitHubActions; env=ENV, master_bran
     branch_ok = m !== nothing && m.captures[1] == master_branch
     ## Check that we are running a cron job
     event_type = get(env, "GITHUB_EVENT_NAME", nothing)
-    cron_ok = event_type == "schedule" && cfg.enable_cron_builds
-    return branch_ok && cron_ok
+    is_schedule = event_type == "schedule"
+    is_workflow_dispatch = event_type == "workflow_dispatch"
+    is_schedule_or_workflow_dispatch = is_schedule || is_workflow_dispatch
+    cron_ok = is_schedule_or_workflow_dispatch && cfg.enable_cron_builds
+    result = branch_ok && cron_ok
+    return result
 end
 function pull_request_number(cfg::GitHubActions; env=ENV, kwargs...)
     m = match(r"^refs\/pull\/(\d+)\/merge$", get(env, "GITHUB_REF", ""))
