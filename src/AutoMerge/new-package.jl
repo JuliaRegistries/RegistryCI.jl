@@ -107,15 +107,13 @@ function pull_request_build(api::GitHub.GitHubAPI,
             if this_pr_can_use_special_jll_exceptions
                 g3 = true
                 g4 = true
-                g5 = true
                 m3 = ""
                 m4 = ""
-                m5 = ""
             else
                 g3, m3 = meets_normal_capitalization(pkg)
                 g4, m4 = meets_name_length(pkg)
-                g5, m5 = meets_julia_name_check(pkg)
             end
+            g5, m5 = meets_julia_name_check(pkg)
             if this_pr_can_use_special_jll_exceptions
                 g6 = true
                 m6 = ""
