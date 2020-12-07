@@ -415,7 +415,7 @@ function _run_pkg_commands(working_directory::String,
     # process. For example, we don't want to pass an environment variable containing
     # our GitHub token to the child process. Because if the Julia package that we are
     # testing has malicious code in its __init__() function, it could try to steal
-    # our token. So we only pass eight environment variables:
+    # our token. So we only pass these environment variables:
     # 1. HTTP_PROXY. If it's set, it is delegated to the child process.
     # 2. HTTPS_PROXY. If it's set, it is delegated to the child process.
     # 3. JULIA_DEPOT_PATH. We set JULIA_DEPOT_PATH to the temporary directory that
