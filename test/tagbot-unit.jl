@@ -53,11 +53,11 @@ end
 
 @testset "get_repo_notification_issue" begin
     playback("get_repo_notification_issue.bson") do
-        @test_logs (:info, "Creating new notification issue") begin
+        @test_logs match_mode=:any (:info, "Creating new notification issue") begin
             issue = TB.get_repo_notification_issue("christopher-dG/TestRepo")
             @test issue.number == 11
         end
-        @test_logs (:info, "Found existing notification issue") begin
+        @test_logs match_mode=:any (:info, "Found existing notification issue") begin
             issue = TB.get_repo_notification_issue("christopher-dG/TestRepo")
             @test issue.number == 11
         end

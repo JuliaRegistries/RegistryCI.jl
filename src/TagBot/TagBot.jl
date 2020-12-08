@@ -84,10 +84,16 @@ function get_repo_notification_issue(repo)
     filter!(x -> x.pull_request === nothing, issues)
     return if isempty(issues)
         @info "Creating new notification issue"
-        issue = GH.create_issue(repo; auth=AUTH[], params=(;
-            title=ISSUE_TITLE,
-            body=ISSUE_BODY,
-        ))
+        issue = try
+            GH.create_issue(repo; auth=AUTH[], params=(;
+                title=ISSUE_TITLE,
+                body=ISSUE_BODY,
+            ))
+        catch e
+            occursin("Issues are disabled", e.msg) || rethrow()
+            @info "Issues are disabled on $repo"
+            return nothing
+        end
         GH.edit_issue(repo, issue; auth=AUTH[], params=(; state="closed"))
         issue
     else
@@ -131,6 +137,10 @@ function maybe_notify(event, repo, version; cron=false)
         return
     end
     issue = get_repo_notification_issue(repo)
+    if issue === nothing
+        @info "Couldn't get notification issue for $repo"
+        return
+    end
     if cron && should_fixup(repo, issue)
         @info "Opening fixup PR for $repo"
         open_fixup_pr(repo)
