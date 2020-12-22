@@ -115,7 +115,7 @@ function meets_name_ascii(pkg)
 end
 
 function meets_julia_name_check(pkg)
-    if occursin("julia", lowercase(pkg)) 
+    if occursin("julia", lowercase(pkg))
         return false, "Lowercase package name $(lowercase(pkg)) contains the string \"julia\"."
     elseif startswith(pkg, "Ju")
         return false, "Package name starts with \"Ju\"."
@@ -150,7 +150,7 @@ function meets_distance_check(pkg_name, other_packages; DL_lowercase_cutoff = 1,
             if dl_lowercase <= DL_lowercase_cutoff
                 msg = string(msg, " Damerau-Levenshtein distance $(dl_lowercase) between lowercased names is at or below cutoff of $(DL_lowercase_cutoff).")
             end
-            
+
             # Distance check 3: normalized visual distance,
             # gated by a `dl` check for speed.
             if (sqrt_normalized_vd_cutoff > 0 && dl <= 4)
@@ -169,7 +169,7 @@ function meets_distance_check(pkg_name, other_packages; DL_lowercase_cutoff = 1,
             end
         end
     end
-    
+
     isempty(problem_messages) && return (true, "")
     sort!(problem_messages, by = Base.tail)
     message = string("Package name similar to $(length(problem_messages)) existing package",
@@ -415,7 +415,7 @@ function _run_pkg_commands(working_directory::String,
     # process. For example, we don't want to pass an environment variable containing
     # our GitHub token to the child process. Because if the Julia package that we are
     # testing has malicious code in its __init__() function, it could try to steal
-    # our token. So we only pass eight environment variables:
+    # our token. So we only pass these environment variables:
     # 1. HTTP_PROXY. If it's set, it is delegated to the child process.
     # 2. HTTPS_PROXY. If it's set, it is delegated to the child process.
     # 3. JULIA_DEPOT_PATH. We set JULIA_DEPOT_PATH to the temporary directory that
@@ -429,24 +429,22 @@ function _run_pkg_commands(working_directory::String,
     #    PyCall to install their own version of Python instead of using the system
     #    Python.
     # 8. R_HOME. We set R_HOME to "*".
-    env = Dict{String, String}()
-    if haskey(ENV, "HTTP_PROXY")
-        env["HTTP_PROXY"] = deepcopy(ENV["HTTP_PROXY"])
-    end
-    if haskey(ENV, "HTTPS_PROXY")
-        env["HTTPS_PROXY"] = deepcopy(ENV["HTTPS_PROXY"])
-    end
-    env["JULIA_DEPOT_PATH"] = deepcopy(tmp_dir_2)
-    if haskey(ENV, "JULIA_PKG_SERVER")
-        env["JULIA_PKG_SERVER"] = deepcopy(ENV["JULIA_PKG_SERVER"])
-    end
-    env["JULIA_REGISTRYCI_AUTOMERGE"] = "true"
-    env["PATH"] = deepcopy(ENV["PATH"])
-    env["PYTHON"] = ""
-    env["R_HOME"] = "*"
+    # 9. HOME. Lots of things need HOME.
 
-    cmd = Cmd(`$(Base.julia_cmd()) -e $(code)`;
-              env = env)
+    env = Dict(
+        "JULIA_DEPOT_PATH" => tmp_dir_2,
+        "JULIA_REGISTRYCI_AUTOMERGE" => "true",
+        "PYTHON" => "",
+        "R_HOME" => "*",
+    )
+    for k in ("HOME", "PATH", "HTTP_PROXY", "HTTPS_PROXY", "JULIA_PKG_SERVER")
+        if haskey(ENV, k)
+            env[k] = ENV[k]
+        end
+    end
+
+    cmd = Cmd(`$(Base.julia_cmd()) -e $(code)`; env=env)
+
     # GUI toolkits may need a display just to load the package
     xvfb = Sys.which("xvfb-run")
     @info("xvfb: ", xvfb)
