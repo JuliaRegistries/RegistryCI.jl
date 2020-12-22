@@ -30,9 +30,9 @@ function delete_merged_branch!(api::GitHub.GitHubAPI, repo::GitHub.Repo, pr::Git
             ref = "heads/$(head_branch.ref)"
             GitHub.delete_reference(api, repo, ref; auth=auth)
         catch ex
-            showerror(stderr, ex)
-            Base.show_backtrace(stderr, catch_backtrace())
-            println(stderr)
+            # showerror(stderr, ex)
+            # Base.show_backtrace(stderr, catch_backtrace())
+            # println(stderr)
         end
     end
     return nothing
