@@ -5,7 +5,7 @@ end
 function _get_all_dependencies_nonrecursive(working_directory::AbstractString,
                                             pkg,
                                             version)
-    all_dependencies = Vector{String}(undef, 0)
+    all_dependencies = String[]
     deps = Pkg.TOML.parsefile(joinpath(working_directory, uppercase(pkg[1:1]), pkg, "Deps.toml"))
     for version_range in keys(deps)
         if version in Pkg.Types.VersionRange(version_range)

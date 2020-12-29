@@ -298,10 +298,7 @@ function meets_version_can_be_pkg_added(working_directory::String,
     pkg_add_command = _generate_pkg_add_command(pkg,
                                                 version)
     _registry_deps = convert(Vector{String}, registry_deps)
-    _registry_deps_is_valid_url = Vector{Bool}(undef, length(_registry_deps))
-    for i = 1:length(_registry_deps)
-        _registry_deps_is_valid_url[i] = is_valid_url(_registry_deps[i])
-    end
+    _registry_deps_is_valid_url = is_valid_url.(_registry_deps)
     code = """
         import Pkg;
         Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));
@@ -348,10 +345,7 @@ function meets_version_can_be_imported(working_directory::String,
     pkg_add_command = _generate_pkg_add_command(pkg,
                                                 version)
     _registry_deps = convert(Vector{String}, registry_deps)
-    _registry_deps_is_valid_url = Vector{Bool}(undef, length(_registry_deps))
-    for i = 1:length(_registry_deps)
-        _registry_deps_is_valid_url[i] = is_valid_url(_registry_deps[i])
-    end
+    _registry_deps_is_valid_url = is_valid_url.(_registry_deps)
     code = """
         import Pkg;
         Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));

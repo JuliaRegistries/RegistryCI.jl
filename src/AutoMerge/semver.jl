@@ -68,7 +68,7 @@ end
 latest_version(pkg::String, registry_path::String) = maximum(all_versions(pkg, registry_path))
 
 function julia_compat(pkg::String, version::VersionNumber, registry_path::String)
-    all_compat_entries_for_julia = Vector{Pkg.Types.VersionRange}(undef, 0)
+    all_compat_entries_for_julia = Pkg.Types.VersionRange[]
     compat = Pkg.TOML.parsefile(joinpath(registry_path, uppercase(pkg[1:1]), pkg, "Compat.toml"))
     for version_range in keys(compat)
         if version in Pkg.Types.VersionRange(version_range)
