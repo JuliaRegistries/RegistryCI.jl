@@ -375,9 +375,6 @@ function cron_or_api_build(api::GitHub.GitHubAPI,
         return nothing
     end
 
-    "Pull request: $(pr_number). "
-    "Type: $(pr_type). "
-    "Decision: merge. "
     if pr_type == :NewPackage # it is a new package
         always_assert(status_pr_type == :NewPackage)
         if merge_new_packages
