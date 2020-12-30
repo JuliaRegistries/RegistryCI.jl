@@ -62,250 +62,250 @@ function pull_request_build(api::GitHub.GitHubAPI,
     this_is_jll_package = is_jll_name(pkg)
     @info("This is a new package pull request", pkg, version, this_is_jll_package)
     pr_author_login = author_login(pr)
-    if is_open(pr)
-        if pr_author_login in vcat(authorized_authors, authorized_authors_special_jll_exceptions)
-            description = "New package. Pending."
-            params = Dict("state" => "pending",
-                          "context" => "automerge/decision",
-                          "description" => description)
-            my_retry(() -> GitHub.create_status(api,
-                                                registry,
-                                                current_pr_head_commit_sha;
-                                                auth = auth,
-                                                params = params))
-
-            if this_is_jll_package
-                if pr_author_login in authorized_authors_special_jll_exceptions
-                    this_pr_can_use_special_jll_exceptions = true
-                else
-                    this_pr_can_use_special_jll_exceptions = false
-                end
-            else
-                this_pr_can_use_special_jll_exceptions = false
-            end
-
-            if this_is_jll_package
-                g0 = true
-                m0 = ""
-            else
-                if pr_author_login in authorized_authors
-                    g0 = true
-                    m0 = ""
-                else
-                    g0 = false
-                    m0 = "This package is not a JLL package. The author of this pull request is not authorized to register non-JLL packages."
-                end
-            end
-
-            g1, m1 = pr_only_changes_allowed_files(api,
-                                                   NewPackage(),
-                                                   registry,
-                                                   pr,
-                                                   pkg;
-                                                   auth = auth)
-            g2 = true
-            m2 = ""
-            if this_pr_can_use_special_jll_exceptions
-                g3 = true
-                g4 = true
-                m3 = ""
-                m4 = ""
-            else
-                g3, m3 = meets_normal_capitalization(pkg)
-                g4, m4 = meets_name_length(pkg)
-            end
-            g5, m5 = meets_julia_name_check(pkg)
-            if this_pr_can_use_special_jll_exceptions
-                g6 = true
-                m6 = ""
-            else
-                # g6, m6 = meets_standard_initial_version_number(version)
-                g6 = true
-                m6 = ""
-            end
-
-            # g7, m7 = meets_repo_url_requirement(pkg; registry_head = registry_head)
-            g7 = true
-            m7 = ""
-
-            g8, m8 = meets_compat_for_all_deps(registry_head,
-                                               pkg,
-                                               version)
-            g9_if_jll, m9_if_jll = meets_allowed_jll_nonrecursive_dependencies(registry_head,
-                                                                               pkg,
-                                                                               version)
-            if this_is_jll_package
-                g9 = g9_if_jll
-                m9 = m9_if_jll
-            else
-                g9 = true
-                m9 = ""
-            end
-
-            all_pkg_names = get_all_non_jll_package_names(registry_master)
-            g10, m10 = meets_distance_check(pkg, all_pkg_names)
-
-            g11, m11 = meets_name_ascii(pkg)
-
-            @info("JLL-only authors cannot register non-JLL packages.",
-                  meets_this_guideline = g0,
-                  message = m0)
-            @info("Only modifies the files that it's allowed to modify",
-                  meets_this_guideline = g1,
-                  message = m1)
-            @info("TODO: implement this check",
-                  meets_this_guideline = g2,
-                  message = m2)
-            @info("Normal capitalization",
-                  meets_this_guideline = g3,
-                  message = m3)
-            @info("Name not too short",
-                  meets_this_guideline = g4,
-                  message = m4)
-            @info("Name does not include \"julia\" or start with \"Ju\"",
-                  meets_this_guideline = g5,
-                  message = m5)
-            @info("Standard initial version number ",
-                  meets_this_guideline = g6,
-                  message = m6)
-            @info("Repo URL ends with /name.jl.git",
-                  meets_this_guideline = g7,
-                  message = m7)
-            @info("Compat (with upper bound) for all dependencies",
-                  meets_this_guideline = g8,
-                  message = m8)
-            @info("If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
-                  meets_this_guideline = g9,
-                  message = m9)
-            @info("Name is not too similar to existing package names",
-                  meets_this_guideline = g10,
-                  message = m10)
-            @info("Name is composed of ASCII characters only",
-                  meets_this_guideline = g11,
-                  message = m11)
-            g0through11 = Bool[g0,
-                              g1,
-                              g2,
-                              g3,
-                              g4,
-                              g5,
-                              g6,
-                              g7,
-                              g8,
-                              g9,
-                              g10,
-                              g11]
-            if !all(g0through11)
-                description = "New package. Failed."
-                params = Dict("state" => "failure",
-                              "context" => "automerge/decision",
-                              "description" => description)
-                my_retry(() -> GitHub.create_status(api,
-                                                    registry,
-                                                    current_pr_head_commit_sha;
-                                                    auth = auth,
-                                                    params = params))
-            end
-            g12, m12 = meets_version_can_be_pkg_added(registry_head,
-                                                    pkg,
-                                                    version;
-                                                    registry_deps = registry_deps)
-            @info("Version can be `Pkg.add`ed",
-                  meets_this_guideline = g12,
-                  message = m12)
-            g13, m13 = meets_version_can_be_imported(registry_head,
-                                                     pkg,
-                                                     version;
-                                                     registry_deps = registry_deps)
-            @info("Version can be `import`ed",
-                  meets_this_guideline = g13,
-                  message = m13)
-            g0through13 = Bool[g0,
-                               g1,
-                               g2,
-                               g3,
-                               g4,
-                               g5,
-                               g6,
-                               g7,
-                               g8,
-                               g9,
-                               g10,
-                               g11,
-                               g12,
-                               g13]
-            allmessages0through13 = String[m0,
-                                           m1,
-                                           m2,
-                                           m3,
-                                           m4,
-                                           m5,
-                                           m6,
-                                           m7,
-                                           m8,
-                                           m9,
-                                           m10,
-                                           m11,
-                                           m12,
-                                           m13]
-            if all(g0through13) # success
-                description = "New package. Approved. name=\"$(pkg)\". sha=\"$(current_pr_head_commit_sha)\""
-                params = Dict("state" => "success",
-                              "context" => "automerge/decision",
-                              "description" => description)
-                my_retry(() -> GitHub.create_status(api,
-                                                    registry,
-                                                    current_pr_head_commit_sha;
-                                                    auth = auth,
-                                                    params = params))
-                this_pr_comment_pass = comment_text_pass(NewPackage(),
-                                                         suggest_onepointzero,
-                                                         version,
-                                                         this_pr_can_use_special_jll_exceptions)
-                my_retry(() -> update_automerge_comment!(api,
-                                                         registry,
-                                                         pr;
-                                                         auth = auth,
-                                                         body = this_pr_comment_pass,
-                                                         whoami = whoami))
-                return nothing
-            else # failure
-                description = "New package. Failed."
-                params = Dict("state" => "failure",
-                              "context" => "automerge/decision",
-                              "description" => description)
-                my_retry(() -> GitHub.create_status(api,
-                                                    registry,
-                                                    current_pr_head_commit_sha;
-                                                    auth = auth,
-                                                    params = params))
-                failingmessages0through13 = allmessages0through13[.!g0through13]
-                this_pr_comment_fail = comment_text_fail(NewPackage(),
-                                                         failingmessages0through13,
-                                                         suggest_onepointzero,
-                                                         version)
-                my_retry(() -> update_automerge_comment!(api,
-                                                         registry,
-                                                         pr;
-                                                         body = this_pr_comment_fail,
-                                                         auth = auth,
-                                                         whoami = whoami))
-                throw(AutoMergeGuidelinesNotMet("The automerge guidelines were not met."))
-            end
-        else
-            throw_not_automerge_applicable(
-                AutoMergeAuthorNotAuthorized,
-                true,
-                "Author $(pr_author_login) is not authorized to automerge. Exiting...";
-                error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
-            )
-        end
-    else
+    if !is_open(pr)
         throw_not_automerge_applicable(
             AutoMergePullRequestNotOpen,
             true,
             "The pull request is not open. Exiting...";
-            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
+            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable
         )
+    end
+
+    if pr_author_login ∉ vcat(authorized_authors, authorized_authors_special_jll_exceptions)
+        throw_not_automerge_applicable(
+            AutoMergeAuthorNotAuthorized,
+            true,
+            "Author $(pr_author_login) is not authorized to automerge. Exiting...";
+            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable
+        )
+    end
+
+    description = "New package. Pending."
+    params = Dict("state" => "pending",
+                  "context" => "automerge/decision",
+                  "description" => description)
+    my_retry(() -> GitHub.create_status(api,
+                                        registry,
+                                        current_pr_head_commit_sha;
+                                        auth = auth,
+                                        params = params))
+
+    if this_is_jll_package
+        if pr_author_login in authorized_authors_special_jll_exceptions
+            this_pr_can_use_special_jll_exceptions = true
+        else
+            this_pr_can_use_special_jll_exceptions = false
+        end
+    else
+        this_pr_can_use_special_jll_exceptions = false
+    end
+
+    if this_is_jll_package
+        g0 = true
+        m0 = ""
+    else
+        if pr_author_login in authorized_authors
+            g0 = true
+            m0 = ""
+        else
+            g0 = false
+            m0 = "This package is not a JLL package. The author of this pull request is not authorized to register non-JLL packages."
+        end
+    end
+
+    g1, m1 = pr_only_changes_allowed_files(api,
+                                           NewPackage(),
+                                           registry,
+                                           pr,
+                                           pkg;
+                                           auth = auth)
+    g2 = true
+    m2 = ""
+    if this_pr_can_use_special_jll_exceptions
+        g3 = true
+        g4 = true
+        m3 = ""
+        m4 = ""
+    else
+        g3, m3 = meets_normal_capitalization(pkg)
+        g4, m4 = meets_name_length(pkg)
+    end
+    g5, m5 = meets_julia_name_check(pkg)
+    if this_pr_can_use_special_jll_exceptions
+        g6 = true
+        m6 = ""
+    else
+        # g6, m6 = meets_standard_initial_version_number(version)
+        g6 = true
+        m6 = ""
+    end
+
+    # g7, m7 = meets_repo_url_requirement(pkg; registry_head = registry_head)
+    g7 = true
+    m7 = ""
+
+    g8, m8 = meets_compat_for_all_deps(registry_head,
+                                       pkg,
+                                       version)
+    g9_if_jll, m9_if_jll = meets_allowed_jll_nonrecursive_dependencies(registry_head,
+                                                                       pkg,
+                                                                       version)
+    if this_is_jll_package
+        g9 = g9_if_jll
+        m9 = m9_if_jll
+    else
+        g9 = true
+        m9 = ""
+    end
+
+    all_pkg_names = get_all_non_jll_package_names(registry_master)
+    g10, m10 = meets_distance_check(pkg, all_pkg_names)
+
+    g11, m11 = meets_name_ascii(pkg)
+
+    @info("JLL-only authors cannot register non-JLL packages.",
+          meets_this_guideline = g0,
+          message = m0)
+    @info("Only modifies the files that it's allowed to modify",
+          meets_this_guideline = g1,
+          message = m1)
+    @info("TODO: implement this check",
+          meets_this_guideline = g2,
+          message = m2)
+    @info("Normal capitalization",
+          meets_this_guideline = g3,
+          message = m3)
+    @info("Name not too short",
+          meets_this_guideline = g4,
+          message = m4)
+    @info("Name does not include \"julia\" or start with \"Ju\"",
+          meets_this_guideline = g5,
+          message = m5)
+    @info("Standard initial version number ",
+          meets_this_guideline = g6,
+          message = m6)
+    @info("Repo URL ends with /name.jl.git",
+          meets_this_guideline = g7,
+          message = m7)
+    @info("Compat (with upper bound) for all dependencies",
+          meets_this_guideline = g8,
+          message = m8)
+    @info("If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
+          meets_this_guideline = g9,
+          message = m9)
+    @info("Name is not too similar to existing package names",
+          meets_this_guideline = g10,
+          message = m10)
+    @info("Name is composed of ASCII characters only",
+          meets_this_guideline = g11,
+          message = m11)
+    g0through11 = Bool[g0,
+                      g1,
+                      g2,
+                      g3,
+                      g4,
+                      g5,
+                      g6,
+                      g7,
+                      g8,
+                      g9,
+                      g10,
+                      g11]
+    if !all(g0through11)
+        description = "New package. Failed."
+        params = Dict("state" => "failure",
+                      "context" => "automerge/decision",
+                      "description" => description)
+        my_retry(() -> GitHub.create_status(api,
+                                            registry,
+                                            current_pr_head_commit_sha;
+                                            auth = auth,
+                                            params = params))
+    end
+    g12, m12 = meets_version_can_be_pkg_added(registry_head,
+                                            pkg,
+                                            version;
+                                            registry_deps = registry_deps)
+    @info("Version can be `Pkg.add`ed",
+          meets_this_guideline = g12,
+          message = m12)
+    g13, m13 = meets_version_can_be_imported(registry_head,
+                                             pkg,
+                                             version;
+                                             registry_deps = registry_deps)
+    @info("Version can be `import`ed",
+          meets_this_guideline = g13,
+          message = m13)
+    g0through13 = Bool[g0,
+                       g1,
+                       g2,
+                       g3,
+                       g4,
+                       g5,
+                       g6,
+                       g7,
+                       g8,
+                       g9,
+                       g10,
+                       g11,
+                       g12,
+                       g13]
+    allmessages0through13 = String[m0,
+                                   m1,
+                                   m2,
+                                   m3,
+                                   m4,
+                                   m5,
+                                   m6,
+                                   m7,
+                                   m8,
+                                   m9,
+                                   m10,
+                                   m11,
+                                   m12,
+                                   m13]
+    if all(g0through13) # success
+        description = "New package. Approved. name=\"$(pkg)\". sha=\"$(current_pr_head_commit_sha)\""
+        params = Dict("state" => "success",
+                      "context" => "automerge/decision",
+                      "description" => description)
+        my_retry(() -> GitHub.create_status(api,
+                                            registry,
+                                            current_pr_head_commit_sha;
+                                            auth = auth,
+                                            params = params))
+        this_pr_comment_pass = comment_text_pass(NewPackage(),
+                                                 suggest_onepointzero,
+                                                 version,
+                                                 this_pr_can_use_special_jll_exceptions)
+        my_retry(() -> update_automerge_comment!(api,
+                                                 registry,
+                                                 pr;
+                                                 auth = auth,
+                                                 body = this_pr_comment_pass,
+                                                 whoami = whoami))
+        return nothing
+    else # failure
+        description = "New package. Failed."
+        params = Dict("state" => "failure",
+                      "context" => "automerge/decision",
+                      "description" => description)
+        my_retry(() -> GitHub.create_status(api,
+                                            registry,
+                                            current_pr_head_commit_sha;
+                                            auth = auth,
+                                            params = params))
+        failingmessages0through13 = allmessages0through13[.!g0through13]
+        this_pr_comment_fail = comment_text_fail(NewPackage(),
+                                                 failingmessages0through13,
+                                                 suggest_onepointzero,
+                                                 version)
+        my_retry(() -> update_automerge_comment!(api,
+                                                 registry,
+                                                 pr;
+                                                 body = this_pr_comment_fail,
+                                                 auth = auth,
+                                                 whoami = whoami))
+        throw(AutoMergeGuidelinesNotMet("The automerge guidelines were not met."))
     end
 end
