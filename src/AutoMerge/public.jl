@@ -67,7 +67,7 @@ function run(env = ENV,
                            registry_deps = registry_deps)
     end
 
-    if run_merge_build || run_pr_build # we run the "cron" job at the end of every PR job
+    if run_merge_build || run_pr_build # we run the "cron" job at the end of every PR job as a way to make sure no other PRs have been waiting too long for automerge. Because GHA schedule-jobs are unreliable
         cron_or_api_build(api,
                           registry_repo;
                           auth = auth,
