@@ -65,9 +65,9 @@ function run(env = ENV,
                            suggest_onepointzero = suggest_onepointzero,
                            whoami = whoami,
                            registry_deps = registry_deps)
-        return nothing
-    else
-        always_assert(run_merge_build)
+    end
+
+    if run_merge_build || run_pr_build # we run the "cron" job at the end of every PR job
         cron_or_api_build(api,
                           registry_repo;
                           auth = auth,
@@ -82,6 +82,7 @@ function run(env = ENV,
                           whoami = whoami,
                           all_statuses = all_statuses,
                           all_check_runs = all_check_runs)
-        return nothing
     end
+
+    return nothing
 end
