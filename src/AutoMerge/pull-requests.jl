@@ -72,10 +72,12 @@ function pull_request_build(api::GitHub.GitHubAPI,
                             suggest_onepointzero::Bool,
                             whoami::String,
                             registry_deps::Vector{<:AbstractString} = String[])::Nothing
-    # first check if the PR is open, and the author is authorized - if not, then quit
-    # if the PR is open and the author is authorized, then determine if it is a
-    # new package or new version of an existing package, and then call the appropriate
-    # function
+    # First check if the PR is open, and the author is authorized - if
+    # not, then quit.
+    #
+    # If the PR is open and the author is authorized,
+    # then determine if it is a new package or new version of an
+    # existing package, and then call the appropriate method.
     pr_author_login = author_login(pr)
     if !is_open(pr)
         throw_not_automerge_applicable(
@@ -85,7 +87,9 @@ function pull_request_build(api::GitHub.GitHubAPI,
         )
         return nothing
     end
-    if pr_author_login ∉ vcat(authorized_authors, authorized_authors_special_jll_exceptions)
+
+    if pr_author_login ∉ vcat(authorized_authors,
+                              authorized_authors_special_jll_exceptions)
         throw_not_automerge_applicable(
             AutoMergeAuthorNotAuthorized,
             "Author $(pr_author_login) is not authorized to automerge. Exiting...";
@@ -95,51 +99,40 @@ function pull_request_build(api::GitHub.GitHubAPI,
     end
 
     if is_new_package(pr)
-        registry_master = clone_repo(registry)
-        if !master_branch_is_default_branch
-            checkout_branch(registry_master, master_branch)
-        end
-        pull_request_build(api,
-                           NewPackage(),
-                           pr,
-                           current_pr_head_commit_sha,
-                           registry;
-                           auth = auth,
-                           authorized_authors=authorized_authors,
-                           authorized_authors_special_jll_exceptions=authorized_authors_special_jll_exceptions,
-                           error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
-                           registry_head = registry_head,
-                           registry_master = registry_master,
-                           suggest_onepointzero = suggest_onepointzero,
-                           whoami=whoami,
-                           registry_deps = registry_deps)
-        rm(registry_master; force = true, recursive = true)
+        registration_type = NewPackage()
     elseif is_new_version(pr)
-        registry_master = clone_repo(registry)
-        if !master_branch_is_default_branch
-            checkout_branch(registry_master, master_branch)
-        end
-        pull_request_build(api,
-                           NewVersion(),
-                           pr,
-                           current_pr_head_commit_sha,
-                           registry;
-                           auth = auth,
-                           authorized_authors=authorized_authors,
-                           authorized_authors_special_jll_exceptions=authorized_authors_special_jll_exceptions,
-                           error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
-                           registry_head = registry_head,
-                           registry_master = registry_master,
-                           suggest_onepointzero = suggest_onepointzero,
-                           whoami=whoami,
-                           registry_deps = registry_deps)
-        rm(registry_master; force = true, recursive = true)
+        registration_type = NewVersion()
     else
         throw_not_automerge_applicable(
             AutoMergeNeitherNewPackageNorNewVersion,
             "Neither a new package nor a new version. Exiting...";
             error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
         )
+        return nothing
     end
+
+    registry_master = clone_repo(registry)
+    if !master_branch_is_default_branch
+        checkout_branch(registry_master, master_branch)
+    end
+    pkg, version = parse_pull_request_title(registration_type, pr)
+    data = GitHubAutoMergeData(;api = api,
+                               registration_type = registration_type,
+                               pr = pr,
+                               pkg = pkg,
+                               version = version,
+                               current_pr_head_commit_sha = current_pr_head_commit_sha,
+                               registry = registry,
+                               auth = auth,
+                               authorized_authors_authors = authorized_authors_authors,
+                               authorized_authors_special_jll_exceptions = authorized_authors_special_jll_exceptions,
+                               error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
+                               registry_head = registry_head,
+                               registry_master = registry_master,
+                               suggest_onepointzero = suggest_onepointzero,
+                               whoami = whoami,
+                               registry_deps = registry_deps)
+    pull_request_build(data, registration_type)
+    rm(registry_master; force = true, recursive = true)
     return nothing
 end

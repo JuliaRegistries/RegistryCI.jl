@@ -1,17 +1,4 @@
-function pull_request_build(api::GitHub.GitHubAPI,
-                            ::NewVersion,
-                            pr::GitHub.PullRequest,
-                            current_pr_head_commit_sha::String,
-                            registry::GitHub.Repo;
-                            auth::GitHub.Authorization,
-                            authorized_authors::Vector{String},
-                            authorized_authors_special_jll_exceptions::Vector{String},
-                            error_exit_if_automerge_not_applicable::Bool,
-                            registry_head::String,
-                            registry_master::String,
-                            suggest_onepointzero::Bool,
-                            whoami::String,
-                            registry_deps::Vector{<:AbstractString} = String[])::Nothing
+function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
     # Rules:
     # 0. A JLL-only author (e.g. `jlbuild`) is not allowed to register non-JLL packages.
     # 1. Only changes a subset of the following files:
@@ -38,22 +25,18 @@ function pull_request_build(api::GitHub.GitHubAPI,
     # 7. Version can be loaded
     #     - once it's been installed (and built?), can we load the code?
     #     - i.e. can we run `import Foo`
-    pr_author_login = author_login(pr)
-    pkg, version = parse_pull_request_title(NewVersion(), pr)
-    this_is_jll_package = is_jll_name(pkg)
-    @info("This is a new package pull request", pkg, version, this_is_jll_package)
+    pr_author_login = author_login(data.pr)
+    this_is_jll_package = is_jll_name(data.pkg)
+    @info("This is a new package pull request", data.pkg, data.version,
+          this_is_jll_package)
 
-    description = "New version. Pending."
-    params = Dict("state" => "pending",
-                  "context" => "automerge/decision",
-                  "description" => description)
-    my_retry(() -> GitHub.create_status(api, registry,
-                                        current_pr_head_commit_sha;
-                                        auth = auth,
-                                        params=params))
+    update_status(data;
+                  state = "pending",
+                  context = "automerge/decision",
+                  description = "New version. Pending.")
 
     if this_is_jll_package
-        if pr_author_login in authorized_authors_special_jll_exceptions
+        if pr_author_login in data.authorized_authors_special_jll_exceptions
             this_pr_can_use_special_jll_exceptions = true
         else
             this_pr_can_use_special_jll_exceptions = false
@@ -66,7 +49,7 @@ function pull_request_build(api::GitHub.GitHubAPI,
         g0 = true
         m0 = ""
     else
-        if pr_author_login in authorized_authors
+        if pr_author_login in data.authorized_authors
             g0 = true
             m0 = ""
         else
@@ -75,29 +58,29 @@ function pull_request_build(api::GitHub.GitHubAPI,
         end
     end
 
-    g1, m1 = pr_only_changes_allowed_files(api,
-                                           NewVersion(),
-                                           registry,
-                                           pr,
-                                           pkg;
-                                           auth = auth)
+    g1, m1 = pr_only_changes_allowed_files(data.api,
+                                           data.registration_type,
+                                           data.registry,
+                                           data.pr,
+                                           data.pkg;
+                                           auth = data.auth)
     if this_pr_can_use_special_jll_exceptions
         g2 = true
         m2 = ""
         release_type = :jll_release
     else
-        g2, m2, release_type = meets_sequential_version_number(pkg,
-                                                               version;
-                                                               registry_head = registry_head,
-                                                               registry_master = registry_master)
+        g2, m2, release_type = meets_sequential_version_number(data.pkg,
+                                                               data.version;
+                                                               registry_head = data.registry_head,
+                                                               registry_master = data.registry_master)
     end
-    g3, m3 = meets_compat_for_all_deps(registry_head,
-                                       pkg,
-                                       version)
-    g4_if_patch, m4_if_patch = meets_patch_release_does_not_narrow_julia_compat(pkg,
-                                                                                version;
-                                                                                registry_head = registry_head,
-                                                                                registry_master = registry_master)
+    g3, m3 = meets_compat_for_all_deps(data.registry_head,
+                                       data.pkg,
+                                       data.version)
+    g4_if_patch, m4_if_patch = meets_patch_release_does_not_narrow_julia_compat(data.pkg,
+                                                                                data.version;
+                                                                                registry_head = data.registry_head,
+                                                                                registry_master = data.registry_master)
     if release_type == :patch
         g4 = g4_if_patch
         m4 = m4_if_patch
@@ -105,9 +88,9 @@ function pull_request_build(api::GitHub.GitHubAPI,
         g4 = true
         m4 = ""
     end
-    g5_if_jll, m5_if_jll = meets_allowed_jll_nonrecursive_dependencies(registry_head,
-                                                                       pkg,
-                                                                       version)
+    g5_if_jll, m5_if_jll = meets_allowed_jll_nonrecursive_dependencies(data.registry_head,
+                                                                       data.pkg,
+                                                                       data.version)
     if this_is_jll_package
         g5 = g5_if_jll
         m5 = m5_if_jll
@@ -141,26 +124,22 @@ function pull_request_build(api::GitHub.GitHubAPI,
                       g4,
                       g5]
     if !all(g0through5)
-        description = "New version. Failed."
-        params = Dict("state" => "failure",
-                      "context" => "automerge/decision",
-                      "description" => description)
-        my_retry(() -> GitHub.create_status(api, registry,
-                                            current_pr_head_commit_sha;
-                                            auth = auth,
-                                            params = params))
+        update_status(data;
+                      state = "failure",
+                      context = "automerge/decision",
+                      description = "New version. Failed.")
     end
-    g6, m6 = meets_version_can_be_pkg_added(registry_head,
-                                            pkg,
-                                            version;
-                                            registry_deps = registry_deps)
+    g6, m6 = meets_version_can_be_pkg_added(data.registry_head,
+                                            data.pkg,
+                                            data.version;
+                                            registry_deps = data.registry_deps)
     @info("Version can be `Pkg.add`ed",
           meets_this_guideline = g6,
           message = m6)
-    g7, m7 = meets_version_can_be_imported(registry_head,
-                                           pkg,
-                                           version;
-                                           registry_deps = registry_deps)
+    g7, m7 = meets_version_can_be_imported(data.registry_head,
+                                           data.pkg,
+                                           data.version;
+                                           registry_deps = data.registry_deps)
     @info("Version can be `import`ed",
           meets_this_guideline = g7,
           message = m7)
@@ -182,43 +161,25 @@ function pull_request_build(api::GitHub.GitHubAPI,
                                   m7]
     if all(g0through7) # success
         description = "New version. Approved. name=\"$(pkg)\". sha=\"$(current_pr_head_commit_sha)\""
-        params = Dict("state" => "success",
-                      "context" => "automerge/decision",
-                      "description" => description)
-        my_retry(() -> GitHub.create_status(api,
-                                            registry,
-                                            current_pr_head_commit_sha;
-                                            auth = auth,
-                                            params = params))
-        this_pr_comment_pass = comment_text_pass(NewVersion(),
-                                                 suggest_onepointzero,
+        update_status(data;
+                      state = "success",
+                      context = "automerge/decision",
+                      description = description)
+        this_pr_comment_pass = comment_text_pass(data.registration_type,
+                                                 data.suggest_onepointzero,
                                                  version)
-        my_retry(() -> update_automerge_comment!(api,
-                                                 registry,
-                                                 pr;
-                                                 auth = auth,
-                                                 body = this_pr_comment_pass,
-                                                 whoami = whoami))
+        my_retry(() -> update_automerge_comment!(data, this_pr_comment_pass))
     else # failure
-        description = "New version. Failed."
-        params = Dict("state" => "failure",
-                      "context" => "automerge/decision",
-                      "description" => description)
-        my_retry(() -> GitHub.create_status(api, registry,
-                                            current_pr_head_commit_sha;
-                                            auth=auth,
-                                            params=params))
+        update_status(data;
+                      state = "failure",
+                      context = "automerge/decision",
+                      description = "New version. Failed.")
         failingmessages0through7 = allmessages0through7[.!g0through7]
-        this_pr_comment_fail = comment_text_fail(NewVersion(),
+        this_pr_comment_fail = comment_text_fail(data.registration_type,
                                                  failingmessages0through7,
-                                                 suggest_onepointzero,
-                                                 version)
-        my_retry(() -> update_automerge_comment!(api,
-                                                 registry,
-                                                 pr;
-                                                 body = this_pr_comment_fail,
-                                                 auth = auth,
-                                                 whoami = whoami))
+                                                 data.suggest_onepointzero,
+                                                 data.version)
+        my_retry(() -> update_automerge_comment!(data, this_pr_comment_fail))
         throw(AutoMergeGuidelinesNotMet("The automerge guidelines were not met."))
     end
     return nothing
