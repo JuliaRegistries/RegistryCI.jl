@@ -10,12 +10,11 @@ function update_automerge_comment!(api::GitHub.GitHubAPI,
                                                                   auth = auth,
                                                                   whoami = whoami))
     num_comments = length(my_comments)
-    _body::String = convert(String,
-                                    strip(string(strip(body),
-                                    "\n",
-                                    "<!---\n",
-                                    "this_is_the_single_automerge_comment\n",
-                                    "--->\n")))::String
+    _body = string(strip(string(body,
+                                "\n",
+                                "<!---\n",
+                                "this_is_the_single_automerge_comment\n",
+                                "--->\n")))
     if num_comments > 1
         for i = 2:num_comments
             comment_to_delete = my_comments[i]
@@ -29,7 +28,7 @@ function update_automerge_comment!(api::GitHub.GitHubAPI,
             end
         end
         comment_to_update = my_comments[1]
-        if strip(comment_to_update.body) != strip(_body)
+        if strip(comment_to_update.body) != _body
             my_retry(() -> edit_comment!(api, repo,
                                          pr,
                                          comment_to_update,
@@ -38,7 +37,7 @@ function update_automerge_comment!(api::GitHub.GitHubAPI,
         end
     elseif num_comments == 1
         comment_to_update = my_comments[1]
-        if strip(comment_to_update.body) != strip(_body)
+        if strip(comment_to_update.body) != _body
             my_retry(() -> edit_comment!(api, repo,
                                          pr,
                                          comment_to_update,
