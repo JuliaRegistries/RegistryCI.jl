@@ -31,7 +31,7 @@ function meets_allowed_jll_nonrecursive_dependencies(working_directory::Abstract
                                                           pkg,
                                                           version)
     for dep in all_dependencies
-        if !((dep == "Pkg") | (dep == "Libdl") | (dep == "Artifacts") | (dep == "JLLWrappers") | (is_jll_name(dep)))
+        if dep ∉ ("Pkg", "Libdl", "Artifacts", "JLLWrappers") && !is_jll_name(dep))
             return false, "JLL packages are only allowed to depend on Pkg, Libdl, Artifacts, JLLWrappers and other JLL packages"
         end
     end

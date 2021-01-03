@@ -11,7 +11,7 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
     for version_range in keys(deps)
         if version in Pkg.Types.VersionRange(version_range)
             for name in keys(deps[version_range])
-                if (!is_jll_name(name)) & (!is_julia_stdlib(name))
+                if !is_jll_name(name) && !is_julia_stdlib(name)
                     @debug("Found a new (non-stdlib non-JLL) dependency: $(name)")
                     dep_has_compat_with_upper_bound[name] = false
                 end
@@ -241,17 +241,7 @@ function meets_sequential_version_number(existing::Vector{VersionNumber}, ver::V
     return _valid_change(prv, ver)
 end
 
-function _has_no_prerelease_data(version)
-    result = version.prerelease == ()
-    return result
-end
-function _has_no_build_data(version)
-    result = version.build == ()
-    return result
-end
-_has_prerelease_data(version) = !( _has_no_prerelease_data(version) )
-_has_build_data(version) = !( _has_no_build_data(version) )
-_has_prerelease_andor_build_data(version) = _has_prerelease_data(version) || _has_build_data(version)
+_has_prerelease_andor_build_data(version) = !isempty(version.prerelease) || !isempty(version.build)
 
 function meets_sequential_version_number(pkg::String,
                                          new_version::VersionNumber;
