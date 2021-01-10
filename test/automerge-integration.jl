@@ -23,8 +23,12 @@ repo = GitHub.repo(AUTOMERGE_INTEGRATION_TEST_REPO; auth = auth)
 @test success(`$(GIT) --version`)
 @info("Authenticated to GitHub as \"$(whoami)\"")
 
-close_all_pull_requests(GitHub.DEFAULT_API, repo; auth = auth, state = "open")
-delete_stale_branches(repo_url_with_auth; GIT = GIT)
+_delete_branches_older_than = Dates.Hour(3)
+delete_old_pull_request_branches(
+    repo_url_with_auth,
+    _delete_branches_older_than;
+    GIT = GIT,
+)
 
 @testset "Integration tests" begin
     for (test_number, master_dir, feature_dir, title, pass) in [

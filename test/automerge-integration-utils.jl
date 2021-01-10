@@ -20,22 +20,6 @@ function wait_pr_compute_mergeability(api::GitHub.GitHubAPI, repo::GitHub.Repo, 
     return pr
 end
 
-function close_all_pull_requests(api::GitHub.GitHubAPI,
-                                 repo::GitHub.Repo;
-                                 auth::GitHub.Authorization,
-                                 state::String)
-    all_pull_requests = AutoMerge.get_all_pull_requests(api, repo,
-                                                        state;
-                                                        auth = auth)
-    for pr in all_pull_requests
-        try
-            GitHub.close_pull_request(api, repo, pr; auth = auth)
-        catch
-        end
-    end
-    return nothing
-end
-
 function templates(parts...)
     this_filename = @__FILE__
     test_directory = dirname(this_filename)
@@ -110,15 +94,28 @@ function list_all_origin_branches(git_repo_dir; GIT)
     return result
 end
 
-function delete_stale_branches(AUTOMERGE_INTEGRATION_TEST_REPO; GIT)
+function get_age_of_commit(commit)
+    commit_date_string = strip(read(`git show -s --format=%cI $(commit)`, String))
+    commit_date = TimeZones.ZonedDateTime(commit_date_string, "yyyy-mm-ddTHH:MM:SSzzzz")
+    now = TimeZones.ZonedDateTime(TimeZones.now(), TimeZones.localzone())
+    age = max(now - commit_date, Dates.Millisecond(0))
+    return age
+end
+
+function delete_old_pull_request_branches(AUTOMERGE_INTEGRATION_TEST_REPO, older_than; GIT)
     with_cloned_repo(AUTOMERGE_INTEGRATION_TEST_REPO; GIT = GIT) do git_repo_dir
         cd(git_repo_dir)
         all_origin_branches = list_all_origin_branches(git_repo_dir; GIT=GIT)::Vector{String}
-        for b in all_origin_branches
-            if occursin(timestamp_regex, b)
-                try
-                    run(`$(GIT) push origin --delete $(b)`)
-                catch
+        for branch_name in all_origin_branches
+            if occursin(timestamp_regex, branch_name)
+                commit = strip(read(`git rev-parse origin/$(branch_name)`, String))
+                age = get_age_of_commit(commit)
+                if age >= older_than
+                    try
+                        run(`$(GIT) push origin --delete $(branch_name)`)
+                    catch ex
+                        @info "Encountered an error while trying to delete branch" exception=(ex, catch_backtrace()) branch_name
+                    end
                 end
             end
         end

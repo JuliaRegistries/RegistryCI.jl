@@ -1,7 +1,18 @@
 # RegistryCI.jl
 
-[![Build Status](https://travis-ci.com/JuliaRegistries/RegistryCI.jl.svg?branch=master)](https://travis-ci.com/JuliaRegistries/RegistryCI.jl/branches)
-[![Codecov](https://codecov.io/gh/JuliaRegistries/RegistryCI.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaRegistries/RegistryCI.jl/branch/master)
+[![Continuous Integration (Unit Tests)][ci-unit-img]][ci-unit-url]
+[![Continuous Integration (Integration Tests)][ci-integration-img]][ci-integration-url]
+[![Code Coverage][codecov-img]][codecov-url]
+[![Bors][bors-img]][bors-url]
+
+[ci-unit-img]: https://github.com/JuliaRegistries/RegistryCI.jl/workflows/CI%20(unit%20tests)/badge.svg "Continuous Integration (Unit Tests)"
+[ci-unit-url]: https://github.com/JuliaRegistries/RegistryCI.jl/actions?query=workflow%3A%22CI+%28unit+tests%29%22
+[ci-integration-img]: https://github.com/JuliaRegistries/RegistryCI.jl/workflows/CI%20(integration%20tests)/badge.svg "Continuous Integration (Integration Tests)"
+[ci-integration-url]: https://github.com/JuliaRegistries/RegistryCI.jl/actions?query=workflow%3A%22CI+%28integration+tests%29%22
+[codecov-img]: https://codecov.io/gh/JuliaRegistries/RegistryCI.jl/branch/master/graph/badge.svg "Code Coverage"
+[codecov-url]: https://codecov.io/gh/JuliaRegistries/RegistryCI.jl/branch/master
+[bors-img]: https://bors.tech/images/badge_small.svg "Bors"
+[bors-url]: https://app.bors.tech/repositories/25657
 
 RegistryCI provides continuous integration (CI) tools, including automated testing and automatic merging (automerge) of pull requests.
 
@@ -16,12 +27,6 @@ For the list of automatic merging guidelines, please see the [General registry R
 ## RegistryCI.jl integration tests
 
 For instructions on how to run the RegistryCI.jl integration tests on your local machine, see [`INTEGRATION_TESTS.md`](INTEGRATION_TESTS.md).
-
-## TeamCity support
-
-There is support also for TeamCity, but it does not work out-of the box, it requires Pull Request build feature to be added, and passing few build variables as environment variables.
-
-To make it work in TeamCity, see [this Kotlin DSL snippet](teamcity_settings.kts) and put following parts into your DSL/add them in GUI.
 
 ## Acknowledgements
 
