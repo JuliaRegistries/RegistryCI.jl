@@ -49,6 +49,7 @@ delete_old_pull_request_branches(
                 params = Dict("title" => title,
                               "head" => head,
                               "base" => base)
+                sleep(30)
                 pr = GitHub.create_pull_request(repo; auth = auth, params = params)
                 pr = wait_pr_compute_mergeability(GitHub.DEFAULT_API, repo, pr; auth = auth)
                 @test pr.mergeable
