@@ -12,5 +12,5 @@ function throw_not_automerge_applicable(::Type{E},
             end
         end
     end
-    return nothing
+    exit(0)
 end
