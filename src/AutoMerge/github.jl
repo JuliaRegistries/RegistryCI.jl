@@ -66,7 +66,7 @@ function get_all_my_pull_request_comments(api::GitHub.GitHubAPI,
     all_comments = get_all_pull_request_comments(api, repo,
                                                  pr;
                                                  auth = auth)
-    my_comments = Vector{GitHub.Comment}(undef, 0)
+    my_comments = GitHub.Comment[]
     for c in all_comments
         if c.user.login == whoami
             push!(my_comments, c)
@@ -81,7 +81,7 @@ function get_all_pull_request_comments(api::GitHub.GitHubAPI,
                                        repo::GitHub.Repo,
                                        pr::GitHub.PullRequest;
                                        auth::GitHub.Authorization)
-    all_comments = Vector{GitHub.Comment}(undef, 0)
+    all_comments = GitHub.Comment[]
     myparams = Dict("per_page" => 100, "page" => 1)
     cs, page_data = GitHub.comments(api, repo, pr, :pr; auth=auth, params = myparams, page_limit = 100)
     append!(all_comments, cs)
@@ -98,7 +98,7 @@ function get_all_pull_requests(api::GitHub.GitHubAPI,
                                repo::GitHub.Repo,
                                state::String;
                                auth::GitHub.Authorization)
-    all_pull_requests = Vector{GitHub.PullRequest}(undef, 0)
+    all_pull_requests = GitHub.PullRequest[]
     myparams = Dict("state" => state, "per_page" => 100, "page" => 1)
     prs, page_data = GitHub.pull_requests(api, repo; auth=auth, params = myparams, page_limit = 100)
     append!(all_pull_requests, prs)
@@ -112,12 +112,7 @@ end
 
 function get_changed_filenames(api::GitHub.GitHubAPI, repo::GitHub.Repo, pull_request::GitHub.PullRequest; auth::GitHub.Authorization)
     files = GitHub.pull_request_files(api, repo, pull_request; auth=auth)
-    n = length(files)
-    filenames = Vector{String}(undef, n)
-    for i = 1:n
-        filenames[i] = files[i].filename
-    end
-    return filenames
+    return [file.filename for file in files]
 end
 
 is_merged(pull_request::GitHub.PullRequest) = pull_request.merged
