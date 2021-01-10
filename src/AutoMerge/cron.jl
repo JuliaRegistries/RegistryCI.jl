@@ -4,38 +4,35 @@ function all_specified_statuses_passed(api::GitHub.GitHubAPI,
                                        registry::GitHub.Repo,
                                        pr::GitHub.PullRequest,
                                        sha::AbstractString,
-                                       specified_status_context_list::AbstractVector{<:AbstractString};
+                                       specified_status_contexts::AbstractVector{<:AbstractString};
                                        auth::GitHub.Authorization)
-    specified_status_context_did_fail = Dict{String, Bool}()
-    for context in specified_status_context_list
-        specified_status_context_did_fail[context] = true
-    end
+    # Keep track of the values of the specified statuses. If all of
+    # these are switched over to true, the result is a success. Do not
+    # care about the result of unspecified statuses.
+    status_passed = Dict{String, Bool}(context => false
+                                       for context in specified_status_contexts)
     combined_status = GitHub.status(api, registry, sha; auth = auth)
     all_statuses = combined_status.statuses
     for status in all_statuses
         context = status.context
-        if haskey(specified_status_context_did_fail, context)
-            status_was_success = status.state == "success"
-            status_was_failure = !status_was_success
-            specified_status_context_did_fail[context] = status_was_failure
+        if haskey(status_passed, context)
+            status_passed[context] = status.state == "success"
         end
     end
-    if any(values(specified_status_context_did_fail))
-        return false
-    end
-    return true
+    return all(values(status_passed))
 end
 
 function all_specified_check_runs_passed(api::GitHub.GitHubAPI,
                                          registry::GitHub.Repo,
                                          pr::GitHub.PullRequest,
                                          sha::AbstractString,
-                                         specified_check_run_name_list::AbstractVector{<:AbstractString};
+                                         specified_checks::AbstractVector{<:AbstractString};
                                          auth::GitHub.Authorization)
-    specified_check_run_name_did_fail = Dict{String, Bool}()
-    for context in specified_check_run_name_list
-        specified_check_run_name_did_fail[context] = true
-    end
+    # Keep track of the results of the specified checks. If all of
+    # these are switched over to true, the result is a success. Do not
+    # care about the result of unspecified checks.
+    check_passed = Dict{String, Bool}(context => false
+                                      for context in specified_checks)
     endpoint = "/repos/$(registry.full_name)/commits/$(sha)/check-runs"
     check_runs = GitHub.gh_get_json(api,
                                     endpoint;
@@ -44,26 +41,15 @@ function all_specified_check_runs_passed(api::GitHub.GitHubAPI,
                                                    "application/vnd.github.antiope-preview+json"))
     for check_run in check_runs["check_runs"]
         name = check_run["name"]
-        check_run_was_success = (check_run["status"] == "completed") & (check_run["conclusion"] == "success")
-        check_run_was_failure = !check_run_was_success
-        if haskey(specified_check_run_name_did_fail, name)
-            specified_check_run_name_did_fail[name] = check_run_was_failure
+        check_run_was_success = (check_run["status"] == "completed") && (check_run["conclusion"] == "success")
+        if haskey(check_passed, name)
+            check_passed[name] = check_run_was_success
         end
     end
-    if any(values(specified_check_run_name_did_fail))
-        return false
-    end
-    return true
+    return all(values(check_passed))
 end
 
-function pr_comment_is_blocking(c::GitHub.Comment)
-    c_body = body(c)
-    if occursin("[noblock]", c_body)
-        return false
-    else
-        return true
-    end
-end
+pr_comment_is_blocking(c::GitHub.Comment) = !occursin("[noblock]", body(c))
 
 function pr_has_no_blocking_comments(api::GitHub.GitHubAPI,
                                      registry::GitHub.Repo,

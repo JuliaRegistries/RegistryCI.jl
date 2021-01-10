@@ -161,7 +161,7 @@ function wait_pr_compute_mergeability(api::GitHub.GitHubAPI,
     num_tries = 0
     pr = GitHub.pull_request(api, repo, pr.number; auth = auth)
     while !(pr.mergeable isa Bool) && num_tries <= max_tries
-        num_tries = num_tries + 1
+        num_tries += 1
         sleep(5)
         pr = GitHub.pull_request(api, repo, pr.number; auth = auth)
     end
@@ -191,10 +191,7 @@ repo_url(repo::GitHub.Repo) = repo.html_url.uri
 pr_state(pull_request::GitHub.PullRequest) = pull_request.state
 
 function time_since_pr_creation(pull_request::GitHub.PullRequest)
-    _pr_created_at_utc = created_at(pull_request)
-    _now_utc = now_utc()
-    result = _now_utc - _pr_created_at_utc
-    return result
+    return now_utc() - created_at(pull_request)
 end
 
 title(pull_request::GitHub.PullRequest) = pull_request.title
