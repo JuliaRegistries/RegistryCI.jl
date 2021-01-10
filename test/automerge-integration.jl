@@ -73,6 +73,7 @@ delete_old_pull_request_branches(
                                       registry = AUTOMERGE_INTEGRATION_TEST_REPO,
                                       authorized_authors = String[whoami],
                                       authorized_authors_special_jll_exceptions = String[whoami],
+                                      error_exit_if_automerge_not_applicable = true,
                                       master_branch = master,
                                       master_branch_is_default_branch = false)
                         @info "Running integration test for " test_number master_dir feature_dir title pass
@@ -101,6 +102,7 @@ delete_old_pull_request_branches(
                                       registry = AUTOMERGE_INTEGRATION_TEST_REPO,
                                       authorized_authors = String[whoami],
                                       authorized_authors_special_jll_exceptions = String[whoami],
+                                      error_exit_if_automerge_not_applicable = true,
                                       master_branch = master,
                                       master_branch_is_default_branch = false)
                         sleep(1)
@@ -114,6 +116,7 @@ delete_old_pull_request_branches(
                                       registry = AUTOMERGE_INTEGRATION_TEST_REPO,
                                       authorized_authors = String[whoami],
                                       authorized_authors_special_jll_exceptions = String[whoami],
+                                      error_exit_if_automerge_not_applicable = true,
                                       master_branch = master,
                                       master_branch_is_default_branch = false)
                     end
