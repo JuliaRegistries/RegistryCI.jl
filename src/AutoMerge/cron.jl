@@ -258,152 +258,155 @@ function cron_or_api_build(api::GitHub.GitHubAPI,
     pr_number = number(pr)
     @info("Now examining pull request $(pr_number)")
     pr_author = author_login(pr)
-    if pr_author in vcat(authorized_authors, authorized_authors_special_jll_exceptions)
-        if is_new_package(pr) || is_new_version(pr)
-            if is_new_package(pr) # it is a new package
-                pr_type = :NewPackage
-                pkg, version = parse_pull_request_title(NewPackage(), pr)
-            else # it is a new version
-                pr_type = :NewVersion
-                pkg, version = parse_pull_request_title(NewVersion(), pr)
-            end
-            pr_age = time_since_pr_creation(pr)
-            this_pr_is_old_enough = pr_is_old_enough(pr_type,
-                                                     pr_age;
-                                                     pkg = pkg,
-                                                     new_package_waiting_period = new_package_waiting_period,
-                                                     new_jll_package_waiting_period = new_jll_package_waiting_period,
-                                                     new_version_waiting_period = new_version_waiting_period,
-                                                     new_jll_version_waiting_period = new_jll_version_waiting_period,
-                                                     pr_author = pr_author,
-                                                     authorized_authors = authorized_authors,
-                                                     authorized_authors_special_jll_exceptions = authorized_authors_special_jll_exceptions)
-            if this_pr_is_old_enough
-                i_passed_this_pr,
-                    passed_pkg_name,
-                    passed_pr_head_sha,
-                    status_pr_type = pr_has_passing_automerge_decision_status(api,
-                                                                              registry,
-                                                                              pr;
-                                                                              auth = auth,
-                                                                              whoami = whoami)
-                if i_passed_this_pr
-                    always_assert(pkg == passed_pkg_name)
-                    always_assert(pr.head.sha == passed_pr_head_sha)
-                    _statuses_good = all_specified_statuses_passed(api,
-                                                                   registry,
-                                                                   pr,
-                                                                   passed_pr_head_sha,
-                                                                   all_statuses;
-                                                                   auth = auth)
-                    _checkruns_good = all_specified_check_runs_passed(api, registry,
-                                                                      pr,
-                                                                      passed_pr_head_sha,
-                                                                      all_check_runs;
-                                                                      auth = auth)
-                    if _statuses_good && _checkruns_good
-                        if pr_has_no_blocking_comments(api, registry, pr; auth = auth)
-                            "Pull request: $(pr_number). "
-                            "Type: $(pr_type). "
-                            "Decision: merge. "
-                            if pr_type == :NewPackage # it is a new package
-                                always_assert(status_pr_type == :NewPackage)
-                                if merge_new_packages
-                                    my_comment = comment_text_merge_now()
-                                    @info(string("Pull request: $(pr_number). ",
-                                                 "Type: $(pr_type). ",
-                                                 "Decision: merge now."))
-                                    my_retry(() -> merge!(api, registry, pr, passed_pr_head_sha; auth = auth))
-                                else
-                                    @info(string("Pull request: $(pr_number). ",
-                                                 "Type: $(pr_type). ",
-                                                 "Decision: do not merge. ",
-                                                 "Reason: ",
-                                                 "This is a new package pull request. ",
-                                                 "All of the criteria for automerging ",
-                                                 "were met. ",
-                                                 "However, merge_new_packages is false, ",
-                                                 "so I will not merge. ",
-                                                 "If merge_new_packages had been set to ",
-                                                 "true, I would have merged this ",
-                                                 "pull request right now."))
-                                end
-                            else # it is a new version
-                                always_assert(pr_type == :NewVersion)
-                                always_assert(status_pr_type == :NewVersion)
-                                if merge_new_versions
-                                    my_comment = comment_text_merge_now()
-                                    @info(string("Pull request: $(pr_number). ",
-                                                 "Type: $(pr_type). ",
-                                                 "Decision: merge now."))
-                                    my_retry(() -> merge!(api, registry, pr, passed_pr_head_sha; auth = auth))
-                                else
-                                    @info(string("Pull request: $(pr_number). ",
-                                                 "Type: $(pr_type). ",
-                                                 "Decision: do not merge. ",
-                                                 "Reason: merge_new_versions is false",
-                                                 "This is a new version pull request. ",
-                                                 "All of the criteria for automerging ",
-                                                 "were met. ",
-                                                 "However, merge_new_versions is false, ",
-                                                 "so I will not merge. ",
-                                                 "If merge_new_versions had been set to ",
-                                                 "true, I would have merged this ",
-                                                 "pull request right now."))
-                                end
-                            end
-                        else
-                            @info(string("Pull request: $(pr_number). ",
-                                         "Type: $(pr_type). ",
-                                         "Decision: do not merge. ",
-                                         "Reason: pull request has one or more blocking comments."))
-                        end
-                    else
-                        @error(string("Pull request: $(pr_number). ",
-                                      "Type: $(pr_type). ",
-                                      "Decision: do not merge. ",
-                                      "Reason: ",
-                                      "It is not the case that ",
-                                      "all of the specified statuses and ",
-                                      "check runs passed. "))
-                    end
-                else
-                    @info(string("Pull request: $(pr_number). ",
-                                 "Type: $(pr_type). ",
-                                 "Decision: do not merge. ",
-                                 "Reason: automerge/decision status is not passing"),
-                          whoami)
-                end
-            else
-                @info(string("Pull request: $(pr_number). ",
-                             "Type: $(pr_type). ",
-                             "Decision: do not merge. ",
-                             "Reason: mandatory waiting period has not elapsed."),
-                      pr_type,
-                      pr_age,
-                      pkg,
-                      is_jll_name(pkg),
-                      new_package_waiting_period,
-                      new_jll_package_waiting_period,
-                      new_version_waiting_period,
-                      new_jll_version_waiting_period,
-                      pr_author,
-                      authorized_authors,
-                      authorized_authors_special_jll_exceptions)
-            end
-        else
-            @info(string("Pull request: $(pr_number). ",
-                         "Decision: do not merge. ",
-                         "Reason: pull request is neither a new package nor a new version."),
-                  title(pr))
-        end
-    else
+    if pr_author ∉ vcat(authorized_authors, authorized_authors_special_jll_exceptions)
         @info(string("Pull request: $(pr_number). ",
                      "Decision: do not merge. ",
                      "Reason: pull request author is not authorized to automerge."),
               pr_author,
               authorized_authors,
               authorized_authors_special_jll_exceptions)
+        return nothing
+    end
+
+    if !(is_new_package(pr) || is_new_version(pr))
+        @info(string("Pull request: $(pr_number). ",
+                     "Decision: do not merge. ",
+                     "Reason: pull request is neither a new package nor a new version."),
+              title(pr))
+        return nothing
+    end
+
+    if is_new_package(pr) # it is a new package
+        pr_type = :NewPackage
+        pkg, version = parse_pull_request_title(NewPackage(), pr)
+    else # it is a new version
+        pr_type = :NewVersion
+        pkg, version = parse_pull_request_title(NewVersion(), pr)
+    end
+    pr_age = time_since_pr_creation(pr)
+    this_pr_is_old_enough = pr_is_old_enough(pr_type,
+                                             pr_age;
+                                             pkg = pkg,
+                                             new_package_waiting_period = new_package_waiting_period,
+                                             new_jll_package_waiting_period = new_jll_package_waiting_period,
+                                             new_version_waiting_period = new_version_waiting_period,
+                                             new_jll_version_waiting_period = new_jll_version_waiting_period,
+                                             pr_author = pr_author,
+                                             authorized_authors = authorized_authors,
+                                             authorized_authors_special_jll_exceptions = authorized_authors_special_jll_exceptions)
+    if !this_pr_is_old_enough
+        @info(string("Pull request: $(pr_number). ",
+                     "Type: $(pr_type). ",
+                     "Decision: do not merge. ",
+                     "Reason: mandatory waiting period has not elapsed."),
+              pr_type,
+              pr_age,
+              pkg,
+              is_jll_name(pkg),
+              new_package_waiting_period,
+              new_jll_package_waiting_period,
+              new_version_waiting_period,
+              new_jll_version_waiting_period,
+              pr_author,
+              authorized_authors,
+              authorized_authors_special_jll_exceptions)
+        return nothing
+    end
+
+    i_passed_this_pr,
+        passed_pkg_name,
+        passed_pr_head_sha,
+        status_pr_type = pr_has_passing_automerge_decision_status(api,
+                                                                  registry,
+                                                                  pr;
+                                                                  auth = auth,
+                                                                  whoami = whoami)
+    if !i_passed_this_pr
+        @info(string("Pull request: $(pr_number). ",
+                     "Type: $(pr_type). ",
+                     "Decision: do not merge. ",
+                     "Reason: automerge/decision status is not passing"),
+              whoami)
+        return nothing
+    end
+
+    always_assert(pkg == passed_pkg_name)
+    always_assert(pr.head.sha == passed_pr_head_sha)
+    _statuses_good = all_specified_statuses_passed(api,
+                                                   registry,
+                                                   pr,
+                                                   passed_pr_head_sha,
+                                                   all_statuses;
+                                                   auth = auth)
+    _checkruns_good = all_specified_check_runs_passed(api, registry,
+                                                      pr,
+                                                      passed_pr_head_sha,
+                                                      all_check_runs;
+                                                      auth = auth)
+    if !(_statuses_good && _checkruns_good)
+        @error(string("Pull request: $(pr_number). ",
+                      "Type: $(pr_type). ",
+                      "Decision: do not merge. ",
+                      "Reason: ",
+                      "It is not the case that ",
+                      "all of the specified statuses and ",
+                      "check runs passed. "))
+        return nothing
+    end
+
+    if !pr_has_no_blocking_comments(api, registry, pr; auth = auth)
+        @info(string("Pull request: $(pr_number). ",
+                     "Type: $(pr_type). ",
+                     "Decision: do not merge. ",
+                     "Reason: pull request has one or more blocking comments."))
+        return nothing
+    end
+
+    if pr_type == :NewPackage # it is a new package
+        always_assert(status_pr_type == :NewPackage)
+        if merge_new_packages
+            my_comment = comment_text_merge_now()
+            @info(string("Pull request: $(pr_number). ",
+                         "Type: $(pr_type). ",
+                         "Decision: merge now."))
+            my_retry(() -> merge!(api, registry, pr, passed_pr_head_sha; auth = auth))
+        else
+            @info(string("Pull request: $(pr_number). ",
+                         "Type: $(pr_type). ",
+                         "Decision: do not merge. ",
+                         "Reason: ",
+                         "This is a new package pull request. ",
+                         "All of the criteria for automerging ",
+                         "were met. ",
+                         "However, merge_new_packages is false, ",
+                         "so I will not merge. ",
+                         "If merge_new_packages had been set to ",
+                         "true, I would have merged this ",
+                         "pull request right now."))
+        end
+    else # it is a new version
+        always_assert(pr_type == :NewVersion)
+        always_assert(status_pr_type == :NewVersion)
+        if merge_new_versions
+            my_comment = comment_text_merge_now()
+            @info(string("Pull request: $(pr_number). ",
+                         "Type: $(pr_type). ",
+                         "Decision: merge now."))
+            my_retry(() -> merge!(api, registry, pr, passed_pr_head_sha; auth = auth))
+        else
+            @info(string("Pull request: $(pr_number). ",
+                         "Type: $(pr_type). ",
+                         "Decision: do not merge. ",
+                         "Reason: merge_new_versions is false",
+                         "This is a new version pull request. ",
+                         "All of the criteria for automerging ",
+                         "were met. ",
+                         "However, merge_new_versions is false, ",
+                         "so I will not merge. ",
+                         "If merge_new_versions had been set to ",
+                         "true, I would have merged this ",
+                         "pull request right now."))
+        end
     end
     return nothing
 end
