@@ -6,6 +6,7 @@ function pull_request_build(api::GitHub.GitHubAPI,
                             auth::GitHub.Authorization,
                             authorized_authors::Vector{String},
                             authorized_authors_special_jll_exceptions::Vector{String},
+                            error_exit_if_automerge_not_applicable::Bool,
                             registry_head::String,
                             registry_master::String,
                             suggest_onepointzero::Bool,
@@ -292,9 +293,19 @@ function pull_request_build(api::GitHub.GitHubAPI,
                 throw(AutoMergeGuidelinesNotMet("The automerge guidelines were not met."))
             end
         else
-            throw(AutoMergeAuthorNotAuthorized("Author $(pr_author_login) is not authorized to automerge. Exiting..."))
+            throw_not_automerge_applicable(
+                AutoMergeAuthorNotAuthorized,
+                true,
+                "Author $(pr_author_login) is not authorized to automerge. Exiting...";
+                error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
+            )
         end
     else
-        throw(AutoMergePullRequestNotOpen("The pull request is not open. Exiting..."))
+        throw_not_automerge_applicable(
+            AutoMergePullRequestNotOpen,
+            true,
+            "The pull request is not open. Exiting...";
+            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
+        )
     end
 end
