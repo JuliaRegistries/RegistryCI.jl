@@ -55,12 +55,13 @@ function open_fixup_pr(repo; branch="tagbot/$(randstring())", fork=get_fork(repo
         message=FIXUP_COMMIT_MESSAGE,
         sha=bytes2hex(sha1("blob $(length(contents))\0$contents")),
     ))
-    return GH.create_pull_request(repo; auth=AUTH[], params=(;
-        title=FIXUP_PR_TITLE,
-        body=FIXUP_PR_BODY,
-        head="$(TAGBOT_USER[]):$branch",
-        base=fork.default_branch,
-    ))
+    result = try 
+        GH.create_pull_request(repo; auth=AUTH[], params=(;title=FIXUP_PR_TITLE,body=FIXUP_PR_BODY,head="$(TAGBOT_USER[]):$branch",base=fork.default_branch,))
+    catch ex 
+        @error "Encountered an error while trying to create the fixup PR" exception=(ex, catch_backtrace())
+        nothing
+    end
+    return result
 end
 
 function fixup_comment_exists(repo, issue)
