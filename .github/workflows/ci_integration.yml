@@ -2,16 +2,16 @@ name: CI (integration tests)
 
 # We only run the integration tests with Bors. There is a specific reason for
 # this. Using Bors makes it easier for us to limit the total number of
-# concurrent jobs. This is important because it keeps us from triggering 
+# concurrent jobs. This is important because it keeps us from triggering
 # GitHub's abuse rate limits.
 
 on:
   push:
     branches:
-      - master
+      # - master
       - staging
       - trying
-    tags: '*'
+    # tags: '*'
 jobs:
   integration:
     if: github.event_name == 'push'
@@ -19,16 +19,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       max-parallel: 1
-      fail-fast: false
+      fail-fast: true
       matrix:
         arch:
           - x64
         os:
           - ubuntu-latest
         version:
-          - '1.3'
+          # - '1.3'
           - '1'
-          - 'nightly'
+          # - 'nightly'
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
