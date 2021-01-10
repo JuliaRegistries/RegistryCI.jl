@@ -16,6 +16,8 @@ function run(env = ENV,
              additional_statuses::AbstractVector{<:AbstractString} = String[],
              additional_check_runs::AbstractVector{<:AbstractString} = String[],
              #
+             error_exit_if_automerge_not_applicable::Bool = false,
+             #
              master_branch::String = "master",
              master_branch_is_default_branch::Bool = true,
              suggest_onepointzero::Bool = true,
@@ -38,9 +40,12 @@ function run(env = ENV,
     run_pr_build = conditions_met_for_pr_build(cicfg; env=env, master_branch=master_branch)
     run_merge_build = conditions_met_for_merge_build(cicfg; env=env, master_branch=master_branch)
 
-    if !(run_pr_build || run_merge_build)
-        throw(AutoMergeWrongBuildType("Build not determined to be either a PR build or a merge build. Exiting."))
-    end
+    throw_not_automerge_applicable(
+        AutoMergeWrongBuildType,
+        !(run_pr_build || run_merge_build),
+        "Build not determined to be either a PR build or a merge build. Exiting.";
+        error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
+    )
 
     # Authentication
     key = run_pr_build || !tagbot_enabled ? "AUTOMERGE_GITHUB_TOKEN" : "AUTOMERGE_TAGBOT_TOKEN"
@@ -60,6 +65,7 @@ function run(env = ENV,
                            auth = auth,
                            authorized_authors = authorized_authors,
                            authorized_authors_special_jll_exceptions = authorized_authors_special_jll_exceptions,
+                           error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
                            master_branch = master_branch,
                            master_branch_is_default_branch = master_branch_is_default_branch,
                            suggest_onepointzero = suggest_onepointzero,
