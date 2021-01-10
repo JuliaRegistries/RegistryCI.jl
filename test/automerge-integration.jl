@@ -52,6 +52,7 @@ delete_old_pull_request_branches(
                 pr = GitHub.create_pull_request(repo; auth = auth, params = params)
                 pr = wait_pr_compute_mergeability(GitHub.DEFAULT_API, repo, pr; auth = auth)
                 @test pr.mergeable
+                sleep(1)
                 with_pr_merge_commit(pr, repo_url_without_auth; GIT = GIT) do build_dir
                     withenv("AUTOMERGE_GITHUB_TOKEN" => TEST_USER_GITHUB_TOKEN,
                             "TRAVIS_BRANCH" => master,
@@ -60,6 +61,7 @@ delete_old_pull_request_branches(
                             "TRAVIS_PULL_REQUEST" => string(pr.number),
                             "TRAVIS_PULL_REQUEST_SHA" => string(AutoMerge.pull_request_head_sha(pr)),
                             "TRAVIS_REPO_SLUG" => AUTOMERGE_INTEGRATION_TEST_REPO) do
+                        sleep(1)
                         run_thunk = () -> AutoMerge.run(;
                                       merge_new_packages = true,
                                       merge_new_versions = true,
@@ -87,6 +89,7 @@ delete_old_pull_request_branches(
                             "TRAVIS_PULL_REQUEST" => "false",
                             "TRAVIS_PULL_REQUEST_SHA" => "",
                             "TRAVIS_REPO_SLUG" => AUTOMERGE_INTEGRATION_TEST_REPO) do
+                        sleep(1)
                         AutoMerge.run(;
                                       merge_new_packages = true,
                                       merge_new_versions = true,
@@ -99,6 +102,7 @@ delete_old_pull_request_branches(
                                       authorized_authors_special_jll_exceptions = String[whoami],
                                       master_branch = master,
                                       master_branch_is_default_branch = false)
+                        sleep(1)
                         AutoMerge.run(;
                                       merge_new_packages = true,
                                       merge_new_versions = true,
