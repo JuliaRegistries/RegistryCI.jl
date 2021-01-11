@@ -12,8 +12,6 @@ function pull_request_build(api::GitHub.GitHubAPI,
                             suggest_onepointzero::Bool,
                             whoami::String,
                             registry_deps::Vector{<:AbstractString} = String[])::Nothing
-    # first check if the PR is open, and the author is authorized - if not, then quit
-    # if the PR is open and the author is authorized, then check rules 0 through 7.
     # Rules:
     # 0. A JLL-only author (e.g. `jlbuild`) is not allowed to register non-JLL packages.
     # 1. Only changes a subset of the following files:
@@ -40,25 +38,10 @@ function pull_request_build(api::GitHub.GitHubAPI,
     # 7. Version can be loaded
     #     - once it's been installed (and built?), can we load the code?
     #     - i.e. can we run `import Foo`
+    pr_author_login = author_login(pr)
     pkg, version = parse_pull_request_title(NewVersion(), pr)
     this_is_jll_package = is_jll_name(pkg)
     @info("This is a new package pull request", pkg, version, this_is_jll_package)
-    pr_author_login = author_login(pr)
-    if !is_open(pr)
-        throw_not_automerge_applicable(
-            AutoMergePullRequestNotOpen,
-            "The pull request is not open. Exiting...";
-            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable
-        )
-    end
-
-    if pr_author_login ∉ vcat(authorized_authors, authorized_authors_special_jll_exceptions)
-        throw_not_automerge_applicable(
-            AutoMergeAuthorNotAuthorized,
-            "Author $(pr_author_login) is not authorized to automerge. Exiting...";
-            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable
-        )
-    end
 
     description = "New version. Pending."
     params = Dict("state" => "pending",
