@@ -40,12 +40,14 @@ function run(env = ENV,
     run_pr_build = conditions_met_for_pr_build(cicfg; env=env, master_branch=master_branch)
     run_merge_build = conditions_met_for_merge_build(cicfg; env=env, master_branch=master_branch)
 
-    throw_not_automerge_applicable(
-        AutoMergeWrongBuildType,
-        !(run_pr_build || run_merge_build),
-        "Build not determined to be either a PR build or a merge build. Exiting.";
-        error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
-    )
+    if !(run_pr_build || run_merge_build)
+        throw_not_automerge_applicable(
+            AutoMergeWrongBuildType,
+            "Build not determined to be either a PR build or a merge build. Exiting.";
+            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
+        )
+        return nothing
+    end
 
     # Authentication
     key = run_pr_build || !tagbot_enabled ? "AUTOMERGE_GITHUB_TOKEN" : "AUTOMERGE_TAGBOT_TOKEN"
