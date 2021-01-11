@@ -1,16 +1,13 @@
-function throw_not_automerge_applicable(::Type{E},
-                                        condition::Bool,
+function throw_not_automerge_applicable(::Type{EXCEPTION_TYPE},
                                         message::String;
-                                        error_exit_if_automerge_not_applicable::Bool) where {E}
-    if condition
-        try
-            throw(E(message))
-        catch ex
-            @error "" exception=(ex, catch_backtrace())
-            if error_exit_if_automerge_not_applicable
-                rethrow()
-            end
+                                        error_exit_if_automerge_not_applicable::Bool) where {EXCEPTION_TYPE}
+    try
+        throw(EXCEPTION_TYPE(message))
+    catch ex
+        @error "" exception=(ex, catch_backtrace())
+        if error_exit_if_automerge_not_applicable
+            rethrow()
         end
     end
-    exit(0)
+    return nothing
 end

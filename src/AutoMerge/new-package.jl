@@ -65,19 +65,19 @@ function pull_request_build(api::GitHub.GitHubAPI,
     if !is_open(pr)
         throw_not_automerge_applicable(
             AutoMergePullRequestNotOpen,
-            true,
             "The pull request is not open. Exiting...";
             error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable
         )
+        return nothing
     end
 
     if pr_author_login ∉ vcat(authorized_authors, authorized_authors_special_jll_exceptions)
         throw_not_automerge_applicable(
             AutoMergeAuthorNotAuthorized,
-            true,
             "Author $(pr_author_login) is not authorized to automerge. Exiting...";
             error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable
         )
+        return nothing
     end
 
     description = "New package. Pending."
