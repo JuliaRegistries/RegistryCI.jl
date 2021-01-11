@@ -140,6 +140,6 @@ function pull_request_build(api::GitHub.GitHubAPI,
             "Neither a new package nor a new version. Exiting...";
             error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
         )
-        return nothing
     end
+    return nothing
 end

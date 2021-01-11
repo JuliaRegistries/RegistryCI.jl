@@ -199,7 +199,6 @@ function pull_request_build(api::GitHub.GitHubAPI,
                                                  auth = auth,
                                                  body = this_pr_comment_pass,
                                                  whoami = whoami))
-        return nothing
     else # failure
         description = "New version. Failed."
         params = Dict("state" => "failure",
@@ -222,4 +221,5 @@ function pull_request_build(api::GitHub.GitHubAPI,
                                                  whoami = whoami))
         throw(AutoMergeGuidelinesNotMet("The automerge guidelines were not met."))
     end
+    return nothing
 end
