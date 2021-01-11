@@ -8,10 +8,9 @@ name: CI (integration tests)
 on:
   push:
     branches:
-      # - master
+      - master
       - staging
       - trying
-    # tags: '*'
 jobs:
   integration:
     if: github.event_name == 'push'
