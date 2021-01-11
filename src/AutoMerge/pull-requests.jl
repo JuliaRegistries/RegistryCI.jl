@@ -72,6 +72,28 @@ function pull_request_build(api::GitHub.GitHubAPI,
                             suggest_onepointzero::Bool,
                             whoami::String,
                             registry_deps::Vector{<:AbstractString} = String[])::Nothing
+    # first check if the PR is open, and the author is authorized - if not, then quit
+    # if the PR is open and the author is authorized, then determine if it is a
+    # new package or new version of an existing package, and then call the appropriate
+    # function
+    pr_author_login = author_login(pr)
+    if !is_open(pr)
+        throw_not_automerge_applicable(
+            AutoMergePullRequestNotOpen,
+            "The pull request is not open. Exiting...";
+            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable
+        )
+        return nothing
+    end
+    if pr_author_login ∉ vcat(authorized_authors, authorized_authors_special_jll_exceptions)
+        throw_not_automerge_applicable(
+            AutoMergeAuthorNotAuthorized,
+            "Author $(pr_author_login) is not authorized to automerge. Exiting...";
+            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable
+        )
+        return nothing
+    end
+
     if is_new_package(pr)
         registry_master = clone_repo(registry)
         if !master_branch_is_default_branch
