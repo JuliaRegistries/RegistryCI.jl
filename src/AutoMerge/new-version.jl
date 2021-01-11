@@ -38,6 +38,7 @@ function pull_request_build(api::GitHub.GitHubAPI,
     # 7. Version can be loaded
     #     - once it's been installed (and built?), can we load the code?
     #     - i.e. can we run `import Foo`
+    pr_author_login = author_login(pr)
     pkg, version = parse_pull_request_title(NewVersion(), pr)
     this_is_jll_package = is_jll_name(pkg)
     @info("This is a new package pull request", pkg, version, this_is_jll_package)
