@@ -72,6 +72,10 @@ function meets_patch_release_does_not_narrow_julia_compat(pkg::String,
                                                           registry_head::String,
                                                           registry_master::String)
     old_version = latest_version(pkg, registry_master)
+    if old_version.major != new_version.major || old_version.minor != new_version.minor
+        # Not a patch release.
+        return true, ""
+    end
     julia_compats_for_old_version = julia_compat(pkg, old_version, registry_master)
     julia_compats_for_new_version = julia_compat(pkg, new_version, registry_head)
     if Set(julia_compats_for_old_version) == Set(julia_compats_for_new_version)
@@ -127,7 +131,19 @@ end
 damerau_levenshtein(name1, name2) = StringDistances.DamerauLevenshtein()(name1, name2)
 sqrt_normalized_vd(name1, name2) = VisualStringDistances.visual_distance(name1, name2; normalize=x -> 5 + sqrt(x))
 
-function meets_distance_check(pkg_name, other_packages; DL_lowercase_cutoff = 1, DL_cutoff = 2, sqrt_normalized_vd_cutoff = 2.5, comment_collapse_cutoff = 10)
+function meets_distance_check(pkg_name::AbstractString,
+                              registry_master::AbstractString;
+                              kwargs...)
+    other_packages = get_all_non_jll_package_names(registry_master)
+    return meets_distance_check(pkg_name, other_packages; kwargs...)
+end
+
+function meets_distance_check(pkg_name::AbstractString,
+                              other_packages::Vector{<:AbstractString};
+                              DL_lowercase_cutoff = 1,
+                              DL_cutoff = 2,
+                              sqrt_normalized_vd_cutoff = 2.5,
+                              comment_collapse_cutoff = 10)
     problem_messages = Tuple{String, Tuple{Float64, Float64, Float64}}[]
     for other_pkg in other_packages
         if pkg_name == other_pkg

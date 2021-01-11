@@ -67,33 +67,28 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
     if this_pr_can_use_special_jll_exceptions
         g2 = true
         m2 = ""
-        release_type = :jll_release
     else
-        g2, m2, release_type = meets_sequential_version_number(data.pkg,
-                                                               data.version;
-                                                               registry_head = data.registry_head,
-                                                               registry_master = data.registry_master)
+        g2, m2 = meets_sequential_version_number(data.pkg,
+                                                 data.version;
+                                                 registry_head = data.registry_head,
+                                                 registry_master = data.registry_master)
     end
     g3, m3 = meets_compat_for_all_deps(data.registry_head,
                                        data.pkg,
                                        data.version)
-    g4_if_patch, m4_if_patch = meets_patch_release_does_not_narrow_julia_compat(data.pkg,
-                                                                                data.version;
-                                                                                registry_head = data.registry_head,
-                                                                                registry_master = data.registry_master)
-    if release_type == :patch
-        g4 = g4_if_patch
-        m4 = m4_if_patch
-    else
+    if this_pr_can_use_special_jll_exceptions
         g4 = true
         m4 = ""
+    else
+        g4, m4 = meets_patch_release_does_not_narrow_julia_compat(data.pkg,
+                                                                  data.version;
+                                                                  registry_head = data.registry_head,
+                                                                  registry_master = data.registry_master)
     end
-    g5_if_jll, m5_if_jll = meets_allowed_jll_nonrecursive_dependencies(data.registry_head,
-                                                                       data.pkg,
-                                                                       data.version)
     if this_is_jll_package
-        g5 = g5_if_jll
-        m5 = m5_if_jll
+        g5, m5 = meets_allowed_jll_nonrecursive_dependencies(data.registry_head,
+                                                             data.pkg,
+                                                             data.version)
     else
         g5 = true
         m5 = ""

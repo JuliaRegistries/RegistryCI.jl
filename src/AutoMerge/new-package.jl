@@ -120,19 +120,16 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
     g8, m8 = meets_compat_for_all_deps(data.registry_head,
                                        data.pkg,
                                        data.version)
-    g9_if_jll, m9_if_jll = meets_allowed_jll_nonrecursive_dependencies(data.registry_head,
-                                                                       data.pkg,
-                                                                       data.version)
     if this_is_jll_package
-        g9 = g9_if_jll
-        m9 = m9_if_jll
+        g9, m9 = meets_allowed_jll_nonrecursive_dependencies(data.registry_head,
+                                                             data.pkg,
+                                                             data.version)
     else
         g9 = true
         m9 = ""
     end
 
-    all_pkg_names = get_all_non_jll_package_names(data.registry_master)
-    g10, m10 = meets_distance_check(data.pkg, all_pkg_names)
+    g10, m10 = meets_distance_check(data.pkg, data.registry_master)
 
     g11, m11 = meets_name_ascii(data.pkg)
 
