@@ -73,7 +73,6 @@ function run(env = ENV,
                            suggest_onepointzero = suggest_onepointzero,
                            whoami = whoami,
                            registry_deps = registry_deps)
-        return nothing
     else
         always_assert(run_merge_build)
         cron_or_api_build(api,
@@ -90,6 +89,6 @@ function run(env = ENV,
                           whoami = whoami,
                           all_statuses = all_statuses,
                           all_check_runs = all_check_runs)
-        return nothing
     end
+    return nothing
 end
