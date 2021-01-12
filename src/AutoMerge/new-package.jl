@@ -79,170 +79,70 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
         this_pr_can_use_special_jll_exceptions = false
     end
 
-    G0 = guideline_jll_only_authorization
+    guidelines = Guideline[]
+
+    if !this_is_jll_package && pr_author_login ∉ data.authorized_authors
+        push!(guidelines,
+              guideline_jll_only_authorization) # 0
+    end
+
+    push!(guidelines,
+          guideline_pr_only_changes_allowed_files, # 1
+          guideline_unimplemented) # 2
+
+    if !this_pr_can_use_special_jll_exceptions
+        push!(guidelines,
+              guideline_normal_capitalization, # 3
+              guideline_name_length) # 4
+    end
+
+    push!(guidelines,
+          guideline_julia_name_check) # 5
+
+    if !this_pr_can_use_special_jll_exceptions
+        # push!(guidelines,
+        #       guideline_standard_initial_version_number) # 6
+    end
+
+    push!(guidelines,
+          # guideline_repo_url_requirement, #7
+          guideline_compat_for_all_deps) #8
+
     if this_is_jll_package
-        g0 = true
-        m0 = ""
-    else
-        if pr_author_login in data.authorized_authors
-            g0 = true
-            m0 = ""
-        else
-            g0, m0 = check!(G0)
-        end
+        push!(guidelines,
+              guideline_allowed_jll_nonrecursive_dependencies) # 9
     end
 
-    G1 = guideline_pr_only_changes_allowed_files
-    g1, m1 = check!(G1)
+    push!(guidelines,
+          guideline_distance_check, # 10
+          guideline_name_ascii) # 11
 
-    G2 = guideline_unimplemented
-    g2, m2 = check!(G2)
-
-    G3 = guideline_normal_capitalization
-
-    G4 = guideline_name_length
-
-    if this_pr_can_use_special_jll_exceptions
-        g3 = true
-        g4 = true
-        m3 = ""
-        m4 = ""
-    else
-        g3, m3 = check!(G3)
-        g4, m4 = check!(G4)
+    for guideline in guidelines
+        check!(guideline)
+        @info(guideline.info,
+              meets_this_guideline = passed(guideline),
+              message = message(guideline))
     end
 
-    G5 = guideline_julia_name_check
-    g5, m5 = check!(G5)
-
-    G6 = guideline_standard_initial_version_number
-    if this_pr_can_use_special_jll_exceptions
-        g6 = true
-        m6 = ""
-    else
-        # g6, m6 = check!(G6)
-        g6 = true
-        m6 = ""
-    end
-
-    G7 = guideline_repo_url_requirement
-    # g7, m7 = check!(G7)
-    g7 = true
-    m7 = ""
-
-    G8 = guideline_compat_for_all_deps
-    g8, m8 = check!(G8)
-
-    G9 = guideline_allowed_jll_nonrecursive_dependencies
-    if this_is_jll_package
-        g9, m9 = check!(G9)
-    else
-        g9 = true
-        m9 = ""
-    end
-
-    G10 = guideline_distance_check
-    g10, m10 = check!(G10)
-
-    G11 = guideline_name_ascii
-    g11, m11 = check!(G11)
-
-    @info(G0.info,
-          meets_this_guideline = g0,
-          message = m0)
-    @info(G1.info,
-          meets_this_guideline = g1,
-          message = m1)
-    @info(G2.info,
-          meets_this_guideline = g2,
-          message = m2)
-    @info(G3.info,
-          meets_this_guideline = g3,
-          message = m3)
-    @info(G4.info,
-          meets_this_guideline = g4,
-          message = m4)
-    @info(G5.info,
-          meets_this_guideline = g5,
-          message = m5)
-    @info(G6.info,
-          meets_this_guideline = g6,
-          message = m6)
-    @info(G7.info,
-          meets_this_guideline = g7,
-          message = m7)
-    @info(G8.info,
-          meets_this_guideline = g8,
-          message = m8)
-    @info(G9.info,
-          meets_this_guideline = g9,
-          message = m9)
-    @info(G10.info,
-          meets_this_guideline = g10,
-          message = m10)
-    @info(G11.info,
-          meets_this_guideline = g11,
-          message = m11)
-    g0through11 = Bool[g0,
-                      g1,
-                      g2,
-                      g3,
-                      g4,
-                      g5,
-                      g6,
-                      g7,
-                      g8,
-                      g9,
-                      g10,
-                      g11]
-    if !all(g0through11)
+    if !all(passed, guidelines)
         update_status(data;
                       state = "failure",
                       context = "automerge/decision",
                       description = "New package. Failed.")
     end
 
-    G12 = guideline_version_can_be_pkg_added
-    g12, m12 = check!(G12)
-    @info(G12.info,
-          meets_this_guideline = g12,
-          message = m12)
+    push!(guidelines,
+          guideline_version_can_be_pkg_added, # 12
+          guideline_version_can_be_imported) # 13
 
-    G13 = guideline_version_can_be_imported
-    g13, m13 = check!(G13)
-    @info(G13.info,
-          meets_this_guideline = g13,
-          message = m13)
+    for guideline in guidelines[end-1:end]
+        check!(guideline)
+        @info(guideline.info,
+              meets_this_guideline = passed(guideline),
+              message = message(guideline))
+    end
 
-    g0through13 = Bool[g0,
-                       g1,
-                       g2,
-                       g3,
-                       g4,
-                       g5,
-                       g6,
-                       g7,
-                       g8,
-                       g9,
-                       g10,
-                       g11,
-                       g12,
-                       g13]
-    allmessages0through13 = String[m0,
-                                   m1,
-                                   m2,
-                                   m3,
-                                   m4,
-                                   m5,
-                                   m6,
-                                   m7,
-                                   m8,
-                                   m9,
-                                   m10,
-                                   m11,
-                                   m12,
-                                   m13]
-    if all(g0through13) # success
+    if all(passed, guidelines) # success
         description = "New package. Approved. name=\"$(data.pkg)\". sha=\"$(data.current_pr_head_commit_sha)\""
         update_status(data;
                       state = "success",
@@ -258,9 +158,9 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
                       state = "failure",
                       context = "automerge/decision",
                       description = "New package. Failed.")
-        failingmessages0through13 = allmessages0through13[.!g0through13]
+        failing_messages = messages.(filter(!passed, guidelines))
         this_pr_comment_fail = comment_text_fail(data.registration_type,
-                                                 failingmessages0through13,
+                                                 failing_messages,
                                                  data.suggest_onepointzero,
                                                  data.version)
         my_retry(() -> update_automerge_comment!(data, this_pr_comment_fail))

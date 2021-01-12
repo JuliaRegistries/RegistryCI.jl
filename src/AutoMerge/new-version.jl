@@ -46,109 +46,57 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
         this_pr_can_use_special_jll_exceptions = false
     end
 
-    G0 = guideline_jll_only_authorization
-    if this_is_jll_package
-        g0 = true
-        m0 = ""
-    else
-        if pr_author_login in data.authorized_authors
-            g0 = true
-            m0 = ""
-        else
-            g0, m0 = check!(G0)
-        end
+    guidelines = Guideline[]
+    if !this_is_jll_package && pr_author_login ∉ data.authorized_authors
+        push!(guidelines,
+              guideline_jll_only_authorization) # 0
     end
 
-    G1 = guideline_pr_only_changes_allowed_files
-    g1, m1 = check!(G1)
+    push!(guidelines,
+          guideline_pr_only_changes_allowed_files) # 1
 
-    G2 = guideline_sequential_version_number
-
-    if this_pr_can_use_special_jll_exceptions
-        g2 = true
-        m2 = ""
-    else
-        g2, m2 = check!(G2)
+    if !this_pr_can_use_special_jll_exceptions
+        push!(guidelines,
+              guideline_sequential_version_number) # 2
     end
 
-    G3 = guideline_compat_for_all_deps
-    g3, m3 = check!(G3)
+    push!(guidelines,
+          guideline_compat_for_all_deps) # 3
 
-    G4 = guideline_patch_release_does_not_narrow_julia_compat
-    if this_pr_can_use_special_jll_exceptions
-        g4 = true
-        m4 = ""
-    else
-        g4, m4 = check!(G4)
+    if !this_pr_can_use_special_jll_exceptions
+        push!(guidelines,
+              guideline_patch_release_does_not_narrow_julia_compat) # 4
     end
 
-    G5 = guideline_allowed_jll_nonrecursive_dependencies
-    if this_is_jll_package
-        g5, m5 = check!(G5)
-    else
-        g5 = true
-        m5 = ""
+    push!(guidelines,
+          guideline_allowed_jll_nonrecursive_dependencies) # 5
+
+    for guideline in guidelines
+        check!(guideline)
+        @info(guideline.info,
+              meets_this_guideline = passed(guideline),
+              message = message(guideline))
     end
 
-    @info(G0.info,
-          meets_this_guideline = g0,
-          message = m0)
-    @info(G1.info,
-          meets_this_guideline = g1,
-          message = m1)
-    @info(G2.info,
-          meets_this_guideline = g2,
-          message = m2)
-    @info(G3.info,
-          meets_this_guideline = g3,
-          message = m3)
-    @info(G4.info,
-          meets_this_guideline = g4,
-          message = m4)
-    @info(G5.info,
-          meets_this_guideline = g5,
-          message = m5)
-    g0through5 = Bool[g0,
-                      g1,
-                      g2,
-                      g3,
-                      g4,
-                      g5]
-    if !all(g0through5)
+    if !all(passed, guidelines)
         update_status(data;
                       state = "failure",
                       context = "automerge/decision",
                       description = "New version. Failed.")
     end
 
-    G6 = guideline_version_can_be_pkg_added
-    g6, m6 = check!(G6)
-    @info(G6.info,
-          meets_this_guideline = g6,
-          message = m6)
+    push!(guidelines,
+          guideline_version_can_be_pkg_added, # 6
+          guideline_version_can_be_imported) # 7
 
-    G7 = guideline_version_can_be_imported
-    g7, m7 = check!(G7)
-    @info(G7.info,
-          meets_this_guideline = g7,
-          message = m7)
-    g0through7 = Bool[g0,
-                      g1,
-                      g2,
-                      g3,
-                      g4,
-                      g5,
-                      g6,
-                      g7]
-    allmessages0through7 = String[m0,
-                                  m1,
-                                  m2,
-                                  m3,
-                                  m4,
-                                  m5,
-                                  m6,
-                                  m7]
-    if all(g0through7) # success
+    for guideline in guidelines[end-1:end]
+        check!(guideline)
+        @info(guideline.info,
+              meets_this_guideline = passed(guideline),
+              message = message(guideline))
+    end
+
+    if all(passed, guidelines) # success
         description = "New version. Approved. name=\"$(data.pkg)\". sha=\"$(data.current_pr_head_commit_sha)\""
         update_status(data;
                       state = "success",
@@ -163,9 +111,9 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
                       state = "failure",
                       context = "automerge/decision",
                       description = "New version. Failed.")
-        failingmessages0through7 = allmessages0through7[.!g0through7]
+        failing_messages = messages.(filter(!passed, guidelines))
         this_pr_comment_fail = comment_text_fail(data.registration_type,
-                                                 failingmessages0through7,
+                                                 failing_messages,
                                                  data.suggest_onepointzero,
                                                  data.version)
         my_retry(() -> update_automerge_comment!(data, this_pr_comment_fail))
