@@ -27,7 +27,8 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
     #     - i.e. can we run `import Foo`
     pr_author_login = author_login(data.pr)
     this_is_jll_package = is_jll_name(data.pkg)
-    @info("This is a new package pull request", data.pkg, data.version,
+    pkg, version = data.pkg, data.version
+    @info("This is a new package pull request", pkg, version,
           this_is_jll_package)
 
     update_status(data;
@@ -148,7 +149,7 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
                                   m6,
                                   m7]
     if all(g0through7) # success
-        description = "New version. Approved. name=\"$(pkg)\". sha=\"$(current_pr_head_commit_sha)\""
+        description = "New version. Approved. name=\"$(data.pkg)\". sha=\"$(data.current_pr_head_commit_sha)\""
         update_status(data;
                       state = "success",
                       context = "automerge/decision",
