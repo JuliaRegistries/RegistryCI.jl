@@ -45,6 +45,10 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
         this_pr_can_use_special_jll_exceptions = false
     end
 
+    guideline_jll_only_authorization =
+        Guideline("JLL-only authors cannot register non-JLL packages.",
+                  data -> (false, "This package is not a JLL package. The author of this pull request is not authorized to register non-JLL packages."))
+    G0 = guideline_jll_only_authorization
     if this_is_jll_package
         g0 = true
         m0 = ""
@@ -53,63 +57,88 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
             g0 = true
             m0 = ""
         else
-            g0 = false
-            m0 = "This package is not a JLL package. The author of this pull request is not authorized to register non-JLL packages."
+            g0, m0 = check!(G0)
         end
     end
 
-    g1, m1 = pr_only_changes_allowed_files(data.api,
-                                           data.registration_type,
-                                           data.registry,
-                                           data.pr,
-                                           data.pkg;
-                                           auth = data.auth)
+    guideline_pr_only_changes_allowed_files =
+        Guideline("Only modifies the files that it's allowed to modify",
+                  data -> pr_only_changes_allowed_files(data.api,
+                                                        data.registration_type,
+                                                        data.registry,
+                                                        data.pr,
+                                                        data.pkg;
+                                                        auth = data.auth))
+
+    G1 = guideline_pr_only_changes_allowed_files
+    g1, m1 = check!(G1)
+
+    guideline_sequential_version_number =
+        Guideline("Sequential version number",
+                  data -> meets_sequential_version_number(data.pkg,
+                                                          data.version;
+                                                          registry_head = data.registry_head,
+                                                          registry_master = data.registry_master))
+    G2 = guideline_sequential_version_number
+
     if this_pr_can_use_special_jll_exceptions
         g2 = true
         m2 = ""
     else
-        g2, m2 = meets_sequential_version_number(data.pkg,
-                                                 data.version;
-                                                 registry_head = data.registry_head,
-                                                 registry_master = data.registry_master)
+        g2, m2 = check!(G2)
     end
-    g3, m3 = meets_compat_for_all_deps(data.registry_head,
-                                       data.pkg,
-                                       data.version)
+
+    guideline_compat_for_all_deps =
+        Guideline("Compat (with upper bound) for all dependencies",
+                  data -> meets_compat_for_all_deps(data.registry_head,
+                                                    data.pkg,
+                                                    data.version))
+    G3 = guideline_compat_for_all_deps
+    g3, m3 = check!(G3)
+
+    guideline_patch_release_does_not_narrow_julia_compat =
+        Guideline("If it is a patch release, then it does not narrow the Julia compat range",
+                  data -> meets_patch_release_does_not_narrow_julia_compat(data.pkg,
+                                                                           data.version;
+                                                                           registry_head = data.registry_head,
+                                                                           registry_master = data.registry_master))
+    G4 = guideline_patch_release_does_not_narrow_julia_compat
     if this_pr_can_use_special_jll_exceptions
         g4 = true
         m4 = ""
     else
-        g4, m4 = meets_patch_release_does_not_narrow_julia_compat(data.pkg,
-                                                                  data.version;
-                                                                  registry_head = data.registry_head,
-                                                                  registry_master = data.registry_master)
+        g4, m4 = check!(G4)
     end
+
+    guideline_allowed_jll_nonrecursive_dependencies =
+        Guideline("If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
+                  data -> meets_allowed_jll_nonrecursive_dependencies(data.registry_head,
+                                                                      data.pkg,
+                                                                      data.version))
+    G5 = guideline_allowed_jll_nonrecursive_dependencies
     if this_is_jll_package
-        g5, m5 = meets_allowed_jll_nonrecursive_dependencies(data.registry_head,
-                                                             data.pkg,
-                                                             data.version)
+        g5, m5 = check!(G5)
     else
         g5 = true
         m5 = ""
     end
 
-    @info("JLL-only authors cannot register non-JLL packages.",
+    @info(G0.info,
           meets_this_guideline = g0,
           message = m0)
-    @info("Only modifies the files that it's allowed to modify",
+    @info(G1.info,
           meets_this_guideline = g1,
           message = m1)
-    @info("Sequential version number",
+    @info(G2.info,
           meets_this_guideline = g2,
           message = m2)
-    @info("Compat (with upper bound) for all dependencies",
+    @info(G3.info,
           meets_this_guideline = g3,
           message = m3)
-    @info("If it is a patch release, then it does not narrow the Julia compat range",
+    @info(G4.info,
           meets_this_guideline = g4,
           message = m4)
-    @info("If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
+    @info(G5.info,
           meets_this_guideline = g5,
           message = m5)
     g0through5 = Bool[g0,
@@ -124,18 +153,28 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
                       context = "automerge/decision",
                       description = "New version. Failed.")
     end
-    g6, m6 = meets_version_can_be_pkg_added(data.registry_head,
-                                            data.pkg,
-                                            data.version;
-                                            registry_deps = data.registry_deps)
-    @info("Version can be `Pkg.add`ed",
+
+    guideline_version_can_be_pkg_added =
+        Guideline("Version can be `Pkg.add`ed",
+                  data -> meets_version_can_be_pkg_added(data.registry_head,
+                                                         data.pkg,
+                                                         data.version;
+                                                         registry_deps = data.registry_deps))
+    G6 = guideline_version_can_be_pkg_added
+    g6, m6 = check!(G6)
+    @info(G6.info,
           meets_this_guideline = g6,
           message = m6)
-    g7, m7 = meets_version_can_be_imported(data.registry_head,
+
+    guideline_version_can_be_imported =
+        Guideline("Version can be `import`ed",
+                  data -> meets_version_can_be_imported(data.registry_head,
                                            data.pkg,
                                            data.version;
-                                           registry_deps = data.registry_deps)
-    @info("Version can be `import`ed",
+                                           registry_deps = data.registry_deps))
+    G7 = guideline_version_can_be_imported
+    g7, m7 = check!(G7)
+    @info(G7.info,
           meets_this_guideline = g7,
           message = m7)
     g0through7 = Bool[g0,

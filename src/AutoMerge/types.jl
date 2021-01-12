@@ -92,3 +92,31 @@ function GitHubAutoMergeData(;kwargs...)
     @assert Set(keys(kwargs)) == Set(fields)
     return GitHubAutoMergeData(getindex.(Ref(kwargs), fields)...)
 end
+
+struct Guideline
+    # Short description of the guideline. Only used for logging.
+    info::String
+    # Function that is run in order to determine whether a guideline
+    # is met. Input is an instance of `GitHubAutoMergeData` and output
+    # is passed status plus a user facing message explaining the
+    # guideline result.
+    check::Function
+    # Saved result of the `check` function.
+    passed::Bool
+    # Saved output message from the `check` function.
+    message::String
+end
+
+function Guideline(info::String, check::Function)
+    # This initial status and message are overwritten when the check
+    # has been run.
+    passed = false
+    message = "Internal error. A check that was supposed to run never did: $info"
+    return Guideline(info, check, passed, message)
+end
+
+passed(guideline::Guideline) = guideline.passed
+message(guideline::Guideline) = guideline.message
+function check!(guideline::Guideline, data::GitHubAutoMergeData)
+    return guideline.passed, guideline.message = guideline.check(data)
+end
