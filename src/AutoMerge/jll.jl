@@ -1,3 +1,9 @@
+# This is a somewhat artificial guideline that always fails. The point
+# is the messages.
+const guideline_jll_only_authorization =
+    Guideline("JLL-only authors cannot register non-JLL packages.",
+              data -> (false, "This package is not a JLL package. The author of this pull request is not authorized to register non-JLL packages."))
+
 function is_jll_name(name::AbstractString)::Bool
     return endswith(name, "_jll")
 end
@@ -17,6 +23,12 @@ function _get_all_dependencies_nonrecursive(working_directory::AbstractString,
     unique!(all_dependencies)
     return all_dependencies
 end
+
+const guideline_allowed_jll_nonrecursive_dependencies =
+    Guideline("If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
+              data -> meets_allowed_jll_nonrecursive_dependencies(data.registry_head,
+                                                                  data.pkg,
+                                                                  data.version))
 
 function meets_allowed_jll_nonrecursive_dependencies(working_directory::AbstractString,
                                                      pkg,

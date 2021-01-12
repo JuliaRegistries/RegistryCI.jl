@@ -45,9 +45,6 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
         this_pr_can_use_special_jll_exceptions = false
     end
 
-    guideline_jll_only_authorization =
-        Guideline("JLL-only authors cannot register non-JLL packages.",
-                  data -> (false, "This package is not a JLL package. The author of this pull request is not authorized to register non-JLL packages."))
     G0 = guideline_jll_only_authorization
     if this_is_jll_package
         g0 = true
@@ -61,24 +58,9 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
         end
     end
 
-    guideline_pr_only_changes_allowed_files =
-        Guideline("Only modifies the files that it's allowed to modify",
-                  data -> pr_only_changes_allowed_files(data.api,
-                                                        data.registration_type,
-                                                        data.registry,
-                                                        data.pr,
-                                                        data.pkg;
-                                                        auth = data.auth))
-
     G1 = guideline_pr_only_changes_allowed_files
     g1, m1 = check!(G1)
 
-    guideline_sequential_version_number =
-        Guideline("Sequential version number",
-                  data -> meets_sequential_version_number(data.pkg,
-                                                          data.version;
-                                                          registry_head = data.registry_head,
-                                                          registry_master = data.registry_master))
     G2 = guideline_sequential_version_number
 
     if this_pr_can_use_special_jll_exceptions
@@ -88,20 +70,9 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
         g2, m2 = check!(G2)
     end
 
-    guideline_compat_for_all_deps =
-        Guideline("Compat (with upper bound) for all dependencies",
-                  data -> meets_compat_for_all_deps(data.registry_head,
-                                                    data.pkg,
-                                                    data.version))
     G3 = guideline_compat_for_all_deps
     g3, m3 = check!(G3)
 
-    guideline_patch_release_does_not_narrow_julia_compat =
-        Guideline("If it is a patch release, then it does not narrow the Julia compat range",
-                  data -> meets_patch_release_does_not_narrow_julia_compat(data.pkg,
-                                                                           data.version;
-                                                                           registry_head = data.registry_head,
-                                                                           registry_master = data.registry_master))
     G4 = guideline_patch_release_does_not_narrow_julia_compat
     if this_pr_can_use_special_jll_exceptions
         g4 = true
@@ -110,11 +81,6 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
         g4, m4 = check!(G4)
     end
 
-    guideline_allowed_jll_nonrecursive_dependencies =
-        Guideline("If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
-                  data -> meets_allowed_jll_nonrecursive_dependencies(data.registry_head,
-                                                                      data.pkg,
-                                                                      data.version))
     G5 = guideline_allowed_jll_nonrecursive_dependencies
     if this_is_jll_package
         g5, m5 = check!(G5)
@@ -154,24 +120,12 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
                       description = "New version. Failed.")
     end
 
-    guideline_version_can_be_pkg_added =
-        Guideline("Version can be `Pkg.add`ed",
-                  data -> meets_version_can_be_pkg_added(data.registry_head,
-                                                         data.pkg,
-                                                         data.version;
-                                                         registry_deps = data.registry_deps))
     G6 = guideline_version_can_be_pkg_added
     g6, m6 = check!(G6)
     @info(G6.info,
           meets_this_guideline = g6,
           message = m6)
 
-    guideline_version_can_be_imported =
-        Guideline("Version can be `import`ed",
-                  data -> meets_version_can_be_imported(data.registry_head,
-                                           data.pkg,
-                                           data.version;
-                                           registry_deps = data.registry_deps))
     G7 = guideline_version_can_be_imported
     g7, m7 = check!(G7)
     @info(G7.info,

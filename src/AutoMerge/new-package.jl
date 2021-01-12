@@ -1,3 +1,8 @@
+# TODO: Probably want to get rid of this pseudo-guideline.
+const guideline_unimplemented =
+    Guideline("TODO: implement this check",
+              data -> (true, ""))
+
 # TODO: This function should probably be moved to some other file,
 #       unless new_package.jl and new_version.jl are merged into one.
 function update_status(data::GitHubAutoMergeData; kwargs...)
@@ -73,9 +78,6 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
         this_pr_can_use_special_jll_exceptions = false
     end
 
-    guideline_jll_only_authorization =
-        Guideline("JLL-only authors cannot register non-JLL packages.",
-                  data -> (false, "This package is not a JLL package. The author of this pull request is not authorized to register non-JLL packages."))
     G0 = guideline_jll_only_authorization
     if this_is_jll_package
         g0 = true
@@ -89,32 +91,14 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
         end
     end
 
-    guideline_pr_only_changes_allowed_files =
-        Guideline("Only modifies the files that it's allowed to modify",
-                  data -> pr_only_changes_allowed_files(data.api,
-                                                        data.registration_type,
-                                                        data.registry,
-                                                        data.pr,
-                                                        data.pkg;
-                                                        auth = data.auth))
-
     G1 = guideline_pr_only_changes_allowed_files
     g1, m1 = check!(G1)
 
-    guideline_unimplemented =
-        Guideline("TODO: implement this check",
-                  data -> (true, ""))
     G2 = guideline_unimplemented
     g2, m2 = check!(G2)
 
-    guideline_normal_capitalization =
-        Guideline("Normal capitalization",
-                  data -> meets_normal_capitalization(data.pkg))
     G3 = guideline_normal_capitalization
 
-    guideline_name_length =
-        Guideline("Name not too short",
-                  data -> meets_name_length(data.pkg))
     G4 = guideline_name_length
 
     if this_pr_can_use_special_jll_exceptions
@@ -127,15 +111,9 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
         g4, m4 = check!(G4)
     end
 
-    guideline_julia_name_check =
-        Guideline("Name does not include \"julia\" or start with \"Ju\"",
-                  data -> meets_julia_name_check(data.pkg))
     G5 = guideline_julia_name_check
     g5, m5 = check!(G5)
 
-    guideline_standard_initial_version_number =
-        Guideline("Standard initial version number ",
-                  data -> meets_standard_initial_version_number(data.version))
     G6 = guideline_standard_initial_version_number
     if this_pr_can_use_special_jll_exceptions
         g6 = true
@@ -146,28 +124,14 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
         m6 = ""
     end
 
-    guideline_repo_url_requirement =
-        Guideline("Repo URL ends with /name.jl.git",
-                  data -> meets_repo_url_requirement(data.pkg;
-                                                     registry_head = data.registry_head))
     G7 = guideline_repo_url_requirement
     # g7, m7 = check!(G7)
     g7 = true
     m7 = ""
 
-    guideline_compat_for_all_deps =
-        Guideline("Compat (with upper bound) for all dependencies",
-                  data -> meets_compat_for_all_deps(data.registry_head,
-                                                    data.pkg,
-                                                    data.version))
     G8 = guideline_compat_for_all_deps
     g8, m8 = check!(G8)
 
-    guideline_allowed_jll_nonrecursive_dependencies =
-        Guideline("If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
-                  data -> meets_allowed_jll_nonrecursive_dependencies(data.registry_head,
-                                                                      data.pkg,
-                                                                      data.version))
     G9 = guideline_allowed_jll_nonrecursive_dependencies
     if this_is_jll_package
         g9, m9 = check!(G9)
@@ -176,15 +140,9 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
         m9 = ""
     end
 
-    guideline_distance_check =
-        Guideline("Name is not too similar to existing package names",
-                  data -> meets_distance_check(data.pkg, data.registry_master))
     G10 = guideline_distance_check
     g10, m10 = check!(G10)
 
-    guideline_name_ascii =
-        Guideline("Name is composed of ASCII characters only",
-                  data -> meets_name_ascii(data.pkg))
     G11 = guideline_name_ascii
     g11, m11 = check!(G11)
 
@@ -243,24 +201,12 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
                       description = "New package. Failed.")
     end
 
-    guideline_version_can_be_pkg_added =
-        Guideline("Version can be `Pkg.add`ed",
-                  data -> meets_version_can_be_pkg_added(data.registry_head,
-                                                         data.pkg,
-                                                         data.version;
-                                                         registry_deps = data.registry_deps))
     G12 = guideline_version_can_be_pkg_added
     g12, m12 = check!(G12)
     @info(G12.info,
           meets_this_guideline = g12,
           message = m12)
 
-    guideline_version_can_be_imported =
-        Guideline("Version can be `import`ed",
-                  data -> meets_version_can_be_imported(data.registry_head,
-                                           data.pkg,
-                                           data.version;
-                                           registry_deps = data.registry_deps))
     G13 = guideline_version_can_be_imported
     g13, m13 = check!(G13)
     @info(G13.info,
