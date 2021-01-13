@@ -168,7 +168,7 @@ function meets_distance_check(pkg_name::AbstractString,
 end
 
 function meets_distance_check(pkg_name::AbstractString,
-                              other_packages::Vector{<:AbstractString};
+                              other_packages::Vector;
                               DL_lowercase_cutoff = 1,
                               DL_cutoff = 2,
                               sqrt_normalized_vd_cutoff = 2.5,

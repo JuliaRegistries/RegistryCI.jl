@@ -118,7 +118,7 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
           guideline_name_ascii) # 11
 
     for guideline in guidelines
-        check!(guideline)
+        check!(guideline, data)
         @info(guideline.info,
               meets_this_guideline = passed(guideline),
               message = message(guideline))
@@ -136,7 +136,7 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
           guideline_version_can_be_imported) # 13
 
     for guideline in guidelines[end-1:end]
-        check!(guideline)
+        check!(guideline, data)
         @info(guideline.info,
               meets_this_guideline = passed(guideline),
               message = message(guideline))
@@ -158,7 +158,7 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
                       state = "failure",
                       context = "automerge/decision",
                       description = "New package. Failed.")
-        failing_messages = messages.(filter(!passed, guidelines))
+        failing_messages = message.(filter(!passed, guidelines))
         this_pr_comment_fail = comment_text_fail(data.registration_type,
                                                  failing_messages,
                                                  data.suggest_onepointzero,

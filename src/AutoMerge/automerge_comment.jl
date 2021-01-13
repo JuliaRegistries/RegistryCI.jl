@@ -1,7 +1,7 @@
 function update_automerge_comment!(data::GitHubAutoMergeData,
                                    body::AbstractString)::Nothing
     api = data.api
-    repo = data.repo
+    repo = data.registry
     pr = data.pr
     auth = data.auth
     whoami = data.whoami

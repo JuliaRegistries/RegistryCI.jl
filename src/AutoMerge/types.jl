@@ -93,7 +93,7 @@ function GitHubAutoMergeData(;kwargs...)
     return GitHubAutoMergeData(getindex.(Ref(kwargs), fields)...)
 end
 
-struct Guideline
+mutable struct Guideline
     # Short description of the guideline. Only used for logging.
     info::String
     # Function that is run in order to determine whether a guideline
