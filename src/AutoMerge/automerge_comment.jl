@@ -1,9 +1,11 @@
-function update_automerge_comment!(api::GitHub.GitHubAPI,
-                                   repo::GitHub.Repo,
-                                   pr::GitHub.PullRequest;
-                                   body::AbstractString,
-                                   auth::GitHub.Authorization,
-                                   whoami)::Nothing
+function update_automerge_comment!(data::GitHubAutoMergeData,
+                                   body::AbstractString)::Nothing
+    api = data.api
+    repo = data.registry
+    pr = data.pr
+    auth = data.auth
+    whoami = data.whoami
+
     my_comments = my_retry(() -> get_all_my_pull_request_comments(api,
                                                                   repo,
                                                                   pr;

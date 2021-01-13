@@ -16,6 +16,15 @@ function allowed_changed_files(::NewVersion, pkg::String)
     return result
 end
 
+const guideline_pr_only_changes_allowed_files =
+    Guideline("Only modifies the files that it's allowed to modify",
+              data -> pr_only_changes_allowed_files(data.api,
+                                                    data.registration_type,
+                                                    data.registry,
+                                                    data.pr,
+                                                    data.pkg;
+                                                    auth = data.auth))
+
 function pr_only_changes_allowed_files(api::GitHub.GitHubAPI,
                                        t::Union{NewPackage, NewVersion},
                                        registry::GitHub.Repo,

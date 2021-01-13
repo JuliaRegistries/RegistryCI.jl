@@ -1,5 +1,11 @@
 import HTTP
 
+const guideline_compat_for_all_deps =
+    Guideline("Compat (with upper bound) for all dependencies",
+              data -> meets_compat_for_all_deps(data.registry_head,
+                                                data.pkg,
+                                                data.version))
+
 function meets_compat_for_all_deps(working_directory::AbstractString, pkg, version)
     deps = Pkg.TOML.parsefile(joinpath(working_directory, uppercase(pkg[1:1]), pkg, "Deps.toml"))
     compat = Pkg.TOML.parsefile(joinpath(working_directory, uppercase(pkg[1:1]), pkg, "Compat.toml"))
@@ -67,11 +73,22 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
     end
 end
 
+const guideline_patch_release_does_not_narrow_julia_compat =
+    Guideline("If it is a patch release, then it does not narrow the Julia compat range",
+              data -> meets_patch_release_does_not_narrow_julia_compat(data.pkg,
+                                                                       data.version;
+                                                                       registry_head = data.registry_head,
+                                                                       registry_master = data.registry_master))
+
 function meets_patch_release_does_not_narrow_julia_compat(pkg::String,
                                                           new_version::VersionNumber;
                                                           registry_head::String,
                                                           registry_master::String)
     old_version = latest_version(pkg, registry_master)
+    if old_version.major != new_version.major || old_version.minor != new_version.minor
+        # Not a patch release.
+        return true, ""
+    end
     julia_compats_for_old_version = julia_compat(pkg, old_version, registry_master)
     julia_compats_for_new_version = julia_compat(pkg, new_version, registry_head)
     if Set(julia_compats_for_old_version) == Set(julia_compats_for_new_version)
@@ -97,6 +114,10 @@ function meets_patch_release_does_not_narrow_julia_compat(pkg::String,
     end
 end
 
+const guideline_name_length =
+    Guideline("Name not too short",
+              data -> meets_name_length(data.pkg))
+
 function meets_name_length(pkg)
     meets_this_guideline = length(pkg) >= 5
     if meets_this_guideline
@@ -106,6 +127,10 @@ function meets_name_length(pkg)
     end
 end
 
+const guideline_name_ascii =
+    Guideline("Name is composed of ASCII characters only",
+              data -> meets_name_ascii(data.pkg))
+
 function meets_name_ascii(pkg)
     if isascii(pkg)
         return true, ""
@@ -113,6 +138,10 @@ function meets_name_ascii(pkg)
         return false, "Name is not ASCII"
     end
 end
+
+const guideline_julia_name_check =
+    Guideline("Name does not include \"julia\" or start with \"Ju\"",
+              data -> meets_julia_name_check(data.pkg))
 
 function meets_julia_name_check(pkg)
     if occursin("julia", lowercase(pkg))
@@ -127,7 +156,23 @@ end
 damerau_levenshtein(name1, name2) = StringDistances.DamerauLevenshtein()(name1, name2)
 sqrt_normalized_vd(name1, name2) = VisualStringDistances.visual_distance(name1, name2; normalize=x -> 5 + sqrt(x))
 
-function meets_distance_check(pkg_name, other_packages; DL_lowercase_cutoff = 1, DL_cutoff = 2, sqrt_normalized_vd_cutoff = 2.5, comment_collapse_cutoff = 10)
+const guideline_distance_check =
+    Guideline("Name is not too similar to existing package names",
+              data -> meets_distance_check(data.pkg, data.registry_master))
+
+function meets_distance_check(pkg_name::AbstractString,
+                              registry_master::AbstractString;
+                              kwargs...)
+    other_packages = get_all_non_jll_package_names(registry_master)
+    return meets_distance_check(pkg_name, other_packages; kwargs...)
+end
+
+function meets_distance_check(pkg_name::AbstractString,
+                              other_packages::Vector;
+                              DL_lowercase_cutoff = 1,
+                              DL_cutoff = 2,
+                              sqrt_normalized_vd_cutoff = 2.5,
+                              comment_collapse_cutoff = 10)
     problem_messages = Tuple{String, Tuple{Float64, Float64, Float64}}[]
     for other_pkg in other_packages
         if pkg_name == other_pkg
@@ -188,6 +233,10 @@ function meets_distance_check(pkg_name, other_packages; DL_lowercase_cutoff = 1,
     return (false, message)
 end
 
+const guideline_normal_capitalization =
+    Guideline("Normal capitalization",
+              data -> meets_normal_capitalization(data.pkg))
+
 function meets_normal_capitalization(pkg)
     meets_this_guideline = occursin(r"^[A-Z]\w*[a-z]\w*[0-9]?$", pkg)
     if meets_this_guideline
@@ -196,6 +245,11 @@ function meets_normal_capitalization(pkg)
         return false, "Name does not meet all of the following: starts with an uppercase letter, ASCII alphanumerics only, not all letters are uppercase."
     end
 end
+
+const guideline_repo_url_requirement =
+    Guideline("Repo URL ends with /name.jl.git",
+              data -> meets_repo_url_requirement(data.pkg;
+                                                 registry_head = data.registry_head))
 
 function meets_repo_url_requirement(pkg::String; registry_head::String)
     url = Pkg.TOML.parsefile(joinpath(registry_head, uppercase(pkg[1:1]), pkg, "Package.toml"))["repo"]
@@ -224,6 +278,13 @@ function _valid_change(old_version::VersionNumber, new_version::VersionNumber)
         return _invalid_sequential_version("increment is not one of: 0.0.1, 0.1.0, 1.0.0")
     end
 end
+
+const guideline_sequential_version_number =
+    Guideline("Sequential version number",
+              data -> meets_sequential_version_number(data.pkg,
+                                                      data.version;
+                                                      registry_head = data.registry_head,
+                                                      registry_master = data.registry_master))
 
 function meets_sequential_version_number(existing::Vector{VersionNumber}, ver::VersionNumber)
     always_assert(!isempty(existing))
@@ -254,6 +315,10 @@ function meets_sequential_version_number(pkg::String,
     return meets_sequential_version_number(_all_versions, new_version)
 end
 
+const guideline_standard_initial_version_number =
+    Guideline("Standard initial version number ",
+              data -> meets_standard_initial_version_number(data.version))
+
 function meets_standard_initial_version_number(version)
     if _has_prerelease_andor_build_data(version)
         return false, "Version number is not allowed to contain prerelease or build data"
@@ -280,6 +345,13 @@ function _generate_pkg_add_command(pkg::String,
 end
 
 is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str))
+
+const guideline_version_can_be_pkg_added =
+    Guideline("Version can be `Pkg.add`ed",
+              data -> meets_version_can_be_pkg_added(data.registry_head,
+                                                     data.pkg,
+                                                     data.version;
+                                                     registry_deps = data.registry_deps))
 
 function meets_version_can_be_pkg_added(working_directory::String,
                                         pkg::String,
@@ -327,6 +399,13 @@ function meets_version_can_be_pkg_added(working_directory::String,
                              failure_return_1 = failure_return_1,
                              failure_return_2 = failure_return_2)
 end
+
+const guideline_version_can_be_imported =
+    Guideline("Version can be `import`ed",
+              data -> meets_version_can_be_imported(data.registry_head,
+                                                    data.pkg,
+                                                    data.version;
+                                                    registry_deps = data.registry_deps))
 
 function meets_version_can_be_imported(working_directory::String,
                                        pkg::String,
