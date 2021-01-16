@@ -8,6 +8,12 @@ function gather_stdlib_uuids()
     return Set{Base.UUID}(x for x in keys(RegistryTools.stdlibs()))
 end
 
+@static if Base.VERSION >= v"1.7.0-"
+    const collect_registries = Pkg.Registry.reachable_registries
+else
+    const collect_registries = Pkg.Types.collect_registries
+end
+
 is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str))
 # For when you have a registry that has packages with dependencies obtained from
 # another dependency registry. For example, packages registered at the BioJuliaRegistry
@@ -26,7 +32,7 @@ function load_registry_dep_uuids(registry_deps_names::Vector{<:AbstractString} =
         # .julia/registires/XYZ/ABC is the most likely place, but this way the
         # function never has to assume. BJW.
         extrauuids = Set{Base.UUID}()
-        for spec in Pkg.Types.collect_registries()
+        for spec in collect_registries()
             if spec.url ∈ registry_deps_names || spec.name ∈ registry_deps_names
                 reg = Pkg.TOML.parsefile(joinpath(spec.path, "Registry.toml"))
                 for x in keys(reg["packages"])
