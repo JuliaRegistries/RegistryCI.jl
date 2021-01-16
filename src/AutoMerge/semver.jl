@@ -1,3 +1,11 @@
+@static if Base.VERSION >= v"1.7.0-"
+    const isless_ll = Pkg.Versions.isless_ll
+    const isless_uu = Pkg.Versions.isless_uu
+else
+    const isless_ll = Pkg.Types.isless_ll
+    const isless_uu = Pkg.Types.isless_uu
+end
+
 function difference(x::VersionNumber, y::VersionNumber)
     if y.major > x.major
         return VersionNumber(y.major - x.major, y.minor, y.patch)
