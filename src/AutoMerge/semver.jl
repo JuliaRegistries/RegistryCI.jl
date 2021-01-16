@@ -1,3 +1,11 @@
+@static if Base.VERSION >= v"1.7.0-"
+    const isless_ll = Pkg.Versions.isless_ll
+    const isless_uu = Pkg.Versions.isless_uu
+else
+    const isless_ll = Pkg.Types.isless_ll
+    const isless_uu = Pkg.Types.isless_uu
+end
+
 function difference(x::VersionNumber, y::VersionNumber)
     if y.major > x.major
         return VersionNumber(y.major - x.major, y.minor, y.patch)
@@ -107,7 +115,7 @@ function _has_upper_bound(r::Pkg.Types.VersionRange)
 end
 
 function range_did_not_narrow(r1::Pkg.Types.VersionRange, r2::Pkg.Types.VersionRange)
-    result = !Pkg.Types.isless_ll(r1.lower, r2.lower) && !Pkg.Types.isless_uu(r2.upper, r1.upper)
+    result = !isless_ll(r1.lower, r2.lower) && !isless_uu(r2.upper, r1.upper)
     return result
 end
 
