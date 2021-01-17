@@ -101,7 +101,7 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
                       description = description)
         this_pr_comment_pass = comment_text_pass(data.registration_type,
                                                  data.suggest_onepointzero,
-                                                 version)
+                                                 data.version)
         my_retry(() -> update_automerge_comment!(data, this_pr_comment_pass))
     else # failure
         update_status(data;
