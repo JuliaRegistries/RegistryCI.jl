@@ -27,8 +27,9 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
     #     - i.e. can we run `import Foo`
     pr_author_login = author_login(data.pr)
     this_is_jll_package = is_jll_name(data.pkg)
-    pkg, version = data.pkg, data.version
-    @info("This is a new package pull request", pkg, version,
+    @info("This is a new package pull request",
+          pkg = data.pkg,
+          version = data.version,
           this_is_jll_package)
 
     update_status(data;
@@ -46,57 +47,53 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
         this_pr_can_use_special_jll_exceptions = false
     end
 
-    guidelines = Guideline[]
-    if !this_is_jll_package && pr_author_login ∉ data.authorized_authors
-        push!(guidelines,
-              guideline_jll_only_authorization) # 0
+    # If this is true it means that the author only is authorized for
+    # jll packages but this is is a normal package.
+    # TODO: Do all authorization checks in one place before calling
+    # this function.
+    jll_only_authorization = (!this_is_jll_package
+                              && pr_author_login ∉ data.authorized_authors)
+
+    # Each element is a tuple of a guideline and whether it's
+    # applicable. Instead of a guideline there can be the symbol
+    # `:update_status` in which case the PR status will be updated
+    # with the results so far before continuing to the following
+    # guidelines.
+    guidelines =
+        [(guideline_jll_only_authorization, jll_only_authorization), #0
+         (guideline_pr_only_changes_allowed_files, true), # 1
+         (guideline_sequential_version_number,
+          !this_pr_can_use_special_jll_exceptions), # 2
+         (guideline_compat_for_all_deps, true), # 3
+         (guideline_patch_release_does_not_narrow_julia_compat,
+          !this_pr_can_use_special_jll_exceptions), # 4
+         (guideline_allowed_jll_nonrecursive_dependencies,
+          this_is_jll_package), # 5
+         (:update_status, true),
+         (guideline_version_can_be_pkg_added, true), # 6
+         (guideline_version_can_be_imported, true)] # 7
+
+    checked_guidelines = Guideline[]
+
+    for (guideline, applicable) in guidelines
+        applicable || continue
+        if guideline == :update_status
+            if !all(passed, checked_guidelines)
+                update_status(data;
+                              state = "failure",
+                              context = "automerge/decision",
+                              description = "New version. Failed.")
+            end
+        else
+            check!(guideline, data)
+            @info(guideline.info,
+                  meets_this_guideline = passed(guideline),
+                  message = message(guideline))
+            push!(checked_guidelines, guideline)
+        end
     end
 
-    push!(guidelines,
-          guideline_pr_only_changes_allowed_files) # 1
-
-    if !this_pr_can_use_special_jll_exceptions
-        push!(guidelines,
-              guideline_sequential_version_number) # 2
-    end
-
-    push!(guidelines,
-          guideline_compat_for_all_deps) # 3
-
-    if !this_pr_can_use_special_jll_exceptions
-        push!(guidelines,
-              guideline_patch_release_does_not_narrow_julia_compat) # 4
-    end
-
-    push!(guidelines,
-          guideline_allowed_jll_nonrecursive_dependencies) # 5
-
-    for guideline in guidelines
-        check!(guideline, data)
-        @info(guideline.info,
-              meets_this_guideline = passed(guideline),
-              message = message(guideline))
-    end
-
-    if !all(passed, guidelines)
-        update_status(data;
-                      state = "failure",
-                      context = "automerge/decision",
-                      description = "New version. Failed.")
-    end
-
-    push!(guidelines,
-          guideline_version_can_be_pkg_added, # 6
-          guideline_version_can_be_imported) # 7
-
-    for guideline in guidelines[end-1:end]
-        check!(guideline, data)
-        @info(guideline.info,
-              meets_this_guideline = passed(guideline),
-              message = message(guideline))
-    end
-
-    if all(passed, guidelines) # success
+    if all(passed, checked_guidelines) # success
         description = "New version. Approved. name=\"$(data.pkg)\". sha=\"$(data.current_pr_head_commit_sha)\""
         update_status(data;
                       state = "success",
@@ -104,14 +101,14 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
                       description = description)
         this_pr_comment_pass = comment_text_pass(data.registration_type,
                                                  data.suggest_onepointzero,
-                                                 version)
+                                                 data.version)
         my_retry(() -> update_automerge_comment!(data, this_pr_comment_pass))
     else # failure
         update_status(data;
                       state = "failure",
                       context = "automerge/decision",
                       description = "New version. Failed.")
-        failing_messages = message.(filter(!passed, guidelines))
+        failing_messages = message.(filter(!passed, checked_guidelines))
         this_pr_comment_fail = comment_text_fail(data.registration_type,
                                                  failing_messages,
                                                  data.suggest_onepointzero,
