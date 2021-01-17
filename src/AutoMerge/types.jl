@@ -85,8 +85,8 @@ end
 # Constructor that requires all fields as named arguments.
 function GitHubAutoMergeData(;kwargs...)
     fields = fieldnames(GitHubAutoMergeData)
-    @assert Set(keys(kwargs)) == Set(fields)
-    @assert kwargs[:authorization] ∈ (:normal, :jll)
+    always_assert(Set(keys(kwargs)) == Set(fields))
+    always_assert(kwargs[:authorization] ∈ (:normal, :jll))
     return GitHubAutoMergeData(getindex.(Ref(kwargs), fields)...)
 end
 
