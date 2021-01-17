@@ -38,13 +38,15 @@ function meets_allowed_jll_nonrecursive_dependencies(working_directory::Abstract
     # 2. Libdl
     # 3. Artifacts
     # 4. JLLWrappers
-    # 5. other JLL packages
+    # 5. LazyArtifacts
+    # 6. other JLL packages
     all_dependencies = _get_all_dependencies_nonrecursive(working_directory,
                                                           pkg,
                                                           version)
+    allowed_dependencies = ("Pkg", "Libdl", "Artifacts", "JLLWrappers", "LazyArtifacts")
     for dep in all_dependencies
-        if dep ∉ ("Pkg", "Libdl", "Artifacts", "JLLWrappers") && !is_jll_name(dep)
-            return false, "JLL packages are only allowed to depend on Pkg, Libdl, Artifacts, JLLWrappers and other JLL packages"
+        if dep ∉ allowed_dependencies && !is_jll_name(dep)
+            return false, "JLL packages are only allowed to depend on $(join(allowed_dependencies, ", ")) and other JLL packages"
         end
     end
     return true, ""
