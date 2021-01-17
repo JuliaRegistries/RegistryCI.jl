@@ -104,29 +104,17 @@ function pull_request_build(api::GitHub.GitHubAPI,
                             suggest_onepointzero::Bool,
                             whoami::String,
                             registry_deps::Vector{<:AbstractString} = String[])::Nothing
-    # First check if the PR is open, and the author is authorized - if
-    # not, then quit.
-    #
-    # If the PR is open and the author is authorized,
-    # then determine if it is a new package or new version of an
-    # existing package, and then call the appropriate method.
+    # 1. Check if the PR is open, if not quit.
+    # 2. Determine if it is a new package or new version of an
+    #    existing package, if neither quit.
+    # 3. Check if the author is authorized, if not quit.
+    # 4. Call the appropriate method for new package or new version.
     if !is_open(pr)
         throw_not_automerge_applicable(
             AutoMergePullRequestNotOpen,
             "The pull request is not open. Exiting...";
             error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable
         )
-        return nothing
-    end
-
-    pkg, version = parse_pull_request_title(registration_type, pr)
-    pr_author_login = author_login(pr)
-    authorization = check_authorization(pkg, pr_author_login,
-                                        authorized_authors,
-                                        authorized_authors_special_jll_exceptions,
-                                        error_exit_if_automerge_not_applicable)
-
-    if authorization == :not_authorized
         return nothing
     end
 
@@ -140,6 +128,17 @@ function pull_request_build(api::GitHub.GitHubAPI,
             "Neither a new package nor a new version. Exiting...";
             error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
         )
+        return nothing
+    end
+
+    pkg, version = parse_pull_request_title(registration_type, pr)
+    pr_author_login = author_login(pr)
+    authorization = check_authorization(pkg, pr_author_login,
+                                        authorized_authors,
+                                        authorized_authors_special_jll_exceptions,
+                                        error_exit_if_automerge_not_applicable)
+
+    if authorization == :not_authorized
         return nothing
     end
 
