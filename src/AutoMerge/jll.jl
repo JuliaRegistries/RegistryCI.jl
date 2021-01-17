@@ -1,9 +1,3 @@
-# This is a somewhat artificial guideline that always fails. The point
-# is the messages.
-const guideline_jll_only_authorization =
-    Guideline("JLL-only authors cannot register non-JLL packages.",
-              data -> (false, "This package is not a JLL package. The author of this pull request is not authorized to register non-JLL packages."))
-
 function is_jll_name(name::AbstractString)::Bool
     return endswith(name, "_jll")
 end
