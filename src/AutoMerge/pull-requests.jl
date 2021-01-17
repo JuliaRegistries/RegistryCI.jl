@@ -6,6 +6,38 @@ is_new_package(pull_request::GitHub.PullRequest) = occursin(new_package_title_re
 
 is_new_version(pull_request::GitHub.PullRequest) = occursin(new_version_title_regex, title(pull_request))
 
+function check_authorization(pkg, pr_author_login, authorized_authors,
+                             authorized_authors_special_jll_exceptions,
+                             error_exit_if_automerge_not_applicable)
+    if pr_author_login ∉ vcat(authorized_authors,
+                              authorized_authors_special_jll_exceptions)
+        throw_not_automerge_applicable(
+            AutoMergeAuthorNotAuthorized,
+            "Author $(pr_author_login) is not authorized to automerge. Exiting...";
+            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable
+        )
+        return :not_authorized
+    end
+
+    # A JLL-only author (e.g. `jlbuild`) is not allowed to register
+    # non-JLL packages.
+    this_is_jll_package = is_jll_name(pkg)
+    if (!this_is_jll_package && pr_author_login ∉ authorized_authors)
+        throw_not_automerge_applicable(
+            AutoMergeAuthorNotAuthorized,
+            "This package is not a JLL package. Author $(pr_author_login) is not authorized to register non-JLL packages. Exiting...";
+            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable
+        )
+        return :not_authorized
+    end
+
+    if pr_author_login ∈ authorized_authors_special_jll_exceptions
+        return :jll
+    end
+
+    return :normal
+end
+
 function parse_pull_request_title(::NewVersion,
                                   pull_request::GitHub.PullRequest)
     m = match(new_version_title_regex, title(pull_request))
@@ -78,7 +110,6 @@ function pull_request_build(api::GitHub.GitHubAPI,
     # If the PR is open and the author is authorized,
     # then determine if it is a new package or new version of an
     # existing package, and then call the appropriate method.
-    pr_author_login = author_login(pr)
     if !is_open(pr)
         throw_not_automerge_applicable(
             AutoMergePullRequestNotOpen,
@@ -88,13 +119,14 @@ function pull_request_build(api::GitHub.GitHubAPI,
         return nothing
     end
 
-    if pr_author_login ∉ vcat(authorized_authors,
-                              authorized_authors_special_jll_exceptions)
-        throw_not_automerge_applicable(
-            AutoMergeAuthorNotAuthorized,
-            "Author $(pr_author_login) is not authorized to automerge. Exiting...";
-            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable
-        )
+    pkg, version = parse_pull_request_title(registration_type, pr)
+    pr_author_login = author_login(pr)
+    authorization = check_authorization(pkg, pr_author_login,
+                                        authorized_authors,
+                                        authorized_authors_special_jll_exceptions,
+                                        error_exit_if_automerge_not_applicable)
+
+    if authorization == :not_authorized
         return nothing
     end
 
@@ -115,7 +147,6 @@ function pull_request_build(api::GitHub.GitHubAPI,
     if !master_branch_is_default_branch
         checkout_branch(registry_master, master_branch)
     end
-    pkg, version = parse_pull_request_title(registration_type, pr)
     data = GitHubAutoMergeData(;api = api,
                                registration_type = registration_type,
                                pr = pr,
@@ -124,9 +155,7 @@ function pull_request_build(api::GitHub.GitHubAPI,
                                current_pr_head_commit_sha = current_pr_head_commit_sha,
                                registry = registry,
                                auth = auth,
-                               authorized_authors = authorized_authors,
-                               authorized_authors_special_jll_exceptions = authorized_authors_special_jll_exceptions,
-                               error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
+                               authorization = authorization,
                                registry_head = registry_head,
                                registry_master = registry_master,
                                suggest_onepointzero = suggest_onepointzero,

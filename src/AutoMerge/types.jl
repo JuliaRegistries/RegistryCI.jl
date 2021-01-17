@@ -59,14 +59,10 @@ struct GitHubAutoMergeData
     # GitHub authorization data.
     auth::GitHub.Authorization
 
-    # List of GitHub users who are authorized to make automergable registry PRs.
-    authorized_authors::Vector{String}
-
-    # The same but for registration of jll packages.
-    authorized_authors_special_jll_exceptions::Vector{String}
-
-    # Whether to exit with fail or success if the PR is not applicable.
-    error_exit_if_automerge_not_applicable::Bool
+    # Type of authorization for automerge. This can be either:
+    # :jll - special jll exceptions are allowed,
+    # :normal - normal automerge rules.
+    authorization::Symbol
 
     # Directory of a registry clone that includes the PR.
     registry_head::String
@@ -90,6 +86,7 @@ end
 function GitHubAutoMergeData(;kwargs...)
     fields = fieldnames(GitHubAutoMergeData)
     @assert Set(keys(kwargs)) == Set(fields)
+    @assert kwargs[:authorization] ∈ (:normal, :jll)
     return GitHubAutoMergeData(getindex.(Ref(kwargs), fields)...)
 end
 

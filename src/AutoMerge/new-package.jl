@@ -10,7 +10,6 @@ end
 
 function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
     # Rules:
-    # 0. A JLL-only author (e.g. `jlbuild`) is not allowed to register non-JLL packages.
     # 1. Only changes a subset of the following files:
     #     - `Registry.toml`,
     #     - `E/Example/Compat.toml`
@@ -53,7 +52,6 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
     # 13. Version can be loaded
     #     - once it's been installed (and built?), can we load the code?
     #     - i.e. can we run `import Foo`
-    pr_author_login = author_login(data.pr)
     this_is_jll_package = is_jll_name(data.pkg)
     @info("This is a new package pull request",
           pkg = data.pkg,
@@ -65,22 +63,8 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
                   context = "automerge/decision",
                   description = "New package. Pending.")
 
-    if this_is_jll_package
-        if pr_author_login in data.authorized_authors_special_jll_exceptions
-            this_pr_can_use_special_jll_exceptions = true
-        else
-            this_pr_can_use_special_jll_exceptions = false
-        end
-    else
-        this_pr_can_use_special_jll_exceptions = false
-    end
-
-    # If this is true it means that the author only is authorized for
-    # jll packages but this is is a normal package.
-    # TODO: Do all authorization checks in one place before calling
-    # this function.
-    jll_only_authorization = (!this_is_jll_package
-                              && pr_author_login ∉ data.authorized_authors)
+    this_pr_can_use_special_jll_exceptions =
+        this_is_jll_package && data.authorization == :jll
 
     # Each element is a tuple of a guideline and whether it's
     # applicable. Instead of a guideline there can be the symbol
@@ -88,8 +72,7 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
     # with the results so far before continuing to the following
     # guidelines.
     guidelines =
-        [(guideline_jll_only_authorization, jll_only_authorization), #0
-         (guideline_pr_only_changes_allowed_files, true), # 1
+        [(guideline_pr_only_changes_allowed_files, true), # 1
          #(guideline_only_changes_specified_package, true), # 2 (unimplemented)
          (guideline_normal_capitalization,
           !this_pr_can_use_special_jll_exceptions), # 3
