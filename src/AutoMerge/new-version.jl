@@ -47,6 +47,10 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
         this_pr_can_use_special_jll_exceptions = false
     end
 
+    # If this is true it means that the author only is authorized for
+    # jll packages but this is is a normal package.
+    # TODO: Do all authorization checks in one place before calling
+    # this function.
     jll_only_authorization = (!this_is_jll_package
                               && pr_author_login ∉ data.authorized_authors)
 
