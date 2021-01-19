@@ -31,7 +31,19 @@ function _comment_disclaimer()
                     "Note that the guidelines are only required for the pull request ",
                     "to be merged automatically. However, it is **strongly recommended** ",
                     "to follow them, since otherwise the pull request needs to be ",
-                    "manually reviewed and merged by a human.")
+                    "manually reviewed and merged by a human.",
+                    "\n\n",
+                    "After you have fixed the AutoMerge issues, simple retrigger Registrator, ",
+                    "which will automatically update this pull request. ",
+                    "You do not need to change the version number in your `Project.toml` file ",
+                    "(unless of course the AutoMerge issue is that you skipped a version number, ",
+                    "in which case you should change the version number).",
+                    "",
+                    "\n\n",
+                    "If you do not want to fix the AutoMerge issues, please post a comment ",
+                    "explaining why you would like this pull request to be manually merged.",
+                    "",
+                    )
     return result
 end
 
