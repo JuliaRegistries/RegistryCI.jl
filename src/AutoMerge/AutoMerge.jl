@@ -35,5 +35,6 @@ include("not-automerge-applicable.jl")
 include("pull-requests.jl")
 include("semver.jl")
 include("util.jl")
+include("dependency_confusion.jl")
 
 end # module

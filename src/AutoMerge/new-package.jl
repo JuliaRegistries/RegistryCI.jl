@@ -52,6 +52,10 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
     # 13. Version can be loaded
     #     - once it's been installed (and built?), can we load the code?
     #     - i.e. can we run `import Foo`
+    # 14. Package UUID doesn't conflict with an UUID in the provided
+    #     list of package registries. The exception is if also the
+    #     package name *and* package URL matches those in the other
+    #     registry, in which case this is a valid co-registration.
     this_is_jll_package = is_jll_name(data.pkg)
     @info("This is a new package pull request",
           pkg = data.pkg,
@@ -89,7 +93,9 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
          (guideline_name_ascii, true), # 11
          (:update_status, true),
          (guideline_version_can_be_pkg_added, true), # 12
-         (guideline_version_can_be_imported, true)] # 13
+         (guideline_version_can_be_imported, true), # 13
+         (:update_status, true),
+         (guideline_dependency_confusion, true)] # 14
 
     checked_guidelines = Guideline[]
 

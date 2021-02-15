@@ -23,7 +23,12 @@ function run(env = ENV,
              suggest_onepointzero::Bool = true,
              #
              registry_deps::Vector{<:AbstractString} = String[],
-             api_url::String="https://api.github.com")::Nothing
+             api_url::String="https://api.github.com",
+             # A list of public Julia registries (repository URLs)
+             # which will be checked for UUID collisions in order to
+             # mitigate the dependency confusion vulnerability. See
+             # the `dependency_confusion.jl` file for details.
+             public_registries::Vector{<:AbstractString} = String[])::Nothing
     all_statuses = deepcopy(additional_statuses)
     all_check_runs = deepcopy(additional_check_runs)
     push!(all_statuses, "automerge/decision")
@@ -72,7 +77,8 @@ function run(env = ENV,
                            master_branch_is_default_branch = master_branch_is_default_branch,
                            suggest_onepointzero = suggest_onepointzero,
                            whoami = whoami,
-                           registry_deps = registry_deps)
+                           registry_deps = registry_deps,
+                           public_registries = public_registries)
     else
         always_assert(run_merge_build)
         cron_or_api_build(api,
