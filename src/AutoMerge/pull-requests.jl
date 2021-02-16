@@ -67,7 +67,8 @@ function pull_request_build(api::GitHub.GitHubAPI,
                             master_branch::String,
                             master_branch_is_default_branch::Bool,
                             suggest_onepointzero::Bool,
-                            registry_deps::Vector{<:AbstractString} = String[])::Nothing
+                            registry_deps::Vector{<:AbstractString} = String[],
+                            public_registries::Vector{<:AbstractString} = String[])::Nothing
     pr = my_retry(() -> GitHub.pull_request(api, registry, pr_number; auth=auth))
     _github_api_pr_head_commit_sha = pull_request_head_sha(pr)
     if current_pr_head_commit_sha != _github_api_pr_head_commit_sha
@@ -86,7 +87,8 @@ function pull_request_build(api::GitHub.GitHubAPI,
                                 master_branch_is_default_branch=master_branch_is_default_branch,
                                 suggest_onepointzero=suggest_onepointzero,
                                 whoami=whoami,
-                                registry_deps=registry_deps)
+                                registry_deps=registry_deps,
+                                public_registries=public_registries)
     return result
 end
 
@@ -103,7 +105,8 @@ function pull_request_build(api::GitHub.GitHubAPI,
                             master_branch_is_default_branch::Bool,
                             suggest_onepointzero::Bool,
                             whoami::String,
-                            registry_deps::Vector{<:AbstractString} = String[])::Nothing
+                            registry_deps::Vector{<:AbstractString} = String[],
+                            public_registries::Vector{<:AbstractString} = String[])::Nothing
     # 1. Check if the PR is open, if not quit.
     # 2. Determine if it is a new package or new version of an
     #    existing package, if neither quit.
@@ -159,7 +162,8 @@ function pull_request_build(api::GitHub.GitHubAPI,
                                registry_master = registry_master,
                                suggest_onepointzero = suggest_onepointzero,
                                whoami = whoami,
-                               registry_deps = registry_deps)
+                               registry_deps = registry_deps,
+                               public_registries = public_registries)
     pull_request_build(data, registration_type)
     rm(registry_master; force = true, recursive = true)
     return nothing

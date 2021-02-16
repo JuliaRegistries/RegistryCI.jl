@@ -284,3 +284,12 @@ function with_feature_branch(f::Function,
     result = f(b)
     return result
 end
+
+function generate_public_registry(public_dir::AbstractString, GIT)
+    public_git_repo = mktempdir()
+    cp(templates(public_dir), public_git_repo, force = true)
+    run(`$(GIT) -C $(public_git_repo) init`)
+    run(`$(GIT) -C $(public_git_repo) add .`)
+    run(`$(GIT) -C $(public_git_repo) commit -m "create"`)
+    return public_git_repo
+end

@@ -80,6 +80,12 @@ struct GitHubAutoMergeData
     # List of dependent registries. Typically this would contain
     # "General" when running automerge for a private registry.
     registry_deps::Vector{String}
+
+    # A list of public Julia registries (repository URLs) which will
+    # be checked for UUID collisions in order to mitigate the
+    # dependency confusion vulnerability. See the
+    # `dependency_confusion.jl` file for details.
+    public_registries::Vector{String}
 end
 
 # Constructor that requires all fields as named arguments.

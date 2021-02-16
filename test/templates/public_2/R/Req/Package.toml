@@ -1,0 +1,3 @@
+name = "Req"
+uuid = "ae029012-a4dd-5104-9daa-d747884805df"
+repo = "https://github.com/MikeInnes/Requires.jl.git"
