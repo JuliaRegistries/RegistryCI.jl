@@ -31,19 +31,19 @@ delete_old_pull_request_branches(
 )
 
 @testset "Integration tests" begin
-    for (test_number, master_dir, feature_dir, public_dir, title, pass) in [
-            (1, "master_1", "feature_1", "", "New package: Requires v1.0.0", true),            # OK: new package
-            (2, "master_2", "feature_2", "", "New version: Requires v2.0.0", true),            # OK: new version
-            (3, "master_1", "feature_3", "", "New package: Req v1.0.0", false),                # FAIL: name too short
-            (4, "master_2", "feature_4", "", "New version: Requires v2.0.1", false),           # FAIL: skips v2.0.0
-            (5, "master_3", "feature_5", "", "New version: Requires v2.0.0", false),           # FAIL: modifies extra file
-            (6, "master_1", "feature_6", "", "New package: HelloWorldC_jll v1.0.6+0", true),   # OK: new JLL package
-            (7, "master_4", "feature_7", "", "New version: HelloWorldC_jll v1.0.8+0", true),   # OK: new JLL version
-            (8, "master_1", "feature_8", "", "New package: HelloWorldC_jll v1.0.6+0", false),  # FAIL: unallowed dependency
-            (9, "master_1", "feature_1", "public_1", "New package: Requires v1.0.0", true),    # OK: no UUID conflict
-            (10, "master_1", "feature_1", "public_2", "New package: Requires v1.0.0", false),  # FAIL: UUID conflict, name differs
-            (11, "master_1", "feature_1", "public_3", "New package: Requires v1.0.0", false),  # FAIL: UUID conflict, repo differs
-            (12, "master_1", "feature_1", "public_4", "New package: Requires v1.0.0", true),   # OK: UUID conflict but name and repo match
+    for (test_number, master_dir, feature_dir, public_dir, title, check_license, pass) in [
+            (1, "master_1", "feature_1", "", "New package: Requires v1.0.0", true, true),            # OK: new package
+            (2, "master_2", "feature_2", "", "New version: Requires v2.0.0", false, true),            # OK: new version
+            (3, "master_1", "feature_3", "", "New package: Req v1.0.0", false, false),                # FAIL: name too short
+            (4, "master_2", "feature_4", "", "New version: Requires v2.0.1", false, false),           # FAIL: skips v2.0.0
+            (5, "master_3", "feature_5", "", "New version: Requires v2.0.0", false, false),           # FAIL: modifies extra file
+            (6, "master_1", "feature_6", "", "New package: HelloWorldC_jll v1.0.6+0", false, true),   # OK: new JLL package
+            (7, "master_4", "feature_7", "", "New version: HelloWorldC_jll v1.0.8+0", false, true),   # OK: new JLL version
+            (8, "master_1", "feature_8", "", "New package: HelloWorldC_jll v1.0.6+0", false, false),  # FAIL: unallowed dependency
+            (9, "master_1", "feature_1", "public_1", "New package: Requires v1.0.0", false, true),    # OK: no UUID conflict
+            (10, "master_1", "feature_1", "public_2", "New package: Requires v1.0.0", false, false),  # FAIL: UUID conflict, name differs
+            (11, "master_1", "feature_1", "public_3", "New package: Requires v1.0.0", false, false),  # FAIL: UUID conflict, repo differs
+            (12, "master_1", "feature_1", "public_4", "New package: Requires v1.0.0", false, true),   # OK: UUID conflict but name and repo match
         ]
         @info "Performing integration tests with settings" test_number master_dir feature_dir title pass
         with_master_branch(templates(master_dir), "master"; GIT = GIT, repo_url = repo_url_with_auth) do master
@@ -85,6 +85,7 @@ delete_old_pull_request_branches(
                                       error_exit_if_automerge_not_applicable = true,
                                       master_branch = master,
                                       master_branch_is_default_branch = false,
+                                      check_license = check_license,
                                       public_registries = public_registries)
                         @info "Running integration test for " test_number master_dir feature_dir public_dir title pass
                         if pass

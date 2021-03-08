@@ -351,12 +351,14 @@ const guideline_version_can_be_pkg_added =
               data -> meets_version_can_be_pkg_added(data.registry_head,
                                                      data.pkg,
                                                      data.version;
-                                                     registry_deps = data.registry_deps))
+                                                     registry_deps = data.registry_deps,
+                                                     depot_path=data.depot_path))
 
 function meets_version_can_be_pkg_added(working_directory::String,
                                         pkg::String,
                                         version::VersionNumber;
-                                        registry_deps::Vector{<:AbstractString} = String[])
+                                        registry_deps::Vector{<:AbstractString} = String[],
+                                        depot_path)
     pkg_add_command = _generate_pkg_add_command(pkg,
                                                 version)
     _registry_deps = convert(Vector{String}, registry_deps)
@@ -378,26 +380,69 @@ function meets_version_can_be_pkg_added(working_directory::String,
         $(pkg_add_command)
         @info("Successfully `Pkg.add`ed package");
         """
-    before_message = "Attempting to `Pkg.add` the package"
-    success_message = "Successfully `Pkg.add`ed the package"
-    success_return_1 = true
-    success_return_2 = ""
-    failure_message = "Was not able to successfully `Pkg.add` the package"
-    failure_return_1 = false
-    failure_return_2 = string("I was not able to install the package ",
-                              "(i.e. `Pkg.add(\"$(pkg)\")` failed). ",
-                              "See the CI logs for details.")
-    return _run_pkg_commands(working_directory,
-                             pkg,
-                             version;
-                             code = code,
-                             before_message = before_message,
-                             success_message = success_message,
-                             success_return_1 = success_return_1,
-                             success_return_2 = success_return_2,
-                             failure_message = failure_message,
-                             failure_return_1 = failure_return_1,
-                             failure_return_2 = failure_return_2)
+
+    cmd_ran_successfully = _run_pkg_commands(working_directory, pkg,
+                                version; code = code,
+                                before_message = "Attempting to `Pkg.add` the package",
+                                depot_path=depot_path)
+    if cmd_ran_successfully
+        @info "Successfully `Pkg.add`ed the package"
+        return true, ""
+    else
+        @error "Was not able to successfully `Pkg.add` the package"
+        return false, string("I was not able to install the package ",
+                             "(i.e. `Pkg.add(\"$(pkg)\")` failed). ",
+                             "See the CI logs for details.")
+    end
+end
+
+
+const guideline_version_has_osi_license =
+    Guideline("Version has OSI-approved license",
+              data -> meets_version_has_osi_license(data.pkg; depot_path = data.depot_path))
+
+function pkgdir_from_depot(depot_path::String, pkg::String)
+    pkgdirs = readdir(joinpath(depot_path, "packages", pkg); join=true)
+    always_assert(length(pkgdirs) == 1)
+    return pkgdirs[1]
+end
+
+function meets_version_has_osi_license(pkg::String; depot_path)
+    pkgdir = pkgdir_from_depot(depot_path, pkg)
+
+    if !isdir(pkgdir)
+        return false, "Could not check license because could not access package code. Perhaps the `Pkg.add` step failed earlier."
+    end
+
+    license_results = LicenseCheck.find_licenses(pkgdir)
+
+    # Failure mode 1: no licenses
+    if isempty(license_results)
+        @error "Could not find any licenses"
+        return false, string("No licenses detected in the package's top-level folder. An OSI-approved license is required.")
+    end
+
+    flat_results = [(filename = lic.license_filename, identifier=identifier, approved=LicenseCheck.is_osi_approved(identifier)) for lic in license_results for identifier in lic.licenses_found ]
+
+    osi_results = [ string(r.identifier, " license in ", r.filename) for r in flat_results if r.approved ]
+    non_osi_results = [ string(r.identifier, " license in ", r.filename) for r in flat_results if !r.approved ]
+
+    osi_string = string("Found OSI-approved license(s): ", join(osi_results, ", ", ", and "), ".")
+    non_osi_string = string("found non-OSI license(s): ", join(non_osi_results, ", ", ", and "), ".")
+
+    # Failure mode 2: no OSI-approved licenses, but has some kind of license detected
+    if isempty(osi_results)
+        @error "Found no OSI-approved licenses" non_osi_string
+        return false, string("Found no OSI-approved licenses. ",  uppercasefirst(non_osi_string))
+    end
+
+    # Pass: at least one OSI-approved license, possibly other licenses.
+    @info "License check passed; results" osi_results non_osi_results
+    if !isempty(non_osi_results)
+        return true, string(osi_string, " Also ", non_osi_string)
+    else
+        return true, string(osi_string, " Found no other licenses.")
+    end
 end
 
 const guideline_version_can_be_imported =
@@ -405,12 +450,14 @@ const guideline_version_can_be_imported =
               data -> meets_version_can_be_imported(data.registry_head,
                                                     data.pkg,
                                                     data.version;
-                                                    registry_deps = data.registry_deps))
+                                                    registry_deps = data.registry_deps,
+                                                    depot_path=data.depot_path))
 
 function meets_version_can_be_imported(working_directory::String,
                                        pkg::String,
                                        version::VersionNumber;
-                                       registry_deps::Vector{<:AbstractString} = String[])
+                                       registry_deps::Vector{<:AbstractString} = String[],
+                                       depot_path::String)
     pkg_add_command = _generate_pkg_add_command(pkg,
                                                 version)
     _registry_deps = convert(Vector{String}, registry_deps)
@@ -435,44 +482,32 @@ function meets_version_can_be_imported(working_directory::String,
         import $(pkg);
         @info("Successfully `import`ed package");
         """
-    before_message = "Attempting to `import` the package"
-    success_message = "Successfully `import`ed the package"
-    success_return_1 = true
-    success_return_2 = ""
-    failure_message = "Was not able to successfully `import` the package"
-    failure_return_1 = false
-    failure_return_2 = string("I was not able to load the package ",
-                              "(i.e. `import $(pkg)` failed). ",
-                              "See the CI logs for details.")
-    return _run_pkg_commands(working_directory,
-                             pkg,
-                             version;
-                             code = code,
-                             before_message = before_message,
-                             success_message = success_message,
-                             success_return_1 = success_return_1,
-                             success_return_2 = success_return_2,
-                             failure_message = failure_message,
-                             failure_return_1 = failure_return_1,
-                             failure_return_2 = failure_return_2)
+
+    cmd_ran_successfully = _run_pkg_commands(working_directory, pkg,
+                                version; code = code,
+                                before_message = "Attempting to `import` the package",
+                                depot_path=depot_path)
+
+    if cmd_ran_successfully
+        @info "Successfully `import`ed the package"
+        return true, ""
+    else
+        @error "Was not able to successfully `import` the package"
+        return false, string("I was not able to load the package ",
+                             "(i.e. `import $(pkg)` failed). ",
+                             "See the CI logs for details.")
+    end
 end
 
 function _run_pkg_commands(working_directory::String,
                            pkg::String,
                            version::VersionNumber;
+                           depot_path,
                            code,
-                           before_message,
-                           success_message,
-                           success_return_1,
-                           success_return_2,
-                           failure_message,
-                           failure_return_1,
-                           failure_return_2)
+                           before_message)
     original_directory = pwd()
     tmp_dir_1 = mktempdir()
-    tmp_dir_2 = mktempdir()
     atexit(() -> rm(tmp_dir_1; force = true, recursive = true))
-    atexit(() -> rm(tmp_dir_2; force = true, recursive = true))
     cd(tmp_dir_1)
     # We need to be careful with what environment variables we pass to the child
     # process. For example, we don't want to pass an environment variable containing
@@ -495,7 +530,7 @@ function _run_pkg_commands(working_directory::String,
     # 9. HOME. Lots of things need HOME.
 
     env = Dict(
-        "JULIA_DEPOT_PATH" => tmp_dir_2,
+        "JULIA_DEPOT_PATH" => depot_path,
         "JULIA_REGISTRYCI_AUTOMERGE" => "true",
         "PYTHON" => "",
         "R_HOME" => "*",
@@ -519,25 +554,17 @@ function _run_pkg_commands(working_directory::String,
     cmd_ran_successfully = success(pipeline(cmd, stdout=stdout, stderr=stderr))
     cd(original_directory)
 
+    rmdir(tmp_dir_1)
+   
+    return cmd_ran_successfully
+end
+
+function rmdir(dir)
     try
-        chmod(tmp_dir_1, 0o700, recursive = true)
+        chmod(dir, 0o700, recursive = true)
     catch
     end
-    rm(tmp_dir_1; force = true, recursive = true)
-
-    try
-        chmod(tmp_dir_2, 0o700, recursive = true)
-    catch
-    end
-    rm(tmp_dir_2; force = true, recursive = true)
-
-    if cmd_ran_successfully
-        @info(success_message)
-        return success_return_1, success_return_2
-    else
-        @error(failure_message)
-        return failure_return_1, failure_return_2
-    end
+    rm(dir; force = true, recursive = true)
 end
 
 url_has_correct_ending(url, pkg) = endswith(url, "/$(pkg).jl.git")

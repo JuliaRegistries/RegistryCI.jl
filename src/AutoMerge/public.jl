@@ -24,6 +24,7 @@ function run(env = ENV,
              #
              registry_deps::Vector{<:AbstractString} = String[],
              api_url::String="https://api.github.com",
+             check_license::Bool=false,
              # A list of public Julia registries (repository URLs)
              # which will be checked for UUID collisions in order to
              # mitigate the dependency confusion vulnerability. See
@@ -78,6 +79,7 @@ function run(env = ENV,
                            suggest_onepointzero = suggest_onepointzero,
                            whoami = whoami,
                            registry_deps = registry_deps,
+                           check_license = check_license,
                            public_registries = public_registries)
     else
         always_assert(run_merge_build)
