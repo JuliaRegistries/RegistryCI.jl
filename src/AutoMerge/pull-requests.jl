@@ -68,6 +68,7 @@ function pull_request_build(api::GitHub.GitHubAPI,
                             master_branch_is_default_branch::Bool,
                             suggest_onepointzero::Bool,
                             registry_deps::Vector{<:AbstractString} = String[],
+                            check_license::Bool,
                             public_registries::Vector{<:AbstractString} = String[])::Nothing
     pr = my_retry(() -> GitHub.pull_request(api, registry, pr_number; auth=auth))
     _github_api_pr_head_commit_sha = pull_request_head_sha(pr)
@@ -88,6 +89,7 @@ function pull_request_build(api::GitHub.GitHubAPI,
                                 suggest_onepointzero=suggest_onepointzero,
                                 whoami=whoami,
                                 registry_deps=registry_deps,
+                                check_license=check_license,
                                 public_registries=public_registries)
     return result
 end
@@ -106,6 +108,7 @@ function pull_request_build(api::GitHub.GitHubAPI,
                             suggest_onepointzero::Bool,
                             whoami::String,
                             registry_deps::Vector{<:AbstractString} = String[],
+                            check_license::Bool,
                             public_registries::Vector{<:AbstractString} = String[])::Nothing
     # 1. Check if the PR is open, if not quit.
     # 2. Determine if it is a new package or new version of an
@@ -164,7 +167,7 @@ function pull_request_build(api::GitHub.GitHubAPI,
                                whoami = whoami,
                                registry_deps = registry_deps,
                                public_registries = public_registries)
-    pull_request_build(data, registration_type)
+    pull_request_build(data, registration_type; check_license=check_license)
     rm(registry_master; force = true, recursive = true)
     return nothing
 end

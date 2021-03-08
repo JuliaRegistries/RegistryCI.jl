@@ -1,4 +1,4 @@
-function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
+function pull_request_build(data::GitHubAutoMergeData, ::NewVersion; check_license)::Nothing
     # Rules:
     # 1. Only changes a subset of the following files:
     #     - `E/Example/Compat.toml`
@@ -21,9 +21,11 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
     # 6. Version can be installed
     #     - given the proposed changes to the registry, can we resolve and install the new version of the package?
     #     - i.e. can we run `Pkg.add("Foo")`
-    # 7. Version can be loaded
+    # 7. Package repository contains only OSI-approved license(s) in the license file at toplevel in the version being registered
+    # 8. Version can be loaded
     #     - once it's been installed (and built?), can we load the code?
     #     - i.e. can we run `import Foo`
+        
     this_is_jll_package = is_jll_name(data.pkg)
     @info("This is a new package pull request",
           pkg = data.pkg,
@@ -54,7 +56,10 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion)::Nothing
           this_is_jll_package), # 5
          (:update_status, true),
          (guideline_version_can_be_pkg_added, true), # 6
-         (guideline_version_can_be_imported, true)] # 7
+         # `guideline_version_has_osi_license` must be run after
+         # `guideline_version_can_be_pkg_added` so that it can use the downloaded code!
+         (guideline_version_has_osi_license, check_license), # 7
+         (guideline_version_can_be_imported, true)] # 8
 
     checked_guidelines = Guideline[]
 

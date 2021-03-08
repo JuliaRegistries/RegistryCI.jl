@@ -8,7 +8,7 @@ function update_status(data::GitHubAutoMergeData; kwargs...)
                                         params = Dict(kwargs...)))
 end
 
-function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
+function pull_request_build(data::GitHubAutoMergeData, ::NewPackage; check_license)::Nothing
     # Rules:
     # 1. Only changes a subset of the following files:
     #     - `Registry.toml`,
@@ -49,10 +49,11 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
     # 12. Version can be installed
     #     - given the proposed changes to the registry, can we resolve and install the new version of the package?
     #     - i.e. can we run `Pkg.add("Foo")`
-    # 13. Version can be loaded
+    # 13. Package repository contains only OSI-approved license(s) in the license file at toplevel in the version being registered
+    # 14. Version can be loaded
     #     - once it's been installed (and built?), can we load the code?
     #     - i.e. can we run `import Foo`
-    # 14. Package UUID doesn't conflict with an UUID in the provided
+    # 15. Package UUID doesn't conflict with an UUID in the provided
     #     list of package registries. The exception is if also the
     #     package name *and* package URL matches those in the other
     #     registry, in which case this is a valid co-registration.
@@ -93,9 +94,13 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage)::Nothing
          (guideline_name_ascii, true), # 11
          (:update_status, true),
          (guideline_version_can_be_pkg_added, true), # 12
-         (guideline_version_can_be_imported, true), # 13
+          # `guideline_version_has_osi_license` must be run after
+         # `guideline_version_can_be_pkg_added` so that it can use the downloaded code!
+         (guideline_version_has_osi_license, check_license), # 13
+         (guideline_version_can_be_imported, true), # 14
          (:update_status, true),
-         (guideline_dependency_confusion, true)] # 14
+         (guideline_dependency_confusion, true)] # 15
+
 
     checked_guidelines = Guideline[]
 

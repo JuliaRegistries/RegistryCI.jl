@@ -10,6 +10,7 @@ import TimeZones
 import JSON
 import VisualStringDistances
 import StringDistances
+import LicenseCheck
 import TOML
 import Printf
 import RegistryTools

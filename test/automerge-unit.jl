@@ -330,4 +330,41 @@ end
             @test AutoMerge.auto_detect_ci_service(env=ENV) == AutoMerge.GitHubActions()
         end
     end
+
+    @testset "`AutoMerge.meets_version_has_osi_license`" begin
+        # Let's install a fresh depot in a temporary directory
+        # and add some packages to inspect.
+        tmp_path = mktempdir()
+        withenv("JULIA_DEPOT_PATH" => tmp_path) do
+            run(`julia -e 'using Pkg; Pkg.add(["RegistryCI"])'`)
+        end
+        # Let's test ourselves and some of our dependencies that just have MIT licenses:
+        result = AutoMerge.meets_version_has_osi_license("RegistryCI"; depot_path=tmp_path)
+        @test result[1]
+        result = AutoMerge.meets_version_has_osi_license("UnbalancedOptimalTransport"; depot_path=tmp_path)
+        @test result[1]
+        result = AutoMerge.meets_version_has_osi_license("VisualStringDistances"; depot_path=tmp_path)
+        @test result[1]
+
+        # Now, what happens if there's also a non-OSI license in another file?
+        pkg_path = AutoMerge.pkgdir_from_depot(tmp_path, "UnbalancedOptimalTransport")
+        open(joinpath(pkg_path, "LICENSE2"), write=true) do io
+            cc0_bytes = read(joinpath(@__DIR__, "license_data", "CC0.txt"))
+            println(io)
+            write(io, cc0_bytes)
+        end
+        result = AutoMerge.meets_version_has_osi_license("UnbalancedOptimalTransport"; depot_path=tmp_path)
+        @test result[1]
+
+        # What if we also remove the original license, leaving only the CC0 license?
+        rm(joinpath(pkg_path, "LICENSE"))
+        result = AutoMerge.meets_version_has_osi_license("UnbalancedOptimalTransport"; depot_path=tmp_path)
+        @test !result[1]
+
+        # What about no license at all?
+        pkg_path = AutoMerge.pkgdir_from_depot(tmp_path, "VisualStringDistances")
+        rm(joinpath(pkg_path, "LICENSE"))
+        result = AutoMerge.meets_version_has_osi_license("VisualStringDistances"; depot_path=tmp_path)
+        @test !result[1]
+    end
 end
