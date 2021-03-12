@@ -252,13 +252,27 @@ const guideline_repo_url_requirement =
                                                  registry_head = data.registry_head))
 
 function meets_repo_url_requirement(pkg::String; registry_head::String)
-    url = Pkg.TOML.parsefile(joinpath(registry_head, uppercase(pkg[1:1]), pkg, "Package.toml"))["repo"]
+    package_toml_parsed = Pkg.TOML.parsefile(
+        joinpath(
+            registry_head,
+            uppercase(pkg[1:1]),
+            pkg,
+            "Package.toml",
+        )
+    )
+
+    url = package_toml_parsed["repo"]
+    subdir = get(package_toml_parsed, "subdir", "")
+    is_subdirectory_package = occursin(r"[A-Za-z0-9]", subdir)
     meets_this_guideline = url_has_correct_ending(url, pkg)
+
+    if is_subdirectory_package
+        return true, "" # we do not apply this check if the package is a subdirectory package
+    end
     if meets_this_guideline
         return true, ""
-    else
-        return false, "Repo URL does not end with /name.jl.git, where name is the package name"
     end
+    return false, "Repo URL does not end with /name.jl.git, where name is the package name"
 end
 
 function _invalid_sequential_version(reason::AbstractString)
@@ -555,7 +569,7 @@ function _run_pkg_commands(working_directory::String,
     cd(original_directory)
 
     rmdir(tmp_dir_1)
-   
+
     return cmd_ran_successfully
 end
 
