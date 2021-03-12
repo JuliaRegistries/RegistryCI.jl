@@ -358,6 +358,11 @@ function _generate_pkg_add_command(pkg::String,
     return "Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\", version=v\"$(string(version))\"));"
 end
 
+function _generate_pkg_dev_command(pkg::String,
+                                   version::VersionNumber)::String
+    return "Pkg.develop(Pkg.PackageSpec(name=\"$(pkg)\"));"
+end
+
 is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str))
 
 const guideline_version_can_be_pkg_added =
@@ -410,6 +415,54 @@ function meets_version_can_be_pkg_added(working_directory::String,
     end
 end
 
+const guideline_version_can_be_pkg_deved =
+    Guideline("Version can be `Pkg.dev`ed",
+              data -> meets_version_can_be_pkg_deved(data.registry_head,
+                                                     data.pkg,
+                                                     data.version;
+                                                     registry_deps = data.registry_deps,
+                                                     depot_path=data.depot_path))
+
+function meets_version_can_be_pkg_deved(working_directory::String,
+                                        pkg::String,
+                                        version::VersionNumber;
+                                        registry_deps::Vector{<:AbstractString} = String[],
+                                        depot_path)
+    pkg_dev_command = _generate_pkg_dev_command(pkg, version)
+    _registry_deps = convert(Vector{String}, registry_deps)
+    _registry_deps_is_valid_url = is_valid_url.(_registry_deps)
+    code = """
+        import Pkg;
+        Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));
+        _registry_deps = $(_registry_deps);
+        _registry_deps_is_valid_url = $(_registry_deps_is_valid_url);
+        for i = 1:length(_registry_deps)
+            regdep = _registry_deps[i]
+            if _registry_deps_is_valid_url[i]
+                Pkg.Registry.add(Pkg.RegistrySpec(url = regdep))
+            else
+                Pkg.Registry.add(regdep)
+            end
+        end
+        @info("Attempting to `Pkg.dev` package...");
+        $(pkg_dev_command)
+        @info("Successfully `Pkg.dev`ed package");
+        """
+
+    cmd_ran_successfully = _run_pkg_commands(working_directory, pkg,
+                                version; code = code,
+                                before_message = "Attempting to `Pkg.dev` the package",
+                                depot_path=depot_path)
+    if cmd_ran_successfully
+        @info "Successfully `Pkg.dev`ed the package"
+        return true, ""
+    else
+        @error "Was not able to successfully `Pkg.dev` the package"
+        return false, string("I was not able to install the package ",
+                             "(i.e. `Pkg.dev(\"$(pkg)\")` failed). ",
+                             "See the CI logs for details.")
+    end
+end
 
 const guideline_version_has_osi_license =
     Guideline("Version has OSI-approved license",
