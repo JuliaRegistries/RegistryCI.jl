@@ -28,7 +28,7 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage; check_licen
     #     - does not start with "Ju"
     # 6. DISABLED. Standard initial version number - one of 0.0.1, 0.1.0, 1.0.0, X.0.0
     #     - does not apply to JLL packages
-    # 7. DISABLED. Repo URL ends with /$name.jl.git where name is the package name. Now that we have support for multiple packages in different subdirectories of a repo, we have disabled this check.
+    # 7. Repo URL ends with /$name.jl.git where name is the package name. We only apply this check if the package is not a subdirectory package.
     # 8. Compat for all dependencies
     #     - there should be a [compat] entry for Julia
     #     - all [deps] should also have [compat] entries
@@ -86,7 +86,7 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage; check_licen
          (guideline_julia_name_check, true), # 5
          #(guideline_standard_initial_version_number,
          # !this_pr_can_use_special_jll_exceptions), # 6 (deactivated)
-         #(guideline_repo_url_requirement, true), # 7 (deactivated)
+         (guideline_repo_url_requirement, true), # 7
          (guideline_compat_for_all_deps, true), # 8
          (guideline_allowed_jll_nonrecursive_dependencies,
           this_is_jll_package), # 9
