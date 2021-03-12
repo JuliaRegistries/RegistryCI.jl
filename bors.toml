@@ -13,8 +13,9 @@ status = [
     "Unit/Julia 1/ubuntu-latest/x64",
     "Unit/Julia nightly/ubuntu-latest/x64",
     "VersionVigilante",
-    # "codecov/patch",
+    "codecov/project/minimum",
     # "codecov/project",
+    # "codecov/patch",
 ]
 
 timeout_sec = 1800
