@@ -417,20 +417,19 @@ const guideline_version_has_osi_license =
 
 function pkgdir_from_depot(depot_path::String, pkg::String)
     pkgdir_parent = joinpath(depot_path, "packages", pkg)
-    pkgdir_elements = readdir(pkgdir_parent)
-    always_assert(length(pkgdir_elements) == 1)
-    pkgdirs = [joinpath(pkgdir_parent, x) for x in pkgdir_elements]
-    always_assert(length(pkgdirs) == 1)
-    return pkgdirs[1]
+    isdir(pkgdir_parent) || return nothing
+    all_pkgdir_elements = readdir(pkgdir_parent)
+    @info "" pkgdir_parent all_pkgdir_elements
+    (length(all_pkgdir_elements) == 1) || return nothing
+    only_pkgdir_element = all_pkgdir_elements[1]
+    only_pkdir = joinpath(pkgdir_parent, only_pkgdir_element)
+    isdir(only_pkdir) || return nothing
+    return only_pkdir
 end
 
 function meets_version_has_osi_license(pkg::String; depot_path)
-    pkgdir_parent = joinpath(depot_path, "packages", pkg)
-    if !isdir(pkgdir_parent)
-        return false, "Could not check license because could not access package code. Perhaps the `Pkg.add` step failed earlier."
-    end
     pkgdir = pkgdir_from_depot(depot_path, pkg)
-    if !isdir(pkgdir)
+    if pkgdir isa Nothing
         return false, "Could not check license because could not access package code. Perhaps the `Pkg.add` step failed earlier."
     end
 
