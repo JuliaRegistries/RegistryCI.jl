@@ -163,7 +163,9 @@ function test(path = pwd();
                 if !(isempty(compatnames) || (length(compatnames)== 1 && "julia" in compatnames))
                     depnames = Set{String}(x for (_, d) in Pkg.TOML.parsefile(depsfile) for (x, _) in d)
                     push!(depnames, "julia") # All packages has an implicit dependency on julia
-                    @assert compatnames ⊆ depnames
+                    if !(compatnames ⊆ depnames)
+                        throw(ErrorException("Assertion failed: compatnames ⊆ depnames"))
+                    end
                 end
                 # Test that the way Pkg loads this data works
                 Test.@test load_compat(compatfile, vnums)
