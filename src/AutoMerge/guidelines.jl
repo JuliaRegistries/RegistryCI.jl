@@ -425,8 +425,11 @@ function pkgdir_from_depot(depot_path::String, pkg::String)
 end
 
 function meets_version_has_osi_license(pkg::String; depot_path)
+    pkgdir_parent = joinpath(depot_path, "packages", pkg)
+    if !isdir(pkgdir_parent)
+        return false, "Could not check license because could not access package code. Perhaps the `Pkg.add` step failed earlier."
+    end
     pkgdir = pkgdir_from_depot(depot_path, pkg)
-
     if !isdir(pkgdir)
         return false, "Could not check license because could not access package code. Perhaps the `Pkg.add` step failed earlier."
     end
