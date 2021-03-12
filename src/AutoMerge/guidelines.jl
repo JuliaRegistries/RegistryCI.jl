@@ -416,7 +416,10 @@ const guideline_version_has_osi_license =
               data -> meets_version_has_osi_license(data.pkg; depot_path = data.depot_path))
 
 function pkgdir_from_depot(depot_path::String, pkg::String)
-    pkgdirs = readdir(joinpath(depot_path, "packages", pkg); join=true)
+    pkgdir_parent = joinpath(depot_path, "packages", pkg)
+    pkgdir_elements = readdir(pkgdir_parent)
+    always_assert(length(pkgdir_elements) == 1)
+    pkgdirs = [joinpath(pkgdir_parent, x) for x in pkgdir_elements]
     always_assert(length(pkgdirs) == 1)
     return pkgdirs[1]
 end
