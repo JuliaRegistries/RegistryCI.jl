@@ -39,9 +39,6 @@ function run(env = ENV,
 
     registry_head = directory_of_cloned_registry(cicfg; env=env)
 
-    # Run tests on the registry (these are very quick)
-    RegistryCI.test(registry_head; registry_deps = registry_deps)
-
     # Figure out what type of build this is
     run_pr_build = conditions_met_for_pr_build(cicfg; env=env, master_branch=master_branch)
     run_merge_build = conditions_met_for_merge_build(cicfg; env=env, master_branch=master_branch)
