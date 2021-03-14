@@ -145,6 +145,10 @@ function test(path = pwd();
                 deps = Pkg.TOML.parsefile(depsfile)
                 # Require all deps to exist in the General registry or be a stdlib
                 depuuids = Set{Base.UUID}(Base.UUID(x) for (_, d) in deps for (_, x) in d)
+                if !(depuuids ⊆ alluuids)
+                    msg = "It is not the case that all dependencies exist in the General registry"
+                    @error msg setdiff(depuuids, alluuids)
+                end
                 Test.@test depuuids ⊆ alluuids
                 # Test that the way Pkg loads this data works
                 Test.@test load_deps(depsfile, vnums)
