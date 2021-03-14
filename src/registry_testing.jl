@@ -15,6 +15,33 @@ else
 end
 
 is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str))
+
+function _include_this_registry(registry_spec, registry_deps_names::Vector{<:AbstractString})
+    all_fieldvalues = []
+    for fieldname in [:name, :repo, :url]
+        if hasproperty(registry_spec, fieldname)
+            fieldvalue = getproperty(registry_spec, fieldname)
+            if fieldvalue isa AbstractString
+                push!(all_fieldvalues, fieldvalue)
+            end
+        end
+    end
+    for fieldvalue in all_fieldvalues
+        for registry_deps_name in registry_deps_names
+            if strip(fieldvalue) == strip(registry_deps_name)
+                return true
+            end
+            if strip(fieldvalue) == strip("$(registry_deps_name).git")
+                return true
+            end
+            if strip("$(fieldvalue).git") == strip(registry_deps_name)
+                return true
+            end
+        end
+    end
+    return false
+end
+
 # For when you have a registry that has packages with dependencies obtained from
 # another dependency registry. For example, packages registered at the BioJuliaRegistry
 # that have General dependencies. BJW.
@@ -33,7 +60,7 @@ function load_registry_dep_uuids(registry_deps_names::Vector{<:AbstractString} =
         # function never has to assume. BJW.
         extrauuids = Set{Base.UUID}()
         for spec in collect_registries()
-            if spec.url ∈ registry_deps_names || spec.name ∈ registry_deps_names
+            if _include_this_registry(spec, registry_deps_names)
                 reg = Pkg.TOML.parsefile(joinpath(spec.path, "Registry.toml"))
                 for x in keys(reg["packages"])
                     push!(extrauuids, Base.UUID(x))
