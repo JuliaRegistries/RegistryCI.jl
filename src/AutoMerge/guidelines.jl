@@ -1,5 +1,21 @@
 import HTTP
 
+const guideline_registry_consistency_tests_pass =
+    Guideline("Registy consistency tests",
+              data -> meets_registry_consistency_tests_pass(data.registry_head,
+                                                            data.registry_deps))
+
+function meets_registry_consistency_tests_pass(registry_head::String,
+                                               registry_deps::Vector{String})
+    try
+        RegistryCI.test(registry_head; registry_deps = registry_deps)
+        return true, ""
+    catch ex
+        @error "" exception=(ex, catch_backtrace())
+    end
+    return false, "The registry consistency tests failed"
+end
+
 const guideline_compat_for_all_deps =
     Guideline("Compat (with upper bound) for all dependencies",
               data -> meets_compat_for_all_deps(data.registry_head,
