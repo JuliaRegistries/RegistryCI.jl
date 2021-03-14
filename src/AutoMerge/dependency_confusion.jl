@@ -32,7 +32,7 @@ function has_no_dependency_confusion(pkg, registry_head, public_registries)
             if haskey(packages, uuid)
                 message = string("UUID $uuid conflicts with the package ",
                                  packages[uuid]["name"], " in registry ",
-                                 registry_toml["name"], " at $repo.\n",
+                                 registry_toml["name"], " at $repo. ",
                                  "This could be a dependency confusion attack.")
                 # Conflict detected. This is benign if the package name
                 # *and* the package URL matches.
