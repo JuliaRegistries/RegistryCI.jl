@@ -145,7 +145,7 @@ function test(path = pwd();
                 deps = Pkg.TOML.parsefile(depsfile)
                 # Require all deps to exist in the General registry or be a stdlib
                 depuuids = Set{Base.UUID}(Base.UUID(x) for (_, d) in deps for (_, x) in d)
-                Test.@test depuuids ⊆ alluuids
+                Test.@test isempty(setdiff(depuuids, alluuids))
                 # Test that the way Pkg loads this data works
                 Test.@test load_deps(depsfile, vnums)
                 # Make sure the content roundtrips through decompression/compression
