@@ -40,25 +40,26 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage; check_licen
     #         - Pkg
     #         - Libdl
     #         - other JLL packages
-    # 11. Package's name is sufficiently far from existing package names in the registry
+    # 11. Package's name has only ASCII characters
+    # 12. Version can be installed
+    #         - given the proposed changes to the registry, can we resolve and install the new version of the package?
+    #         - i.e. can we run `Pkg.add("Foo")`
+    # 13. Package repository contains only OSI-approved license(s) in the license file at toplevel in the version being registered
+    # 14. Version can be loaded
+    #         - once it's been installed (and built?), can we load the code?
+    #         - i.e. can we run `import Foo`
+    # 15. Dependency confusion check
+    #         - Package UUID doesn't conflict with an UUID in the provided
+    #           list of package registries. The exception is if also the
+    #           package name *and* package URL matches those in the other
+    #           registry, in which case this is a valid co-registration.
+    # 16. Package's name is sufficiently far from existing package names in the registry
+    #         - We always run this check last.
     #         - We exclude JLL packages from the "existing names"
     #         - We use three checks:
     #             i. that the lowercased name is at least 1 away in Damerau Levenshtein distance from any other lowercased name
     #             ii. that the name is at least 2 away in Damerau Levenshtein distance from any other name
     #             iii. that the name is sufficiently far in a visual distance from any other name
-    # 12. Package's name has only ASCII characters
-    # 13. Version can be installed
-    #         - given the proposed changes to the registry, can we resolve and install the new version of the package?
-    #         - i.e. can we run `Pkg.add("Foo")`
-    # 14. Package repository contains only OSI-approved license(s) in the license file at toplevel in the version being registered
-    # 15. Version can be loaded
-    #         - once it's been installed (and built?), can we load the code?
-    #         - i.e. can we run `import Foo`
-    # 16. Dependency confusion check
-    #         - Package UUID doesn't conflict with an UUID in the provided
-    #           list of package registries. The exception is if also the
-    #           package name *and* package URL matches those in the other
-    #           registry, in which case this is a valid co-registration.
     this_is_jll_package = is_jll_name(data.pkg)
     @info("This is a new package pull request",
           pkg = data.pkg,
@@ -94,18 +95,23 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage; check_licen
             (guideline_compat_for_all_deps, true),              # 9
             (guideline_allowed_jll_nonrecursive_dependencies,   # 10
                 this_is_jll_package),
-            (guideline_distance_check, true),                   # 11
-            (guideline_name_ascii, true),                       # 12
+            (guideline_name_ascii, true),                       # 11
             (:update_status, true),
-            (guideline_version_can_be_pkg_added, true),         # 13
-            # `guideline_version_has_osi_license` must be run after
-            # `guideline_version_can_be_pkg_added` so that it can use the downloaded code!
-            (guideline_version_has_osi_license, check_license), # 14
-            (guideline_version_can_be_imported, true),          # 15
+            (guideline_version_can_be_pkg_added, true),         # 12
+            # `guideline_version_has_osi_license` must be run
+            # after `guideline_version_can_be_pkg_added` so
+            # that it can use the downloaded code!
+            (guideline_version_has_osi_license, check_license), # 13
+            (guideline_version_can_be_imported, true),          # 14
             (:update_status, true),
-            (guideline_dependency_confusion, true),             # 16
+            (guideline_dependency_confusion, true),             # 15
+            # We always run the `guideline_distance_check`
+            # check last, because if the check fails, it
+            # prints the list of similar package names in
+            # the automerge comment. To make the comment easy
+            # to read, we want this list to be at the end.
+            (guideline_distance_check, true),                   # 16
          ]
-
 
     checked_guidelines = Guideline[]
 
