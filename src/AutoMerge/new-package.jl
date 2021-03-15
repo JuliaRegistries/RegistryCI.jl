@@ -10,53 +10,56 @@ end
 
 function pull_request_build(data::GitHubAutoMergeData, ::NewPackage; check_license)::Nothing
     # Rules:
-    # 1. Only changes a subset of the following files:
-    #     - `Registry.toml`,
-    #     - `E/Example/Compat.toml`
-    #     - `E/Example/Deps.toml`
-    #     - `E/Example/Package.toml`
-    #     - `E/Example/Versions.toml`
-    # 2. TODO: implement this check. When implemented, this check will make sure that the changes to `Registry.toml` only modify the specified package.
-    # 3. Normal capitalization
-    #     - name should match r"^[A-Z]\w*[a-z]\w*[0-9]?$"
-    #     - i.e. starts with a capital letter, ASCII alphanumerics only, contains at least 1 lowercase letter
-    # 4. Not too short
-    #     - at least five letters
-    #     - you can register names shorter than this, but doing so requires someone to approve
-    # 5. Meets julia name check
-    #     - does not include the string "julia" with any case
-    #     - does not start with "Ju"
-    # 6. DISABLED. Standard initial version number - one of 0.0.1, 0.1.0, 1.0.0, X.0.0
-    #     - does not apply to JLL packages
-    # 7. Repo URL ends with /$name.jl.git where name is the package name. We only apply this check if the package is not a subdirectory package.
-    # 8. Compat for all dependencies
-    #     - there should be a [compat] entry for Julia
-    #     - all [deps] should also have [compat] entries
-    #     - all [compat] entries should have upper bounds
-    #     - dependencies that are standard libraries do not need [compat] entries
-    #     - dependencies that are JLL packages do not need [compat] entries
-    # 9. (only applies to JLL packages) The only dependencies of the package are:
-    #     - Pkg
-    #     - Libdl
-    #     - other JLL packages
-    # 10. Package's name is sufficiently far from existing package names in the registry
-    #     - We exclude JLL packages from the "existing names"
-    #     - We use three checks:
-    #         - that the lowercased name is at least 1 away in Damerau Levenshtein distance from any other lowercased name
-    #         - that the name is at least 2 away in Damerau Levenshtein distance from any other name
-    #         - that the name is sufficiently far in a visual distance from any other name
+    # 1. Registry consistency tests pass
+    # 2.  Only changes a subset of the following files:
+    #         - `Registry.toml`,
+    #         - `E/Example/Compat.toml`
+    #         - `E/Example/Deps.toml`
+    #         - `E/Example/Package.toml`
+    #         - `E/Example/Versions.toml`
+    # 3.  TODO: implement this check. When implemented, this check will make sure that the changes to `Registry.toml` only modify the specified package.
+    # 4.  Normal capitalization
+    #         - name should match r"^[A-Z]\w*[a-z]\w*[0-9]?$"
+    #         - i.e. starts with a capital letter, ASCII alphanumerics only, contains at least 1 lowercase letter
+    # 5.  Not too short
+    #         - at least five letters
+    #         - you can register names shorter than this, but doing so requires someone to approve
+    # 6.  Meets julia name check
+    #         - does not include the string "julia" with any case
+    #         - does not start with "Ju"
+    # 7.  DISABLED. Standard initial version number - one of 0.0.1, 0.1.0, 1.0.0, X.0.0
+    #         - does not apply to JLL packages
+    # 8.  Repo URL ends with /$name.jl.git where name is the package name. We only apply this check if the package is not a subdirectory package.
+    # 9.  Compat for all dependencies
+    #         - there should be a [compat] entry for Julia
+    #         - all [deps] should also have [compat] entries
+    #         - all [compat] entries should have upper bounds
+    #         - dependencies that are standard libraries do not need [compat] entries
+    #         - dependencies that are JLL packages do not need [compat] entries
+    # 10. (only applies to JLL packages) The only dependencies of the package are:
+    #         - Pkg
+    #         - Libdl
+    #         - other JLL packages
     # 11. Package's name has only ASCII characters
     # 12. Version can be installed
-    #     - given the proposed changes to the registry, can we resolve and install the new version of the package?
-    #     - i.e. can we run `Pkg.add("Foo")`
+    #         - given the proposed changes to the registry, can we resolve and install the new version of the package?
+    #         - i.e. can we run `Pkg.add("Foo")`
     # 13. Package repository contains only OSI-approved license(s) in the license file at toplevel in the version being registered
     # 14. Version can be loaded
-    #     - once it's been installed (and built?), can we load the code?
-    #     - i.e. can we run `import Foo`
-    # 15. Package UUID doesn't conflict with an UUID in the provided
-    #     list of package registries. The exception is if also the
-    #     package name *and* package URL matches those in the other
-    #     registry, in which case this is a valid co-registration.
+    #         - once it's been installed (and built?), can we load the code?
+    #         - i.e. can we run `import Foo`
+    # 15. Dependency confusion check
+    #         - Package UUID doesn't conflict with an UUID in the provided
+    #           list of package registries. The exception is if also the
+    #           package name *and* package URL matches those in the other
+    #           registry, in which case this is a valid co-registration.
+    # 16. Package's name is sufficiently far from existing package names in the registry
+    #         - We always run this check last.
+    #         - We exclude JLL packages from the "existing names"
+    #         - We use three checks:
+    #             i. that the lowercased name is at least 1 away in Damerau Levenshtein distance from any other lowercased name
+    #             ii. that the name is at least 2 away in Damerau Levenshtein distance from any other name
+    #             iii. that the name is sufficiently far in a visual distance from any other name
     this_is_jll_package = is_jll_name(data.pkg)
     @info("This is a new package pull request",
           pkg = data.pkg,
@@ -77,30 +80,38 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage; check_licen
     # with the results so far before continuing to the following
     # guidelines.
     guidelines =
-        [(guideline_pr_only_changes_allowed_files, true), # 1
-         #(guideline_only_changes_specified_package, true), # 2 (unimplemented)
-         (guideline_normal_capitalization,
-          !this_pr_can_use_special_jll_exceptions), # 3
-         (guideline_name_length,
-          !this_pr_can_use_special_jll_exceptions), # 4
-         (guideline_julia_name_check, true), # 5
-         #(guideline_standard_initial_version_number,
-         # !this_pr_can_use_special_jll_exceptions), # 6 (deactivated)
-         (guideline_repo_url_requirement, true), # 7
-         (guideline_compat_for_all_deps, true), # 8
-         (guideline_allowed_jll_nonrecursive_dependencies,
-          this_is_jll_package), # 9
-         (guideline_distance_check, true), # 10
-         (guideline_name_ascii, true), # 11
-         (:update_status, true),
-         (guideline_version_can_be_pkg_added, true), # 12
-          # `guideline_version_has_osi_license` must be run after
-         # `guideline_version_can_be_pkg_added` so that it can use the downloaded code!
-         (guideline_version_has_osi_license, check_license), # 13
-         (guideline_version_can_be_imported, true), # 14
-         (:update_status, true),
-         (guideline_dependency_confusion, true)] # 15
-
+        [
+            (guideline_registry_consistency_tests_pass, true),  # 1
+            (guideline_pr_only_changes_allowed_files, true),    # 2
+            # (guideline_only_changes_specified_package, true), # 3 (unimplemented)
+            (guideline_normal_capitalization,                   # 4
+                !this_pr_can_use_special_jll_exceptions),
+            (guideline_name_length,                             # 5
+                !this_pr_can_use_special_jll_exceptions),
+            (guideline_julia_name_check, true),                 # 6
+            # (guideline_standard_initial_version_number,       # 7 (deactivated)
+            #     !this_pr_can_use_special_jll_exceptions),
+            (guideline_repo_url_requirement, true),             # 8
+            (guideline_compat_for_all_deps, true),              # 9
+            (guideline_allowed_jll_nonrecursive_dependencies,   # 10
+                this_is_jll_package),
+            (guideline_name_ascii, true),                       # 11
+            (:update_status, true),
+            (guideline_version_can_be_pkg_added, true),         # 12
+            # `guideline_version_has_osi_license` must be run
+            # after `guideline_version_can_be_pkg_added` so
+            # that it can use the downloaded code!
+            (guideline_version_has_osi_license, check_license), # 13
+            (guideline_version_can_be_imported, true),          # 14
+            (:update_status, true),
+            (guideline_dependency_confusion, true),             # 15
+            # We always run the `guideline_distance_check`
+            # check last, because if the check fails, it
+            # prints the list of similar package names in
+            # the automerge comment. To make the comment easy
+            # to read, we want this list to be at the end.
+            (guideline_distance_check, true),                   # 16
+         ]
 
     checked_guidelines = Guideline[]
 

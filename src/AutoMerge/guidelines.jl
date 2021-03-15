@@ -1,5 +1,21 @@
 import HTTP
 
+const guideline_registry_consistency_tests_pass =
+    Guideline("Registy consistency tests",
+              data -> meets_registry_consistency_tests_pass(data.registry_head,
+                                                            data.registry_deps))
+
+function meets_registry_consistency_tests_pass(registry_head::String,
+                                               registry_deps::Vector{String})
+    try
+        RegistryCI.test(registry_head; registry_deps = registry_deps)
+        return true, ""
+    catch ex
+        @error "" exception=(ex, catch_backtrace())
+    end
+    return false, "The registry consistency tests failed"
+end
+
 const guideline_compat_for_all_deps =
     Guideline("Compat (with upper bound) for all dependencies",
               data -> meets_compat_for_all_deps(data.registry_head,
@@ -219,16 +235,20 @@ function meets_distance_check(pkg_name::AbstractString,
     sort!(problem_messages, by = Base.tail)
     message = string("Package name similar to $(length(problem_messages)) existing package",
                     length(problem_messages) > 1 ? "s" : "", ".\n")
-    if length(problem_messages) > comment_collapse_cutoff
+    use_spoiler = length(problem_messages) > comment_collapse_cutoff
+    # we indent each line by two spaces in all the following
+    # so that it nests properly in the outer list.
+    if use_spoiler
         message *=  """
-                    <details>
-                    <summary>Similar package names</summary>
-
+                      <details>
+                      <summary>Similar package names</summary>
+                      
                     """
     end
-    message *= join(join.(zip(1:length(problem_messages), first.(problem_messages)), Ref(". ")), '\n')
-    if length(problem_messages) > comment_collapse_cutoff
-        message *=  "\n</details>\n"
+    numbers = string.("  ", 1:length(problem_messages))
+    message *= join(join.(zip(numbers, first.(problem_messages)), Ref(". ")), '\n')
+    if use_spoiler
+        message *= "\n\n  </details>\n"
     end
     return (false, message)
 end
