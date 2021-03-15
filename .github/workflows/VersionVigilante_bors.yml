@@ -9,7 +9,7 @@ on:
       - '*.md'
       - 'bors.toml'
       - 'codecov.toml'
-      - '.github/*'
+      - '.github/**'
 
 jobs:
   VersionVigilante:
