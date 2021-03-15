@@ -88,7 +88,7 @@ using Dates
     registry = "JuliaRegistries/General",
     tagbot_enabled = true,
     authorized_authors = String["JuliaRegistrator"],
-    authorized_authors_special_jll_exceptions = String["jlbuild"],
+    authorized_authors_special_jll_exceptions = String[""],
     suggest_onepointzero = false,
     additional_statuses = String[],
     additional_check_runs = String[],
