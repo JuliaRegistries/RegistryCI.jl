@@ -5,6 +5,11 @@ on:
     branches:
       - staging
       - trying
+    paths-ignore:
+      - '*.md'
+      - 'bors.toml'
+      - 'codecov.toml'
+      - '.github/*'
 
 jobs:
   VersionVigilante:
