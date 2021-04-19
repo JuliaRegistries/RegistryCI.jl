@@ -30,21 +30,26 @@ delete_old_pull_request_branches(
     GIT = GIT,
 )
 
+requires_commit = "1c843ed4d4d568345ca557fea48f43efdcd0271f"
+hello_world_commit1 = "197e0e03f3f840f830cb5095ab6407d00fbee61c"
+hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
+
 @testset "Integration tests" begin
-    for (test_number, master_dir, feature_dir, public_dir, title, check_license, pass) in [
-            (1, "master_1", "feature_1", "", "New package: Requires v1.0.0", true, true),            # OK: new package
-            (2, "master_2", "feature_2", "", "New version: Requires v2.0.0", false, true),            # OK: new version
-            (3, "master_1", "feature_3", "", "New package: Req v1.0.0", false, false),                # FAIL: name too short
-            (4, "master_2", "feature_4", "", "New version: Requires v2.0.1", false, false),           # FAIL: skips v2.0.0
-            (5, "master_3", "feature_5", "", "New version: Requires v2.0.0", false, false),           # FAIL: modifies extra file
-            (6, "master_1", "feature_6", "", "New package: HelloWorldC_jll v1.0.6+0", false, true),   # OK: new JLL package
-            (7, "master_4", "feature_7", "", "New version: HelloWorldC_jll v1.0.8+0", false, true),   # OK: new JLL version
-            (8, "master_1", "feature_8", "", "New package: HelloWorldC_jll v1.0.6+0", false, false),  # FAIL: unallowed dependency
-            (9, "master_1", "feature_1", "public_1", "New package: Requires v1.0.0", false, true),    # OK: no UUID conflict
-            (10, "master_1", "feature_1", "public_2", "New package: Requires v1.0.0", false, false),  # FAIL: UUID conflict, name differs
-            (11, "master_1", "feature_1", "public_3", "New package: Requires v1.0.0", false, false),  # FAIL: UUID conflict, repo differs
-            (12, "master_1", "feature_1", "public_4", "New package: Requires v1.0.0", false, true),   # OK: UUID conflict but name and repo match
-        ]
+    for (test_number, (master_dir, feature_dir, public_dir, title, check_license, pass, commit)) in enumerate([
+            ("master_1", "feature_1", "", "New package: Requires v1.0.0", true, true, requires_commit), # OK: new package
+            ("master_1", "feature_1", "", "New package: Requires v1.0.0", true, false, "659e09770ba9fda4a503f8bf281d446c9583ff3b"), # FAIL: wrong commit!
+            ("master_2", "feature_2", "", "New version: Requires v2.0.0", false, true, requires_commit),            # OK: new version
+            ("master_1", "feature_3", "", "New package: Req v1.0.0", false, false, requires_commit),                # FAIL: name too short
+            ("master_2", "feature_4", "", "New version: Requires v2.0.1", false, false, requires_commit),           # FAIL: skips v2.0.0
+            ("master_3", "feature_5", "", "New version: Requires v2.0.0", false, false, requires_commit),           # FAIL: modifies extra file
+            ("master_1", "feature_6", "", "New package: HelloWorldC_jll v1.0.6+0", false, true, hello_world_commit1),   # OK: new JLL package
+            ("master_4", "feature_7", "", "New version: HelloWorldC_jll v1.0.8+0", false, true, hello_world_commit2),   # OK: new JLL version
+            ("master_1", "feature_8", "", "New package: HelloWorldC_jll v1.0.6+0", false, false, hello_world_commit1),  # FAIL: unallowed dependency
+            ("master_1", "feature_1", "public_1", "New package: Requires v1.0.0", false, true, requires_commit),    # OK: no UUID conflict
+            ("master_1", "feature_1", "public_2", "New package: Requires v1.0.0", false, false, requires_commit),  # FAIL: UUID conflict, name differs
+            ("master_1", "feature_1", "public_3", "New package: Requires v1.0.0", false, false, requires_commit),  # FAIL: UUID conflict, repo differs
+            ("master_1", "feature_1", "public_4", "New package: Requires v1.0.0", false, true, requires_commit),   # OK: UUID conflict but name and repo match
+        ])
         @info "Performing integration tests with settings" test_number master_dir feature_dir title pass
         with_master_branch(templates(master_dir), "master"; GIT = GIT, repo_url = repo_url_with_auth) do master
             with_feature_branch(templates(feature_dir), master; GIT = GIT, repo_url = repo_url_with_auth) do feature
@@ -55,9 +60,14 @@ delete_old_pull_request_branches(
                 end
                 head = feature
                 base = master
+                body = """
+                - Commit: $commit
+                """
                 params = Dict("title" => title,
                               "head" => head,
-                              "base" => base)
+                              "base" => base,
+                              "body" => body)
+ 
                 sleep(1)
                 pr = GitHub.create_pull_request(repo; auth = auth, params = params)
                 pr = wait_pr_compute_mergeability(GitHub.DEFAULT_API, repo, pr; auth = auth)

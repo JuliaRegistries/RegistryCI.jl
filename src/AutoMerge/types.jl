@@ -81,10 +81,11 @@ struct GitHubAutoMergeData
     # "General" when running automerge for a private registry.
     registry_deps::Vector{String}
 
-    # Location of the Julia depot where the package code
+    # Location of the directory where the package code
     # will be downloaded into. Populated at construction time
     # via `mktempdir`.
-    depot_path::String
+    pkg_code_path::String
+
     # A list of public Julia registries (repository URLs) which will
     # be checked for UUID collisions in order to mitigate the
     # dependency confusion vulnerability. See the
@@ -92,10 +93,10 @@ struct GitHubAutoMergeData
     public_registries::Vector{String}
 end
 
-# Constructor that requires all fields (except `depot_path`) as named arguments.
+# Constructor that requires all fields (except `pkg_code_path`) as named arguments.
 function GitHubAutoMergeData(; kwargs...)
-    depot_path = mktempdir(; cleanup=true)
-    kwargs = (; depot_path=depot_path, kwargs...)
+    pkg_code_path = mktempdir(; cleanup=true)
+    kwargs = (; pkg_code_path=pkg_code_path, kwargs...)
     fields = fieldnames(GitHubAutoMergeData)
     always_assert(Set(keys(kwargs)) == Set(fields))
     always_assert(kwargs[:authorization] ∈ (:normal, :jll))

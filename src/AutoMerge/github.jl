@@ -3,6 +3,7 @@ author_login(pull_request::GitHub.PullRequest) = pull_request.user.login
 base_repo(pull_request::GitHub.PullRequest) = pull_request.base.repo
 
 body(c::GitHub.Comment) = c.body
+body(pr::GitHub.PullRequest) = pr.body
 
 function created_at(pull_request::GitHub.PullRequest)
     result = time_is_already_in_utc(pull_request.created_at)

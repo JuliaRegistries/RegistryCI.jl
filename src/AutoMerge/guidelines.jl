@@ -373,6 +373,48 @@ function _is_x_0_0(version::VersionNumber)
     return result
 end
 
+const guideline_code_can_be_downloaded =
+    Guideline("Code can be downloaded",
+              data -> meets_code_can_be_downloaded(data.registry_head,
+                                                   data.pkg, data.version, data.pr;
+                                                     pkg_code_path = data.pkg_code_path))
+
+function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_path)
+    uuid, package_repo, subdir, tree_hash_from_toml = parse_registry_pkg_info(registry_head, pkg, version)
+
+    # We get the `tree_hash` two ways and check they agree, which helps ensures the `subdir` parameter is correct. Two ways:
+    # 1. By the commit hash in the PR body and the subdir parameter
+    # 2. By the tree hash in the Versions.toml
+
+    commit_hash = commit_from_pull_request_body(pr)
+
+    local tree_hash_from_commit, tree_hash_from_commit_success
+    clone_success = load_files_from_url_and_tree_hash(pkg_code_path, package_repo, tree_hash_from_toml) do dir
+        tree_hash_from_commit, tree_hash_from_commit_success = try
+            readchomp(Cmd(`git rev-parse $(commit_hash):$(subdir)`; dir=dir)), true
+        catch e
+            @error e
+            "", false
+        end
+    end
+
+    if !clone_success
+        return false, "Cloning repository failed."
+    end
+
+    if !tree_hash_from_commit_success
+        return false, "Could not obtain tree hash from commit hash and subdir parameter. Possibly this indicates that an incorrect `subdir` parameter was passed during registration."
+    end
+
+    if tree_hash_from_commit != tree_hash_from_toml
+        @error "`tree_hash_from_commit != tree_hash_from_toml`" tree_hash_from_commit tree_hash_from_toml
+        return false, "Tree hash obtained from the commit message and subdirectory does not match the tree hash in the Versions.toml file. Possibly this indicates that an incorrect `subdir` parameter was passed during registration."
+    else
+        return true, ""
+    end
+end
+
+
 function _generate_pkg_add_command(pkg::String,
                                    version::VersionNumber)::String
     return "Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\", version=v\"$(string(version))\"));"
@@ -385,14 +427,12 @@ const guideline_version_can_be_pkg_added =
               data -> meets_version_can_be_pkg_added(data.registry_head,
                                                      data.pkg,
                                                      data.version;
-                                                     registry_deps = data.registry_deps,
-                                                     depot_path=data.depot_path))
+                                                     registry_deps = data.registry_deps))
 
 function meets_version_can_be_pkg_added(working_directory::String,
                                         pkg::String,
                                         version::VersionNumber;
-                                        registry_deps::Vector{<:AbstractString} = String[],
-                                        depot_path)
+                                        registry_deps::Vector{<:AbstractString} = String[])
     pkg_add_command = _generate_pkg_add_command(pkg,
                                                 version)
     _registry_deps = convert(Vector{String}, registry_deps)
@@ -417,8 +457,7 @@ function meets_version_can_be_pkg_added(working_directory::String,
 
     cmd_ran_successfully = _run_pkg_commands(working_directory, pkg,
                                 version; code = code,
-                                before_message = "Attempting to `Pkg.add` the package",
-                                depot_path=depot_path)
+                                before_message = "Attempting to `Pkg.add` the package")
     if cmd_ran_successfully
         @info "Successfully `Pkg.add`ed the package"
         return true, ""
@@ -433,24 +472,13 @@ end
 
 const guideline_version_has_osi_license =
     Guideline("Version has OSI-approved license",
-              data -> meets_version_has_osi_license(data.pkg; depot_path = data.depot_path))
+              data -> meets_version_has_osi_license(data.pkg; pkg_code_path = data.pkg_code_path))
 
-function pkgdir_from_depot(depot_path::String, pkg::String)
-    pkgdir_parent = joinpath(depot_path, "packages", pkg)
-    isdir(pkgdir_parent) || return nothing
-    all_pkgdir_elements = readdir(pkgdir_parent)
-    @info "" pkgdir_parent all_pkgdir_elements
-    (length(all_pkgdir_elements) == 1) || return nothing
-    only_pkgdir_element = all_pkgdir_elements[1]
-    only_pkdir = joinpath(pkgdir_parent, only_pkgdir_element)
-    isdir(only_pkdir) || return nothing
-    return only_pkdir
-end
 
-function meets_version_has_osi_license(pkg::String; depot_path)
-    pkgdir = pkgdir_from_depot(depot_path, pkg)
-    if pkgdir isa Nothing
-        return false, "Could not check license because could not access package code. Perhaps the `Pkg.add` step failed earlier."
+function meets_version_has_osi_license(pkg::String; pkg_code_path)
+    pkgdir = pkg_code_path
+    if !isdir(pkgdir) || isempty(readdir(pkgdir))
+        return false, "Could not check license because could not access package code. Perhaps the `can_download_code` check failed earlier."
     end
 
     license_results = LicenseCheck.find_licenses(pkgdir)
@@ -489,14 +517,12 @@ const guideline_version_can_be_imported =
               data -> meets_version_can_be_imported(data.registry_head,
                                                     data.pkg,
                                                     data.version;
-                                                    registry_deps = data.registry_deps,
-                                                    depot_path=data.depot_path))
+                                                    registry_deps = data.registry_deps))
 
 function meets_version_can_be_imported(working_directory::String,
                                        pkg::String,
                                        version::VersionNumber;
-                                       registry_deps::Vector{<:AbstractString} = String[],
-                                       depot_path::String)
+                                       registry_deps::Vector{<:AbstractString} = String[])
     pkg_add_command = _generate_pkg_add_command(pkg,
                                                 version)
     _registry_deps = convert(Vector{String}, registry_deps)
@@ -524,8 +550,7 @@ function meets_version_can_be_imported(working_directory::String,
 
     cmd_ran_successfully = _run_pkg_commands(working_directory, pkg,
                                 version; code = code,
-                                before_message = "Attempting to `import` the package",
-                                depot_path=depot_path)
+                                before_message = "Attempting to `import` the package")
 
     if cmd_ran_successfully
         @info "Successfully `import`ed the package"
@@ -541,7 +566,6 @@ end
 function _run_pkg_commands(working_directory::String,
                            pkg::String,
                            version::VersionNumber;
-                           depot_path,
                            code,
                            before_message)
     original_directory = pwd()
@@ -569,7 +593,7 @@ function _run_pkg_commands(working_directory::String,
     # 9. HOME. Lots of things need HOME.
 
     env = Dict(
-        "JULIA_DEPOT_PATH" => depot_path,
+        "JULIA_DEPOT_PATH" => mktempdir(),
         "JULIA_REGISTRYCI_AUTOMERGE" => "true",
         "PYTHON" => "",
         "R_HOME" => "*",

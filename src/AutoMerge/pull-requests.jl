@@ -2,6 +2,8 @@ const new_package_title_regex = r"^New package: (\w*) v(.*)"
 
 const new_version_title_regex = r"^New version: (\w*) v(.*)"
 
+const commit_regex = r"^- Commit: (\w*)$"
+
 is_new_package(pull_request::GitHub.PullRequest) = occursin(new_package_title_regex, title(pull_request))
 
 is_new_version(pull_request::GitHub.PullRequest) = occursin(new_version_title_regex, title(pull_request))
@@ -44,6 +46,11 @@ function parse_pull_request_title(::NewVersion,
     pkg = convert(String, m.captures[1])::String
     version = VersionNumber(m.captures[2])
     return pkg, version
+end
+
+function commit_from_pull_request_body(pull_request::GitHub.PullRequest)
+    m = match(commit_regex, body(pull_request))
+    return convert(String, m.captures[1])::String
 end
 
 function parse_pull_request_title(::NewPackage,

@@ -13,17 +13,7 @@ const guideline_dependency_confusion =
 # offline. This could be implemented with the help of the Scratch
 # package, but requires Julia >= 1.5.
 function has_no_dependency_confusion(pkg, registry_head, public_registries)
-    # We know the name of this package but not its uuid. Look it up in
-    # the registry that includes the current PR.
-    packages = TOML.parsefile(joinpath(registry_head, "Registry.toml"))["packages"]
-    filter!(packages) do (key, value)
-        value["name"] == pkg
-    end
-    # For Julia >= 1.4 this can be simplified with the `only` function.
-    always_assert(length(packages) == 1)
-    uuid = first(keys(packages))
-    # Also need to find out the package repository.
-    package_repo = TOML.parsefile(joinpath(registry_head, packages[uuid]["path"], "Package.toml"))["repo"]
+    uuid, package_repo = parse_registry_pkg_info(registry_head, pkg)
     for repo in public_registries
         try
             registry = clone_repo(repo)
