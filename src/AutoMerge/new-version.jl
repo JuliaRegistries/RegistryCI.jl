@@ -22,8 +22,10 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion; check_licen
     # 7. Version can be installed
     #     - given the proposed changes to the registry, can we resolve and install the new version of the package?
     #     - i.e. can we run `Pkg.add("Foo")`
-    # 8. Package repository contains only OSI-approved license(s) in the license file at toplevel in the version being registered
-    # 9. Version can be loaded
+    # 8. Package code can be downloaded. Can we `git clone` the repo and get the files corresponding to the tree hash in the PR?
+    #       - and does that tree hash match what we get by looking at the subdir + commit the registration was triggered from?
+    # 9. Package repository contains only OSI-approved license(s) in the license file at toplevel in the version being registered
+    # 10. Version can be loaded
     #     - once it's been installed (and built?), can we load the code?
     #     - i.e. can we run `import Foo`
 
@@ -59,10 +61,11 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewVersion; check_licen
                 this_is_jll_package),
             (:update_status, true),
             (guideline_version_can_be_pkg_added, true),            # 7
+            (guideline_code_can_be_downloaded, true),              # 8
             # `guideline_version_has_osi_license` must be run after
-            # `guideline_version_can_be_pkg_added` so that it can use the downloaded code!
-            (guideline_version_has_osi_license, check_license),    # 8
-            (guideline_version_can_be_imported, true),             # 9
+            # `guideline_code_can_be_downloaded` so that it can use the downloaded code!
+            (guideline_version_has_osi_license, check_license),    # 9
+            (guideline_version_can_be_imported, true),             # 10
         ]
 
     checked_guidelines = Guideline[]

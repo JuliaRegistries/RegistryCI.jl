@@ -10,6 +10,41 @@ using TimeZones
 
 const AutoMerge = RegistryCI.AutoMerge
 
+# helper for testing `AutoMerge.meets_version_has_osi_license`
+function pkgdir_from_depot(depot_path::String, pkg::String)
+    pkgdir_parent = joinpath(depot_path, "packages", pkg)
+    isdir(pkgdir_parent) || return nothing
+    all_pkgdir_elements = readdir(pkgdir_parent)
+    @info "" pkgdir_parent all_pkgdir_elements
+    (length(all_pkgdir_elements) == 1) || return nothing
+    only_pkgdir_element = all_pkgdir_elements[1]
+    only_pkdir = joinpath(pkgdir_parent, only_pkgdir_element)
+    isdir(only_pkdir) || return nothing
+    return only_pkdir
+end
+
+@testset "Utilities" begin
+    @testset "`AutoMerge.parse_registry_pkg_info`" begin
+    registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
+    result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI", "1.0.0")
+    @test result == (;  uuid = "0c95cc5f-2f7e-43fe-82dd-79dbcba86b32",
+                        repo = "https://github.com/JuliaRegistries/RegistryCI.jl.git",
+                        subdir = "",
+                        tree_hash = "1036c9c4d600468785fbd9dae87587e59d2f66a9")
+    result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI")
+    @test result == (;  uuid = "0c95cc5f-2f7e-43fe-82dd-79dbcba86b32",
+                        repo = "https://github.com/JuliaRegistries/RegistryCI.jl.git",
+                        subdir = "",
+                        tree_hash = nothing)
+
+    result = AutoMerge.parse_registry_pkg_info(registry_path, "SnoopCompileCore", "2.5.2")
+    @test result == (;  uuid = "e2b509da-e806-4183-be48-004708413034",
+                        repo = "https://github.com/timholy/SnoopCompile.jl.git",
+                        subdir = "SnoopCompileCore",
+                        tree_hash = "bb6d6df44d9aa3494c997aebdee85b713b92c0de")
+    end
+end
+
 @testset "Guidelines for new packages" begin
     @testset "Normal capitalization" begin
         @test AutoMerge.meets_normal_capitalization("Zygote")[1]  # Regular name
@@ -335,36 +370,37 @@ end
         # Let's install a fresh depot in a temporary directory
         # and add some packages to inspect.
         tmp_path = mktempdir()
+        has_osi_license_in_depot(pkg) = AutoMerge.meets_version_has_osi_license(pkg; pkg_code_path=pkgdir_from_depot(tmp_path, pkg))
         withenv("JULIA_DEPOT_PATH" => tmp_path) do
             run(`julia -e 'using Pkg; Pkg.add(["RegistryCI"])'`)
         end
         # Let's test ourselves and some of our dependencies that just have MIT licenses:
-        result = AutoMerge.meets_version_has_osi_license("RegistryCI"; depot_path=tmp_path)
+        result = has_osi_license_in_depot("RegistryCI")
         @test result[1]
-        result = AutoMerge.meets_version_has_osi_license("UnbalancedOptimalTransport"; depot_path=tmp_path)
+        result = has_osi_license_in_depot("UnbalancedOptimalTransport")
         @test result[1]
-        result = AutoMerge.meets_version_has_osi_license("VisualStringDistances"; depot_path=tmp_path)
+        result = has_osi_license_in_depot("VisualStringDistances")
         @test result[1]
 
         # Now, what happens if there's also a non-OSI license in another file?
-        pkg_path = AutoMerge.pkgdir_from_depot(tmp_path, "UnbalancedOptimalTransport")
+        pkg_path = pkgdir_from_depot(tmp_path, "UnbalancedOptimalTransport")
         open(joinpath(pkg_path, "LICENSE2"), write=true) do io
             cc0_bytes = read(joinpath(@__DIR__, "license_data", "CC0.txt"))
             println(io)
             write(io, cc0_bytes)
         end
-        result = AutoMerge.meets_version_has_osi_license("UnbalancedOptimalTransport"; depot_path=tmp_path)
+        result = has_osi_license_in_depot("UnbalancedOptimalTransport")
         @test result[1]
 
         # What if we also remove the original license, leaving only the CC0 license?
         rm(joinpath(pkg_path, "LICENSE"))
-        result = AutoMerge.meets_version_has_osi_license("UnbalancedOptimalTransport"; depot_path=tmp_path)
+        result = has_osi_license_in_depot("UnbalancedOptimalTransport")
         @test !result[1]
 
         # What about no license at all?
-        pkg_path = AutoMerge.pkgdir_from_depot(tmp_path, "VisualStringDistances")
+        pkg_path = pkgdir_from_depot(tmp_path, "VisualStringDistances")
         rm(joinpath(pkg_path, "LICENSE"))
-        result = AutoMerge.meets_version_has_osi_license("VisualStringDistances"; depot_path=tmp_path)
+        result = has_osi_license_in_depot("VisualStringDistances")
         @test !result[1]
     end
 end

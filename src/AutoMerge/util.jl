@@ -1,17 +1,13 @@
 function checkout_branch(dir::AbstractString,
-                         branch::AbstractString;
-                         git_command::AbstractString = "git")
-    original_working_directory = pwd()
-    cd(dir)
-    Base.run(`$(git_command) checkout $(branch)`)
-    cd(original_working_directory)
+    branch::AbstractString;
+    git_command::AbstractString = "git")
+    Base.run(Cmd(`$(git_command) checkout $(branch)`; dir=dir))
 end
 
 clone_repo(repo::GitHub.Repo) = clone_repo(repo_url(repo))
 
 function clone_repo(url::AbstractString)
-    parent_dir = mktempdir()
-    atexit(() -> rm(parent_dir; force = true, recursive = true))
+    parent_dir = mktempdir(; cleanup=true)
     repo_dir = joinpath(parent_dir, "REPO")
     my_retry(() -> _clone_repo_into_dir(url, repo_dir))
     @info("Clone was successful")
@@ -24,6 +20,62 @@ function _clone_repo_into_dir(url::AbstractString, repo_dir)
     mkpath(repo_dir)
     LibGit2.clone(url, repo_dir)
     return repo_dir
+end
+
+"""
+    load_files_from_url_and_tree_hash(f, destination::String, url::String, tree_hash::String) -> Bool
+
+Attempts to clone a git repo from `url` into a temporary directory, runs `f(dir)` on that directory,
+then extract the files and folders from a given `tree_hash`, placing them in `destination`.
+
+Returns a boolean indicating if the cloning succeeded.
+"""
+function load_files_from_url_and_tree_hash(f, destination::String, url::String, tree_hash::String)
+    pkg_clone_dir = mktempdir()
+    clone_success = try
+        _clone_repo_into_dir(url, pkg_clone_dir)
+        true
+    catch e
+        @error "Cloning $url failed" e
+        false
+    end
+    # if cloning failed, bail now
+    !clone_success && return clone_success
+
+    f(pkg_clone_dir)
+    Tar.extract(Cmd(`git archive $tree_hash`; dir=pkg_clone_dir), destination)
+    return clone_success
+end
+
+"""
+    parse_registry_pkg_info(registry_path, pkg, version=nothing) -> @NamedTuple{uuid::String, repo::String, subdir::String, tree_hash::Union{Nothing, String}}
+
+Searches the registry located at `registry_path` for a package with name `pkg`. Upon finding it,
+it parses the associated `Package.toml` file and returns the UUID and repository URI, and `subdir`.
+
+If `version` is supplied, then the associated `tree_hash` will be returned. Otherwise, `tree_hash` will be `nothing`.
+"""
+function parse_registry_pkg_info(registry_path, pkg, version=nothing)
+    # We know the name of this package but not its uuid. Look it up in
+    # the registry that includes the current PR.
+    packages = TOML.parsefile(joinpath(registry_path, "Registry.toml"))["packages"]
+    filter!(packages) do (key, value)
+        value["name"] == pkg
+    end
+    # For Julia >= 1.4 this can be simplified with the `only` function.
+    always_assert(length(packages) == 1)
+    uuid = convert(String, first(keys(packages)))
+    # Also need to find out the package repository.
+    package = TOML.parsefile(joinpath(registry_path, packages[uuid]["path"], "Package.toml"))
+    repo = convert(String, package["repo"])
+    subdir = convert(String, get(package, "subdir", ""))
+    if version === nothing
+        tree_hash = nothing
+    else
+        versions = TOML.parsefile(joinpath(registry_path, packages[uuid]["path"], "Versions.toml"))
+        tree_hash = convert(String, versions[string(version)]["git-tree-sha1"])
+    end
+    return (; uuid=uuid, repo=repo, subdir=subdir, tree_hash=tree_hash)
 end
 
 function _comment_disclaimer()

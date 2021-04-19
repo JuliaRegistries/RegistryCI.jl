@@ -15,6 +15,7 @@ import TOML
 import Printf
 import RegistryTools
 import ..RegistryCI
+import Tar
 
 include("assert.jl")
 
