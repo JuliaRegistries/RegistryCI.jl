@@ -49,7 +49,7 @@ function meets_compat_for_julia(working_directory::AbstractString, pkg, version)
         end
     end
 
-    return false, "Julia has no compat entry."
+    return false, "There is no compat entry for `julia`."
 end
 
 const guideline_compat_for_all_deps =
