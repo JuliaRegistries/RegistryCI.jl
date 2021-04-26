@@ -24,9 +24,11 @@ const guideline_compat_for_julia =
 
 function meets_compat_for_julia(working_directory::AbstractString, pkg, version)
     compat = Pkg.TOML.parsefile(joinpath(working_directory, uppercase(pkg[1:1]), pkg, "Compat.toml"))
-    # Now, we go through all the compat entries. If a dependency has a compat
-    # entry with an upper bound, we change the corresponding value in the Dict
-    # to true.
+    # Go through all the compat entries looking for the julia compat
+    # of the new version. When found, test
+    # 1. that it is a bounded range,
+    # 2. that the upper bound is not 2 or higher,
+    # 3. that the range includes at least one 1.x version.
     for version_range in keys(compat)
         if version in Pkg.Types.VersionRange(version_range)
             if haskey(compat[version_range], "julia")
