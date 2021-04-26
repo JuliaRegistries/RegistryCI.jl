@@ -36,7 +36,7 @@ function meets_compat_for_julia(working_directory::AbstractString, pkg, version)
                     return false, "The compat entry for `julia` is unbounded."
                 elseif !isempty(intersect(julia_compat,
                                           Pkg.Types.VersionSpec("2-*")))
-                    return false, "Julia has a compat entry with an upper bound of 2 or higher."
+                    return false, "The compat entry for `julia` has an upper bound of 2 or higher."
                 elseif isempty(intersect(julia_compat,
                                          Pkg.Types.VersionSpec("1")))
                     # For completeness, although this seems rather
