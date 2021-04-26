@@ -41,7 +41,7 @@ function meets_compat_for_julia(working_directory::AbstractString, pkg, version)
                                          Pkg.Types.VersionSpec("1")))
                     # For completeness, although this seems rather
                     # unlikely to occur.
-                    return false, "Julia has a compat entry that doesn't include any 1.x version."
+                    return false, "The compat entry for `julia` doesn't include any 1.x version."
                 else
                     return true, ""
                 end
