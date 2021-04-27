@@ -116,7 +116,8 @@ function pull_request_build(api::GitHub.GitHubAPI,
                             whoami::String,
                             registry_deps::Vector{<:AbstractString} = String[],
                             check_license::Bool,
-                            public_registries::Vector{<:AbstractString} = String[])::Nothing
+                            public_registries::Vector{<:AbstractString} = String[],
+                            read_only::Bool)::Nothing
     # 1. Check if the PR is open, if not quit.
     # 2. Determine if it is a new package or new version of an
     #    existing package, if neither quit.
@@ -173,7 +174,8 @@ function pull_request_build(api::GitHub.GitHubAPI,
                                suggest_onepointzero = suggest_onepointzero,
                                whoami = whoami,
                                registry_deps = registry_deps,
-                               public_registries = public_registries)
+                               public_registries = public_registries,
+                               read_only = read_only)
     pull_request_build(data, registration_type; check_license=check_license)
     rm(registry_master; force = true, recursive = true)
     return nothing

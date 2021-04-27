@@ -175,7 +175,8 @@ function cron_or_api_build(api::GitHub.GitHubAPI,
                            new_jll_version_waiting_period,
                            whoami::String,
                            all_statuses::AbstractVector{<:AbstractString},
-                           all_check_runs::AbstractVector{<:AbstractString})
+                           all_check_runs::AbstractVector{<:AbstractString},
+                           read_only::Bool)
     # first, get a list of ALL open pull requests on this repository
     # then, loop through each of them.
     all_currently_open_pull_requests = my_retry(() -> get_all_pull_requests(api, registry, "open"; auth = auth))
@@ -201,7 +202,8 @@ function cron_or_api_build(api::GitHub.GitHubAPI,
                                                  new_jll_version_waiting_period = new_jll_version_waiting_period,
                                                  whoami = whoami,
                                                  all_statuses = all_statuses,
-                                                 all_check_runs = all_check_runs),
+                                                 all_check_runs = all_check_runs,
+                                                 read_only = read_only),
                          num_retries)
             catch ex
                 at_least_one_exception_was_thrown = true
@@ -231,7 +233,8 @@ function cron_or_api_build(api::GitHub.GitHubAPI,
                            new_jll_version_waiting_period,
                            whoami::String,
                            all_statuses::AbstractVector{<:AbstractString},
-                           all_check_runs::AbstractVector{<:AbstractString})
+                           all_check_runs::AbstractVector{<:AbstractString},
+                           read_only::Bool)
     #       first, see if the author is an authorized author. if not, then skip.
     #       next, see if the title matches either the "New Version" regex or
     #               the "New Package regex". if it is not either a new
@@ -355,7 +358,11 @@ function cron_or_api_build(api::GitHub.GitHubAPI,
             @info(string("Pull request: $(pr_number). ",
                          "Type: $(pr_type). ",
                          "Decision: merge now."))
-            my_retry(() -> merge!(api, registry, pr, passed_pr_head_sha; auth = auth))
+            if read_only
+                @info "`read_only` mode on; skipping merge"
+            else
+                my_retry(() -> merge!(api, registry, pr, passed_pr_head_sha; auth = auth))
+            end
         else
             @info(string("Pull request: $(pr_number). ",
                          "Type: $(pr_type). ",
@@ -378,7 +385,11 @@ function cron_or_api_build(api::GitHub.GitHubAPI,
             @info(string("Pull request: $(pr_number). ",
                          "Type: $(pr_type). ",
                          "Decision: merge now."))
-            my_retry(() -> merge!(api, registry, pr, passed_pr_head_sha; auth = auth))
+            if read_only
+                @info "`read_only` mode on; skipping merge"
+            else
+                my_retry(() -> merge!(api, registry, pr, passed_pr_head_sha; auth = auth))
+            end
         else
             @info(string("Pull request: $(pr_number). ",
                          "Type: $(pr_type). ",

@@ -29,7 +29,8 @@ function run(env = ENV,
              # which will be checked for UUID collisions in order to
              # mitigate the dependency confusion vulnerability. See
              # the `dependency_confusion.jl` file for details.
-             public_registries::Vector{<:AbstractString} = String[])::Nothing
+             public_registries::Vector{<:AbstractString} = String[],
+             read_only::Bool=false)::Nothing
     all_statuses = deepcopy(additional_statuses)
     all_check_runs = deepcopy(additional_check_runs)
     push!(all_statuses, "automerge/decision")
@@ -77,7 +78,8 @@ function run(env = ENV,
                            whoami = whoami,
                            registry_deps = registry_deps,
                            check_license = check_license,
-                           public_registries = public_registries)
+                           public_registries = public_registries,
+                           read_only = read_only)
     else
         always_assert(run_merge_build)
         cron_or_api_build(api,
@@ -93,7 +95,8 @@ function run(env = ENV,
                           new_jll_version_waiting_period = new_jll_version_waiting_period,
                           whoami = whoami,
                           all_statuses = all_statuses,
-                          all_check_runs = all_check_runs)
+                          all_check_runs = all_check_runs,
+                          read_only = read_only)
     end
     return nothing
 end
