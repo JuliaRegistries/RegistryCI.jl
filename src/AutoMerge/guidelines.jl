@@ -16,6 +16,44 @@ function meets_registry_consistency_tests_pass(registry_head::String,
     return false, "The registry consistency tests failed"
 end
 
+const guideline_compat_for_julia =
+    Guideline("Compat with upper bound for julia",
+              data -> meets_compat_for_julia(data.registry_head,
+                                             data.pkg,
+                                             data.version))
+
+function meets_compat_for_julia(working_directory::AbstractString, pkg, version)
+    compat = Pkg.TOML.parsefile(joinpath(working_directory, uppercase(pkg[1:1]), pkg, "Compat.toml"))
+    # Go through all the compat entries looking for the julia compat
+    # of the new version. When found, test
+    # 1. that it is a bounded range,
+    # 2. that the upper bound is not 2 or higher,
+    # 3. that the range includes at least one 1.x version.
+    for version_range in keys(compat)
+        if version in Pkg.Types.VersionRange(version_range)
+            if haskey(compat[version_range], "julia")
+                julia_compat = Pkg.Types.VersionSpec(compat[version_range]["julia"])
+                if !isempty(intersect(julia_compat,
+                                      Pkg.Types.VersionSpec("$(typemax(Base.VInt))-*")))
+                    return false, "The compat entry for `julia` is unbounded."
+                elseif !isempty(intersect(julia_compat,
+                                          Pkg.Types.VersionSpec("2-*")))
+                    return false, "The compat entry for `julia` has an upper bound of 2 or higher."
+                elseif isempty(intersect(julia_compat,
+                                         Pkg.Types.VersionSpec("1")))
+                    # For completeness, although this seems rather
+                    # unlikely to occur.
+                    return false, "The compat entry for `julia` doesn't include any 1.x version."
+                else
+                    return true, ""
+                end
+            end
+        end
+    end
+
+    return false, "There is no compat entry for `julia`."
+end
+
 const guideline_compat_for_all_deps =
     Guideline("Compat (with upper bound) for all dependencies",
               data -> meets_compat_for_all_deps(data.registry_head,
@@ -28,8 +66,6 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
     # First, we construct a Dict in which the keys are the package's
     # dependencies, and the value is always false.
     dep_has_compat_with_upper_bound = Dict{String, Bool}()
-    @debug("We always have julia as a dependency")
-    dep_has_compat_with_upper_bound["julia"] = false
     for version_range in keys(deps)
         if version in Pkg.Types.VersionRange(version_range)
             for name in keys(deps[version_range])
@@ -45,9 +81,7 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
     # to true.
     for version_range in keys(compat)
         if version in Pkg.Types.VersionRange(version_range)
-            for compat_entry in compat[version_range]
-                name = compat_entry[1]
-                value = compat_entry[2]
+            for (name, value) in compat[version_range]
                 if value isa Vector
                     if !isempty(value)
                         value_ranges = Pkg.Types.VersionRange.(value)

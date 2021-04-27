@@ -30,32 +30,36 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage; check_licen
     # 7.  DISABLED. Standard initial version number - one of 0.0.1, 0.1.0, 1.0.0, X.0.0
     #         - does not apply to JLL packages
     # 8.  Repo URL ends with /$name.jl.git where name is the package name. We only apply this check if the package is not a subdirectory package.
-    # 9.  Compat for all dependencies
+    # 9.  Compat for Julia
+    #         - there should be a [compat] entry for Julia
+    #         - the Julia [compat] should have an upper bound
+    #         - the Julia [compat] upper bound must have major version 1
+    # 10.  Compat for all dependencies
     #         - there should be a [compat] entry for Julia
     #         - all [deps] should also have [compat] entries
     #         - all [compat] entries should have upper bounds
     #         - dependencies that are standard libraries do not need [compat] entries
     #         - dependencies that are JLL packages do not need [compat] entries
-    # 10. (only applies to JLL packages) The only dependencies of the package are:
+    # 11. (only applies to JLL packages) The only dependencies of the package are:
     #         - Pkg
     #         - Libdl
     #         - other JLL packages
-    # 11. Package's name has only ASCII characters
-    # 12. Version can be installed
+    # 12. Package's name has only ASCII characters
+    # 13. Version can be installed
     #         - given the proposed changes to the registry, can we resolve and install the new version of the package?
     #         - i.e. can we run `Pkg.add("Foo")`
-    # 13. Package code can be downloaded. Can we `git clone` the repo and get the files corresponding to the tree hash in the PR?
+    # 14. Package code can be downloaded. Can we `git clone` the repo and get the files corresponding to the tree hash in the PR?
     #       - and does that tree hash match what we get by looking at the subdir + commit the registration was triggered from?
-    # 14. Package repository contains only OSI-approved license(s) in the license file at toplevel in the version being registered
-    # 15. Version can be loaded
+    # 15. Package repository contains only OSI-approved license(s) in the license file at toplevel in the version being registered
+    # 16. Version can be loaded
     #         - once it's been installed (and built?), can we load the code?
     #         - i.e. can we run `import Foo`
-    # 16. Dependency confusion check
+    # 17. Dependency confusion check
     #         - Package UUID doesn't conflict with an UUID in the provided
     #           list of package registries. The exception is if also the
     #           package name *and* package URL matches those in the other
     #           registry, in which case this is a valid co-registration.
-    # 17. Package's name is sufficiently far from existing package names in the registry
+    # 18. Package's name is sufficiently far from existing package names in the registry
     #         - We always run this check last.
     #         - We exclude JLL packages from the "existing names"
     #         - We use three checks:
@@ -94,26 +98,27 @@ function pull_request_build(data::GitHubAutoMergeData, ::NewPackage; check_licen
             # (guideline_standard_initial_version_number,       # 7 (deactivated)
             #     !this_pr_can_use_special_jll_exceptions),
             (guideline_repo_url_requirement, true),             # 8
-            (guideline_compat_for_all_deps, true),              # 9
-            (guideline_allowed_jll_nonrecursive_dependencies,   # 10
+            (guideline_compat_for_julia, true),                 # 9
+            (guideline_compat_for_all_deps, true),              # 10
+            (guideline_allowed_jll_nonrecursive_dependencies,   # 11
                 this_is_jll_package),
-            (guideline_name_ascii, true),                       # 11
+            (guideline_name_ascii, true),                       # 12
             (:update_status, true),
-            (guideline_version_can_be_pkg_added, true),         # 12
-            (guideline_code_can_be_downloaded, true),           # 13
+            (guideline_version_can_be_pkg_added, true),         # 13
+            (guideline_code_can_be_downloaded, true),           # 14
             # `guideline_version_has_osi_license` must be run
             # after `guideline_code_can_be_downloaded` so
             # that it can use the downloaded code!
-            (guideline_version_has_osi_license, check_license), # 14
-            (guideline_version_can_be_imported, true),          # 15
+            (guideline_version_has_osi_license, check_license), # 15
+            (guideline_version_can_be_imported, true),          # 16
             (:update_status, true),
-            (guideline_dependency_confusion, true),             # 16
+            (guideline_dependency_confusion, true),             # 17
             # We always run the `guideline_distance_check`
             # check last, because if the check fails, it
             # prints the list of similar package names in
             # the automerge comment. To make the comment easy
             # to read, we want this list to be at the end.
-            (guideline_distance_check, true),                   # 17
+            (guideline_distance_check, true),                   # 18
          ]
 
     checked_guidelines = Guideline[]
