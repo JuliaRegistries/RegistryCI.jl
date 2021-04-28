@@ -61,7 +61,9 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                 head = feature
                 base = master
                 body = """
+                - Foo: Bar
                 - Commit: $commit
+                - Hello: World
                 """
                 params = Dict("title" => title,
                               "head" => head,
