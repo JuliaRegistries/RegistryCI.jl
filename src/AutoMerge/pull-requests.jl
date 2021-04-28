@@ -49,7 +49,9 @@ function parse_pull_request_title(::NewVersion,
 end
 
 function commit_from_pull_request_body(pull_request::GitHub.PullRequest)
-    m = match(commit_regex, body(pull_request))
+    pr_body = body(pull_request)
+    @debug "" pr_body
+    m = match(commit_regex, pr_body)
     return convert(String, m.captures[1])::String
 end
 
