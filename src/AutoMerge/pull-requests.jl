@@ -76,7 +76,8 @@ function pull_request_build(api::GitHub.GitHubAPI,
                             suggest_onepointzero::Bool,
                             registry_deps::Vector{<:AbstractString} = String[],
                             check_license::Bool,
-                            public_registries::Vector{<:AbstractString} = String[])::Nothing
+                            public_registries::Vector{<:AbstractString} = String[],
+                            read_only::Bool)::Nothing
     pr = my_retry(() -> GitHub.pull_request(api, registry, pr_number; auth=auth))
     _github_api_pr_head_commit_sha = pull_request_head_sha(pr)
     if current_pr_head_commit_sha != _github_api_pr_head_commit_sha
@@ -97,7 +98,8 @@ function pull_request_build(api::GitHub.GitHubAPI,
                                 whoami=whoami,
                                 registry_deps=registry_deps,
                                 check_license=check_license,
-                                public_registries=public_registries)
+                                public_registries=public_registries,
+                                read_only=read_only)
     return result
 end
 
