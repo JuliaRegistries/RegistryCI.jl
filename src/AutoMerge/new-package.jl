@@ -1,6 +1,10 @@
 # TODO: This function should probably be moved to some other file,
 #       unless new_package.jl and new_version.jl are merged into one.
 function update_status(data::GitHubAutoMergeData; kwargs...)
+    if data.read_only
+        @info "`read_only` mode; skipping updating the status" 
+        return nothing
+    end
     my_retry(() -> GitHub.create_status(data.api,
                                         data.registry,
                                         data.current_pr_head_commit_sha;

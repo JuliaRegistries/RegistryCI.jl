@@ -1,5 +1,9 @@
 function update_automerge_comment!(data::GitHubAutoMergeData,
                                    body::AbstractString)::Nothing
+    if data.read_only
+        @info "`read_only` mode; skipping updating automerge comment."
+        return nothing
+    end
     api = data.api
     repo = data.registry
     pr = data.pr

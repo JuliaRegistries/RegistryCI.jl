@@ -91,6 +91,9 @@ struct GitHubAutoMergeData
     # dependency confusion vulnerability. See the
     # `dependency_confusion.jl` file for details.
     public_registries::Vector{String}
+
+    # whether only read-only actions should be taken
+    read_only::Bool
 end
 
 # Constructor that requires all fields (except `pkg_code_path`) as named arguments.
