@@ -25,23 +25,23 @@ end
 
 @testset "Utilities" begin
     @testset "`AutoMerge.parse_registry_pkg_info`" begin
-    registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
-    result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI", "1.0.0")
-    @test result == (;  uuid = "0c95cc5f-2f7e-43fe-82dd-79dbcba86b32",
-                        repo = "https://github.com/JuliaRegistries/RegistryCI.jl.git",
-                        subdir = "",
-                        tree_hash = "1036c9c4d600468785fbd9dae87587e59d2f66a9")
-    result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI")
-    @test result == (;  uuid = "0c95cc5f-2f7e-43fe-82dd-79dbcba86b32",
-                        repo = "https://github.com/JuliaRegistries/RegistryCI.jl.git",
-                        subdir = "",
-                        tree_hash = nothing)
+        registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
+        result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI", "1.0.0")
+        @test result == (;  uuid = "0c95cc5f-2f7e-43fe-82dd-79dbcba86b32",
+                            repo = "https://github.com/JuliaRegistries/RegistryCI.jl.git",
+                            subdir = "",
+                            tree_hash = "1036c9c4d600468785fbd9dae87587e59d2f66a9")
+        result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI")
+        @test result == (;  uuid = "0c95cc5f-2f7e-43fe-82dd-79dbcba86b32",
+                            repo = "https://github.com/JuliaRegistries/RegistryCI.jl.git",
+                            subdir = "",
+                            tree_hash = nothing)
 
-    result = AutoMerge.parse_registry_pkg_info(registry_path, "SnoopCompileCore", "2.5.2")
-    @test result == (;  uuid = "e2b509da-e806-4183-be48-004708413034",
-                        repo = "https://github.com/timholy/SnoopCompile.jl.git",
-                        subdir = "SnoopCompileCore",
-                        tree_hash = "bb6d6df44d9aa3494c997aebdee85b713b92c0de")
+        result = AutoMerge.parse_registry_pkg_info(registry_path, "SnoopCompileCore", "2.5.2")
+        @test result == (;  uuid = "e2b509da-e806-4183-be48-004708413034",
+                            repo = "https://github.com/timholy/SnoopCompile.jl.git",
+                            subdir = "SnoopCompileCore",
+                            tree_hash = "bb6d6df44d9aa3494c997aebdee85b713b92c0de")
     end
 end
 
@@ -194,6 +194,33 @@ end
     @testset "assert.jl" begin
         @test nothing == @test_nowarn AutoMerge.always_assert(1 == 1)
         @test_throws AutoMerge.AlwaysAssertionError AutoMerge.always_assert(1 == 2)
+    end
+    @testset "pull-requests.jl" begin
+        @testset "regexes" begin
+            @testset "new_package_title_regex" begin
+                @test occursin(AutoMerge.new_package_title_regex, "New package: HelloWorld v1.2.3")
+                @test occursin(AutoMerge.new_package_title_regex, "New package: HelloWorld v1.2.3+0")
+                @test !occursin(AutoMerge.new_package_title_regex, "New version: HelloWorld v1.2.3")
+                @test !occursin(AutoMerge.new_package_title_regex, "New version: HelloWorld v1.2.3+0")
+            end
+            @testset "new_version_title_regex" begin
+                @test !occursin(AutoMerge.new_version_title_regex, "New package: HelloWorld v1.2.3")
+                @test !occursin(AutoMerge.new_version_title_regex, "New package: HelloWorld v1.2.3+0")
+                @test occursin(AutoMerge.new_version_title_regex, "New version: HelloWorld v1.2.3")
+                @test occursin(AutoMerge.new_version_title_regex, "New version: HelloWorld v1.2.3+0")
+            end
+            @testset "commit_regex" begin
+                @test occursin(AutoMerge.commit_regex, "- Foo\n- Commit: mycommithash123\n- Bar")
+                @test occursin(AutoMerge.commit_regex, "- Commit: mycommithash123\n- Bar")
+                @test occursin(AutoMerge.commit_regex, "- Foo\n- Commit: mycommithash123")
+                @test occursin(AutoMerge.commit_regex, "- Commit: mycommithash123")
+                @test occursin(AutoMerge.commit_regex, "* Foo\n* Commit: mycommithash123\n* Bar")
+                @test occursin(AutoMerge.commit_regex, "* Commit: mycommithash123\n* Bar")
+                @test occursin(AutoMerge.commit_regex, "* Foo\n* Commit: mycommithash123")
+                @test occursin(AutoMerge.commit_regex, "* Commit: mycommithash123")
+                @test !occursin(AutoMerge.commit_regex, "- Commit: mycommit hash 123")
+            end
+        end
     end
     @testset "semver.jl" begin
         @test AutoMerge.leftmost_nonzero(v"1.2.3") == :major

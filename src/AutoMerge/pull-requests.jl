@@ -1,8 +1,8 @@
-const new_package_title_regex = r"^New package: (\w*) v(.*)"
+const new_package_title_regex = r"^New package: (\w*?) v(\S*?)$"
 
-const new_version_title_regex = r"^New version: (\w*) v(.*)"
+const new_version_title_regex = r"^New version: (\w*?) v(\S*?)$"
 
-const commit_regex = r"\n- Commit: (\w*)\n"
+const commit_regex = r"(?:^|\n)(?:\-|\*) Commit: (\w*?)(?:$|\n)"
 
 is_new_package(pull_request::GitHub.PullRequest) = occursin(new_package_title_regex, title(pull_request))
 
@@ -50,7 +50,7 @@ end
 
 function commit_from_pull_request_body(pull_request::GitHub.PullRequest)
     pr_body = body(pull_request)
-    m = match(commit_regex, string("\n", pr_body, "\n"))
+    m = match(commit_regex, pr_body)
     return convert(String, m.captures[1])::String
 end
 
