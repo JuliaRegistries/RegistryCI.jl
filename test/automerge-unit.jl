@@ -202,7 +202,7 @@ end
                 @test occursin(AutoMerge.new_package_title_regex, "New package: HelloWorld v1.2.3+0")
                 @test !occursin(AutoMerge.new_package_title_regex, "New version: HelloWorld v1.2.3")
                 @test !occursin(AutoMerge.new_package_title_regex, "New version: HelloWorld v1.2.3+0")
-                let 
+                let
                     m = match(AutoMerge.new_package_title_regex, "New package: HelloWorld v1.2.3+0")
                     @test length(m.captures) == 2
                     @test m.captures[1] == "HelloWorld"
@@ -214,7 +214,7 @@ end
                 @test !occursin(AutoMerge.new_version_title_regex, "New package: HelloWorld v1.2.3+0")
                 @test occursin(AutoMerge.new_version_title_regex, "New version: HelloWorld v1.2.3")
                 @test occursin(AutoMerge.new_version_title_regex, "New version: HelloWorld v1.2.3+0")
-                let 
+                let
                     m = match(AutoMerge.new_version_title_regex, "New version: HelloWorld v1.2.3+0")
                     @test length(m.captures) == 2
                     @test m.captures[1] == "HelloWorld"
@@ -231,7 +231,7 @@ end
                 @test occursin(AutoMerge.commit_regex, "* Foo\n* Commit: mycommithash123")
                 @test occursin(AutoMerge.commit_regex, "* Commit: mycommithash123")
                 @test !occursin(AutoMerge.commit_regex, "- Commit: mycommit hash 123")
-                let 
+                let
                     m = match(AutoMerge.commit_regex, "- Foo\n- Commit: mycommithash123\n- Bar")
                     @test length(m.captures) == 1
                     @test m.captures[1] == "mycommithash123"

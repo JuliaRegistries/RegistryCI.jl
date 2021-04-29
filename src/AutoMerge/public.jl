@@ -1,3 +1,6 @@
+"""
+    run(env, cicfg::CIService; kwargs...)
+"""
 function run(env = ENV,
              cicfg::CIService=auto_detect_ci_service(;env=env);
              merge_new_packages::Bool,
