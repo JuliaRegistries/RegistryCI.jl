@@ -73,7 +73,7 @@ end
         @test !AutoMerge.meets_julia_name_check("AbcJuLiA")[1]
     end
     @testset "Package name is ASCII" begin
-        @test !AutoMerge.meets_name_ascii("ábc")[1]
+        @test !AutoMerge.meets_name_ascii("ábc")[1]
         @test AutoMerge.meets_name_ascii("abc")[1]
     end
     @testset "Package name distance" begin
@@ -202,12 +202,24 @@ end
                 @test occursin(AutoMerge.new_package_title_regex, "New package: HelloWorld v1.2.3+0")
                 @test !occursin(AutoMerge.new_package_title_regex, "New version: HelloWorld v1.2.3")
                 @test !occursin(AutoMerge.new_package_title_regex, "New version: HelloWorld v1.2.3+0")
+                let 
+                    m = match(AutoMerge.new_package_title_regex, "New package: HelloWorld v1.2.3+0")
+                    @test length(m.captures) == 2
+                    @test m.captures[1] == "HelloWorld"
+                    @test m.captures[2] == "1.2.3+0"
+                end
             end
             @testset "new_version_title_regex" begin
                 @test !occursin(AutoMerge.new_version_title_regex, "New package: HelloWorld v1.2.3")
                 @test !occursin(AutoMerge.new_version_title_regex, "New package: HelloWorld v1.2.3+0")
                 @test occursin(AutoMerge.new_version_title_regex, "New version: HelloWorld v1.2.3")
                 @test occursin(AutoMerge.new_version_title_regex, "New version: HelloWorld v1.2.3+0")
+                let 
+                    m = match(AutoMerge.new_version_title_regex, "New version: HelloWorld v1.2.3+0")
+                    @test length(m.captures) == 2
+                    @test m.captures[1] == "HelloWorld"
+                    @test m.captures[2] == "1.2.3+0"
+                end
             end
             @testset "commit_regex" begin
                 @test occursin(AutoMerge.commit_regex, "- Foo\n- Commit: mycommithash123\n- Bar")
@@ -219,6 +231,11 @@ end
                 @test occursin(AutoMerge.commit_regex, "* Foo\n* Commit: mycommithash123")
                 @test occursin(AutoMerge.commit_regex, "* Commit: mycommithash123")
                 @test !occursin(AutoMerge.commit_regex, "- Commit: mycommit hash 123")
+                let 
+                    m = match(AutoMerge.commit_regex, "- Foo\n- Commit: mycommithash123\n- Bar")
+                    @test length(m.captures) == 1
+                    @test m.captures[1] == "mycommithash123"
+                end
             end
         end
     end
