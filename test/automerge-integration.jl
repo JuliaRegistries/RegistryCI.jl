@@ -14,6 +14,7 @@ include("automerge-integration-utils.jl")
 
 AUTOMERGE_INTEGRATION_TEST_REPO = ENV["AUTOMERGE_INTEGRATION_TEST_REPO"]::String
 TEST_USER_GITHUB_TOKEN = ENV["BCBI_TEST_USER_GITHUB_TOKEN"]::String
+INTEGRATION_TEST_READ_ONLY_TOKEN = ENV["INTEGRATION_TEST_READ_ONLY_TOKEN"]::String
 GIT = "git"
 auth = GitHub.authenticate(TEST_USER_GITHUB_TOKEN)
 whoami = RegistryCI.AutoMerge.username(GitHub.DEFAULT_API, auth)
@@ -69,7 +70,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                               "head" => head,
                               "base" => base,
                               "body" => body)
- 
+
                 sleep(1)
                 pr = GitHub.create_pull_request(repo; auth = auth, params = params)
                 pr = wait_pr_compute_mergeability(GitHub.DEFAULT_API, repo, pr; auth = auth)
