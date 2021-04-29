@@ -205,8 +205,8 @@ end
                 let 
                     m = match(AutoMerge.new_package_title_regex, "New package: HelloWorld v1.2.3+0")
                     @test length(m.captures) == 2
-                    @test m.capture[1] == "HelloWorld"
-                    @test m.capture[2] == "v1.2.3+0"
+                    @test m.captures[1] == "HelloWorld"
+                    @test m.captures[2] == "v1.2.3+0"
                 end
             end
             @testset "new_version_title_regex" begin
@@ -217,8 +217,8 @@ end
                 let 
                     m = match(AutoMerge.new_version_title_regex, "New version: HelloWorld v1.2.3+0")
                     @test length(m.captures) == 2
-                    @test m.capture[1] == "HelloWorld"
-                    @test m.capture[2] == "v1.2.3+0"
+                    @test m.captures[1] == "HelloWorld"
+                    @test m.captures[2] == "v1.2.3+0"
                 end
             end
             @testset "commit_regex" begin
@@ -234,7 +234,7 @@ end
                 let 
                     m = match(AutoMerge.commit_regex, "- Foo\n- Commit: mycommithash123\n- Bar")
                     @test length(m.captures) == 1
-                    @test m.capture[1] == "mycommithash123"
+                    @test m.captures[1] == "mycommithash123"
                 end
             end
         end
