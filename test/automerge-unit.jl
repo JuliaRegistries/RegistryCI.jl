@@ -73,7 +73,7 @@ end
         @test !AutoMerge.meets_julia_name_check("AbcJuLiA")[1]
     end
     @testset "Package name is ASCII" begin
-        @test !AutoMerge.meets_name_ascii("ábc")[1]
+        @test !AutoMerge.meets_name_ascii("ábc")[1]
         @test AutoMerge.meets_name_ascii("abc")[1]
     end
     @testset "Package name distance" begin
@@ -206,7 +206,7 @@ end
                     m = match(AutoMerge.new_package_title_regex, "New package: HelloWorld v1.2.3+0")
                     @test length(m.captures) == 2
                     @test m.captures[1] == "HelloWorld"
-                    @test m.captures[2] == "v1.2.3+0"
+                    @test m.captures[2] == "1.2.3+0"
                 end
             end
             @testset "new_version_title_regex" begin
@@ -218,7 +218,7 @@ end
                     m = match(AutoMerge.new_version_title_regex, "New version: HelloWorld v1.2.3+0")
                     @test length(m.captures) == 2
                     @test m.captures[1] == "HelloWorld"
-                    @test m.captures[2] == "v1.2.3+0"
+                    @test m.captures[2] == "1.2.3+0"
                 end
             end
             @testset "commit_regex" begin
