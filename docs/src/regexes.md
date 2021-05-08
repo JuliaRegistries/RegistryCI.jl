@@ -67,7 +67,7 @@ for row in rows
     regex_occurs_in_example = occursin(row.regex, row.example)
     if !regex_occurs_in_example
         @error("Regex does not occur in example", row.regex, row.example)
-        throw(ErrorException("Regex $(row.regex) does not occur in example $(row.example)"))
+        throw(ErrorException("Regex `$(row.regex)` does not occur in example \"$(row.example)\""))
     end
 end
 
