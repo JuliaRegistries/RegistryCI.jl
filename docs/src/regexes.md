@@ -47,7 +47,7 @@ const row_2 = table_row(;
     regex = RegistryCI.AutoMerge.new_version_title_regex,
     pr_field = "PR title",
     pr_type = "New versions",
-    example = "New version: HelloWorld----- v1.2.3",
+    example = "New version: HelloWorld v1.2.3",
 )
 
 const row_3 = table_row(;
