@@ -40,7 +40,7 @@ const row_1 = table_row(;
     regex = RegistryCI.AutoMerge.new_package_title_regex,
     pr_field = "PR title",
     pr_type = "New packages",
-    example = "New package: HelloWorld v1.2.3",
+    example = "New packageFOOBAR: HelloWorld v1.2.3",
 )
 
 const row_2 = table_row(;
