@@ -2,7 +2,7 @@ const new_package_title_regex = r"^New package: (\w*?) v(\S*?)$"
 
 const new_version_title_regex = r"^New version: (\w*?) v(\S*?)$"
 
-const commit_regex = r"(?:^|\n)(?:\-|\*) Commit: (\w*?)(?:$|\n)"
+const commit_regex = r"(?:^|\n|\r\n)(?:\-|\*) Commit: (\w*?)(?:$|\n|\r\n)"
 
 is_new_package(pull_request::GitHub.PullRequest) = occursin(new_package_title_regex, title(pull_request))
 
