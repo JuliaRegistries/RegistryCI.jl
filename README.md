@@ -3,11 +3,13 @@
 [![Documentation (stable)][docs-stable-img]][docs-stable-url]
 [![Documentation (dev)][docs-dev-img]][docs-dev-url]
 
-[![Continuous Integration (Unit Tests)][ci-unit-img]][ci-unit-url]
-[![Continuous Integration (Integration Tests)][ci-integration-img]][ci-integration-url]
-
 [![Code Coverage][codecov-img]][codecov-url]
 [![Bors][bors-img]][bors-url]
+
+| Test Set          | Status                                                                                  | 
+| ----------------- | --------------------------------------------------------------------------------------- |
+| Unit Tests        | [![Continuous Integration (Unit Tests)][ci-unit-img]][ci-unit-url]                      |
+| Integration Tests | [![Continuous Integration (Integration Tests)][ci-integration-img]][ci-integration-url] |
 
 [docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg "Documentation (stable)"
 [docs-stable-url]: https://JuliaRegistries.github.io/RegistryCI.jl/stable
