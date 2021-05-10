@@ -1,4 +1,7 @@
-function my_retry(f::Function, num_retries::Integer = 1)
-    result = retry(f, delays=ExponentialBackOff(n=num_retries))()
-    return result
+function my_retry(f::Function)
+    delays = ExponentialBackOff(;
+        n = 10,
+        max_delay = 30.0,
+    )
+    return retry(f; delays = delays)()
 end
