@@ -182,29 +182,31 @@ function cron_or_api_build(api::GitHub.GitHubAPI,
     all_currently_open_pull_requests = my_retry(() -> get_all_pull_requests(api, registry, "open"; auth = auth))
     reverse!(all_currently_open_pull_requests)
     at_least_one_exception_was_thrown = false
-    num_retries = 0
     if isempty(all_currently_open_pull_requests)
         @info("There are no open pull requests.")
     else
         for pr in all_currently_open_pull_requests
             try
-                my_retry(() -> cron_or_api_build(api,
-                                                 pr,
-                                                 registry::GitHub.Repo;
-                                                 auth = auth,
-                                                 authorized_authors = authorized_authors,
-                                                 authorized_authors_special_jll_exceptions = authorized_authors_special_jll_exceptions,
-                                                 merge_new_packages = merge_new_packages,
-                                                 merge_new_versions = merge_new_versions,
-                                                 new_package_waiting_period = new_package_waiting_period,
-                                                 new_jll_package_waiting_period = new_jll_package_waiting_period,
-                                                 new_version_waiting_period = new_version_waiting_period,
-                                                 new_jll_version_waiting_period = new_jll_version_waiting_period,
-                                                 whoami = whoami,
-                                                 all_statuses = all_statuses,
-                                                 all_check_runs = all_check_runs,
-                                                 read_only = read_only),
-                         num_retries)
+                my_retry() do
+                    cron_or_api_build(
+                        api,
+                        pr,
+                        registry;
+                        auth = auth,
+                        authorized_authors = authorized_authors,
+                        authorized_authors_special_jll_exceptions = authorized_authors_special_jll_exceptions,
+                        merge_new_packages = merge_new_packages,
+                        merge_new_versions = merge_new_versions,
+                        new_package_waiting_period = new_package_waiting_period,
+                        new_jll_package_waiting_period = new_jll_package_waiting_period,
+                        new_version_waiting_period = new_version_waiting_period,
+                        new_jll_version_waiting_period = new_jll_version_waiting_period,
+                        whoami = whoami,
+                        all_statuses = all_statuses,
+                        all_check_runs = all_check_runs,
+                        read_only = read_only,
+                    )
+                end
             catch ex
                 at_least_one_exception_was_thrown = true
                 showerror(stderr, ex)
