@@ -42,21 +42,21 @@ using RegistryCI
 using Dates
 
 RegistryCI.AutoMerge.run(
-merge_new_packages = ENV["MERGE_NEW_PACKAGES"] == "true",
-merge_new_versions = ENV["MERGE_NEW_VERSIONS"] == "true",
-new_package_waiting_period = Day(3),
-new_jll_package_waiting_period = Minute(20),
-new_version_waiting_period = Minute(10),
-new_jll_version_waiting_period = Minute(10),
-registry = "JuliaLang/General",
-tagbot_enabled = true,
-authorized_authors = String["JuliaRegistrator"],
-authorized_authors_special_jll_exceptions = String["jlbuild"],
-suggest_onepointzero = false,
-additional_statuses = String[],
-additional_check_runs = String[],
-check_license = true,
-public_registries = String["https://github.com/HolyLab/HolyLabRegistry"],
+    merge_new_packages = ENV["MERGE_NEW_PACKAGES"] == "true",
+    merge_new_versions = ENV["MERGE_NEW_VERSIONS"] == "true",
+    new_package_waiting_period = Day(3),
+    new_jll_package_waiting_period = Minute(20),
+    new_version_waiting_period = Minute(10),
+    new_jll_version_waiting_period = Minute(10),
+    registry = "JuliaLang/General",
+    tagbot_enabled = true,
+    authorized_authors = String["JuliaRegistrator"],
+    authorized_authors_special_jll_exceptions = String["jlbuild"],
+    suggest_onepointzero = false,
+    additional_statuses = String[],
+    additional_check_runs = String[],
+    check_license = true,
+    public_registries = String["https://github.com/HolyLab/HolyLabRegistry"],
 )
 ```
 """
