@@ -18,7 +18,7 @@ Run the `RegistryCI.AutoMerge` service.
 - `new_jll_version_waiting_period`: new JLL package version waiting period, e.g `Minute(10)`.
 - `registry`: the registry name you want to run AutoMerge on.
 - `tagbot_enabled`: if tagbot is enabled.
-- `authorized_authors`: who can submit registration, e.g `"JuliaRegistrator"`
+- `authorized_authors`: list of who can submit registration, e.g `String["JuliaRegistrator"]`.
 - `authorized_authors_special_jll_exceptions`:
 - `additional_statuses`:
 - `additional_check_runs`:
