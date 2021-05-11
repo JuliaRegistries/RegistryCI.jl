@@ -5,13 +5,14 @@ Run the `RegistryCI.AutoMerge` service.
 
 # Arguments
 
-- `env`:
+- `env`: an `AbstractDictionary` used to read environmental variables from.
+   Defaults to `ENV` but a plain `Dict` can be passed to mimic an alternate environment. 
 - `ciccfg`:
 
 # Keyword Arguments
 
-- `merge_new_packages`:
-- `merge_new_versions`:
+- `merge_new_packages`: should AutoMerge merge registration PRs for new packages
+- `merge_new_versions`: should AutoMerge merge registration PRs for new versions of packages
 - `new_package_waiting_period`: new package waiting period, e.g `Day(3)`.
 - `new_jll_package_waiting_period`: new JLL package waiting period, e.g `Minute(20)`.
 - `new_version_waiting_period`: new package version waiting period, e.g `Minute(10)`.
@@ -19,18 +20,21 @@ Run the `RegistryCI.AutoMerge` service.
 - `registry`: the registry name you want to run AutoMerge on.
 - `tagbot_enabled`: if tagbot is enabled.
 - `authorized_authors`: list of who can submit registration, e.g `String["JuliaRegistrator"]`.
-- `authorized_authors_special_jll_exceptions`:
+- `authorized_authors_special_jll_exceptions`: a list of users who can submit JLL packages (which have strict rules about allowed dependencies and are subject to `new_jll_*_waiting_period`s instead of `new_*_waiting_period`s).
 - `additional_statuses`:
 - `additional_check_runs`:
 - `error_exit_if_automerge_not_applicable`:
 - `master_branch`: name of `master_branch`, e.g you may want to specify this to `"main"` for new GitHub repositories.
 - `master_branch_is_default_branch`: if `master_branch` specified above is the default branch.
-- `suggest_onepointzero`:
+- `suggest_onepointzero`: should the AutoMerge comment include a suggestion to tag a 1.0 release for v0.x.y packages.
 - `registry_deps`: list of registry dependencies, e.g your packages may depend on `General`.
 - `api_url`: the registry host API URL, default is `"https://api.github.com"`.
 - `check_license`: check package has a valid license, default is `false`.
-- `public_registries`: list of public registries that you would want to avoid
-dependency confusion (packages with same UUID).
+- `public_registries`: If a new package registration has a UUID that matches
+   that of a package already registered in one of these registries supplied here
+   (and has either a different name or different URL) then an error will be thrown.
+   This to prevent AutoMerge from being used for "dependency confusion"
+   attacks on those registries.
 - `read_only`: run in read only mode, default is `false`.
 
 # Example
