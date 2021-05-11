@@ -21,9 +21,9 @@ Run the `RegistryCI.AutoMerge` service.
 - `tagbot_enabled`: if tagbot is enabled.
 - `authorized_authors`: list of who can submit registration, e.g `String["JuliaRegistrator"]`.
 - `authorized_authors_special_jll_exceptions`: a list of users who can submit JLL packages (which have strict rules about allowed dependencies and are subject to `new_jll_*_waiting_period`s instead of `new_*_waiting_period`s).
-- `additional_statuses`:
-- `additional_check_runs`:
-- `error_exit_if_automerge_not_applicable`:
+- `additional_statuses`: list of additional commit statuses that must pass before AutoMerge will merge a PR
+- `additional_check_runs`: list of additional check runs that must pass before AutoMerge will merge a PR
+- `error_exit_if_automerge_not_applicable`: if `false`, AutoMerge will not error on PRs made by non-AutoMerge-authorized users
 - `master_branch`: name of `master_branch`, e.g you may want to specify this to `"main"` for new GitHub repositories.
 - `master_branch_is_default_branch`: if `master_branch` specified above is the default branch.
 - `suggest_onepointzero`: should the AutoMerge comment include a suggestion to tag a 1.0 release for v0.x.y packages.
