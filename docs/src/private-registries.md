@@ -12,7 +12,7 @@ After you have the registry configured, you can setup CI using RegistryCI by fol
 
 You will first need to copy the `.ci` folder in the root of the General registry to the root of your own registry. This folder contains some resources required for the RegistryCI package to work and update itself.
 
-Next, you will need to copy the `ci.yml` and `remember_to_update_registryci.yml` workflow files.
+Next, you will need to copy the `ci.yml` and `update_manifest.yml` workflow files.
 
 The `ci.yml` file should be modified as follows if you have packages in your registry that depend on packages in the General registry.
 If the packages in your registry depend on packages in other registries, they should also be added to `registry_deps`
@@ -20,13 +20,6 @@ If the packages in your registry depend on packages in other registries, they sh
 - run: julia --project=.ci/ --color=yes -e 'import RegistryCI; RegistryCI.test()'
 
 + run: julia --project=.ci/ --color=yes -e 'import RegistryCI; RegistryCI.test(registry_deps=["https://github.com/JuliaRegistries/General"])'
-```
-
-In the `remember_to_update_registryci.yml` file, the `"${{ github.repository }}" == "JuliaRegistries/General"` condition should be removed in order for the auto-update of RegistryCI to be enabled.
-```diff
-- run: julia -e 'include(".ci/remember_to_update_registryci.jl"); "${{ github.repository }}" == "JuliaRegistries/General" && RememberToUpdateRegistryCI.main(".ci"; registry = "${{ github.repository }}", cc_usernames = String[], old_julia_version = v"1.5.3")'
-
-+ run: julia -e 'include(".ci/remember_to_update_registryci.jl"); RememberToUpdateRegistryCI.main(".ci"; registry = "${{ github.repository }}", cc_usernames = String[], old_julia_version = v"1.5.3")'
 ```
 
 The self-update mechanism mentioned above uses a `TAGBOT_TOKEN` secret in order to create a pull request with the update.

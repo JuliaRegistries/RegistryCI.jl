@@ -1,5 +1,64 @@
 """
-    run(env, cicfg::CIService; kwargs...)
+    run([env, cicfg::CIService]; kwargs...)
+
+Run the `RegistryCI.AutoMerge` service.
+
+# Arguments
+
+- `env`:
+- `ciccfg`:
+
+# Keyword Arguments
+
+- `merge_new_packages`:
+- `merge_new_versions`:
+- `new_package_waiting_period`: new package waiting period, e.g `Day(3)`.
+- `new_jll_package_waiting_period`: new JLL package waiting period, e.g `Minute(20)`.
+- `new_version_waiting_period`: new package version waiting period, e.g `Minute(10)`.
+- `new_jll_version_waiting_period`: new JLL package version waiting period, e.g `Minute(10)`.
+- `registry`: the registry name you want to run AutoMerge on.
+- `tagbot_enabled`: if tagbot is enabled.
+- `authorized_authors`:
+- `authorized_authors_special_jll_exceptions`:
+- `additional_statuses`:
+- `additional_check_runs`:
+- `error_exit_if_automerge_not_applicable`:
+- `master_branch`: name of `master_branch`, e.g you may want to specify this to `"main"` for new GitHub repositories.
+- `master_branch_is_default_branch`: if `master_branch` specified above is the default branch.
+- `suggest_onepointzero`:
+- `registry_deps`: list of registry dependencies, e.g your packages may depend on `General`.
+- `api_url`: the registry host API URL, default is `"https://api.github.com"`.
+- `check_license`: check package has a valid license, default is `false`.
+- `public_registries`: list of public registries that you would want to avoid
+dependency confusion (packages with same UUID).
+- `read_only`: run in read only mode, default is `false`.
+
+# Example
+
+Here is an example of how `General` registry is configured
+
+```julia
+using RegistryCI
+using Dates
+
+RegistryCI.AutoMerge.run(
+merge_new_packages = ENV["MERGE_NEW_PACKAGES"] == "true",
+merge_new_versions = ENV["MERGE_NEW_VERSIONS"] == "true",
+new_package_waiting_period = Day(3),
+new_jll_package_waiting_period = Minute(20),
+new_version_waiting_period = Minute(10),
+new_jll_version_waiting_period = Minute(10),
+registry = "Happy-Diode/Miskatonic",
+tagbot_enabled = true,
+authorized_authors = String["DrHenryArmitage"],
+authorized_authors_special_jll_exceptions = String["jlbuild"],
+suggest_onepointzero = false,
+additional_statuses = String[],
+additional_check_runs = String[],
+check_license = true,
+public_registries = String["https://github.com/HolyLab/HolyLabRegistry"],
+)
+```
 """
 function run(env = ENV,
              cicfg::CIService=auto_detect_ci_service(;env=env);
