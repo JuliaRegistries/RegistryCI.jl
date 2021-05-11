@@ -7,7 +7,7 @@ Run the `RegistryCI.AutoMerge` service.
 
 - `env`: an `AbstractDictionary` used to read environmental variables from.
    Defaults to `ENV` but a plain `Dict` can be passed to mimic an alternate environment. 
-- `ciccfg`:
+- `ciccfg`: Configuration struct describing the continuous integration (CI) environment in which AutoMerge is being run.
 
 # Keyword Arguments
 
