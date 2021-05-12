@@ -1,10 +1,26 @@
 # RegistryCI.jl
 
-|                         |                                                               |                   |                                                                                         |
-|------------------------|---------------------------------------------------------------|-------------------|-----------------------------------------------------------------------------------------|
-| Documentation (stable) | [![Documentation (stable)][docs-stable-img]][docs-stable-url] | Unit Tests        | [![Continuous Integration (Unit Tests)][ci-unit-img]][ci-unit-url]                      |
-| Documentation (dev)    | [![Documentation (dev)][docs-dev-img]][docs-dev-url]          | Integration Tests | [![Continuous Integration (Integration Tests)][ci-integration-img]][ci-integration-url] |
-| Code Coverage          | [![Code Coverage][codecov-img]][codecov-url]                  | Bors              | [![Bors][bors-img]][bors-url]                                                           |
+<table>
+   <tr>
+    <td>Documentation (stable)</td>
+    <td>[![Documentation (stable)][docs-stable-img]][docs-stable-url]</td>
+    <td>Unit Tests</td>
+    <td>[![Continuous Integration (Unit Tests)][ci-unit-img]][ci-unit-url]</td>
+  </tr>
+  <tr>
+    <td>Documentation (dev)</td>
+    <td>[![Documentation (dev)][docs-dev-img]][docs-dev-url]</td>
+    <td>Integration Tests</td>
+    <td>[![Continuous Integration (Integration Tests)][ci-integration-img]][ci-integration-url]</td>
+  </tr>
+  <tr>
+    <td>Code Coverage</td>
+    <td>[![Code Coverage][codecov-img]][codecov-url]</td>
+    <td>Bors</td>
+    <td>[![Bors][bors-img]][bors-url]</td>
+  </tr>
+</table>
+
 
 [docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg "Documentation (stable)"
 [docs-stable-url]: https://JuliaRegistries.github.io/RegistryCI.jl/stable
