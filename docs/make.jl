@@ -26,5 +26,5 @@ makedocs(;
 
 deploydocs(;
     repo="github.com/JuliaRegistries/RegistryCI.jl",
-    push_preview=true, # TODO: turn this back to false
+    push_preview=false,
 )
