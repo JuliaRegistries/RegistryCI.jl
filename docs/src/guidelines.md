@@ -17,7 +17,7 @@ function guidelines_to_markdown_output(guidelines_function::Function)
         this_pr_can_use_special_jll_exceptions = false,
     )
     filter!(x -> x[1] != :update_status, guidelines)
-    filter!(x -> x[1].include_in_docs, guidelines)
+    filter!(x -> !(x[1].docs isa Nothing), guidelines)
     docs = [rstrip(x[1].docs) for x in guidelines]
     output_string = join(string.(collect(1:length(docs)), Ref(". "), docs), "\n")
     output_markdown = Markdown.parse(output_string)
@@ -43,8 +43,8 @@ function guidelines_to_markdown_output(guidelines_function::Function)
         this_pr_can_use_special_jll_exceptions = false,
     )
     filter!(x -> x[1] != :update_status, guidelines)
-    filter!(x -> x[1].include_in_docs, guidelines)
-    docs = [x[1].docs for x in guidelines]
+    filter!(x -> !(x[1].docs isa Nothing), guidelines)
+    docs = [rstrip(x[1].docs) for x in guidelines]
     output_string = join(string.(collect(1:length(docs)), Ref(". "), docs), "\n")
     output_markdown = Markdown.parse(output_string)
     return output_markdown

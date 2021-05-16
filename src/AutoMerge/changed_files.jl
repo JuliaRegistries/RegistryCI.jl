@@ -17,8 +17,8 @@ function allowed_changed_files(::NewVersion, pkg::String)
 end
 
 const guideline_pr_only_changes_allowed_files = Guideline(;
-    info = "Only modifies the files that it's allowed to modify",
-    include_in_docs = false,
+    info = "Only modifies the files that it's allowed to modify.",
+    docs = nothing,
     check = data -> pr_only_changes_allowed_files(data.api,
         data.registration_type,
         data.registry,

@@ -115,9 +115,7 @@ Base.@kwdef mutable struct Guideline
     info::String
 
     # Documentation for the guideline
-    docs::String = info
-
-    include_in_docs::Bool = true
+    docs::Union{String,Nothing} = info
 
     # Function that is run in order to determine whether a guideline
     # is met. Input is an instance of `GitHubAutoMergeData` and output

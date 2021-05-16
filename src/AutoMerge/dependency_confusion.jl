@@ -3,7 +3,7 @@
 
 const guideline_dependency_confusion = Guideline(;
     info = "No UUID conflict with other registries.",
-    include_in_docs = false,
+    docs = nothing,
     check = data -> has_no_dependency_confusion(
         data.pkg,
         data.registry_head,

@@ -2,7 +2,7 @@ import HTTP
 
 const guideline_registry_consistency_tests_pass = Guideline(;
     info = "Registy consistency tests",
-    include_in_docs = false,
+    docs = nothing,
     check = data -> meets_registry_consistency_tests_pass(
         data.registry_head,
         data.registry_deps,
@@ -24,7 +24,7 @@ const guideline_compat_for_julia = Guideline(;
     info = "Compat with upper bound for julia",
     docs = string(
         "There is an upper-bounded `[compat]` entry for `julia` that ",
-        "only includes a finite number of breaking releases of Julia",
+        "only includes a finite number of breaking releases of Julia.",
     ),
     check = data -> meets_compat_for_julia(
         data.registry_head,
@@ -70,7 +70,7 @@ const guideline_compat_for_all_deps = Guideline(;
     docs = string(
         "Dependencies: All dependencies should have `[compat]` entries that ",
         "are upper-bounded and only include a finite number of breaking releases. ",
-        "For more information, please see the \"Name similarity distance check\" subsection under the \"Additional information\" section below.",
+        "For more information, please see the \"Upper bounded `[compat]` entries\" subsection under \"Additional information\" below.",
     ),
     check = data -> meets_compat_for_all_deps(
         data.registry_head,
@@ -204,8 +204,7 @@ function meets_name_length(pkg)
 end
 
 const guideline_name_ascii = Guideline(;
-    info = "Name is composed of ASCII characters only",
-    docs = "Name is composed of ASCII characters only",
+    info = "Name is composed of ASCII characters only.",
     check = data -> meets_name_ascii(data.pkg),
 )
 
@@ -218,7 +217,7 @@ function meets_name_ascii(pkg)
 end
 
 const guideline_julia_name_check = Guideline(;
-    info = "Name does not include \"julia\" or start with \"Ju\"",
+    info = "Name does not include \"julia\" or start with \"Ju\".",
     check = data -> meets_julia_name_check(data.pkg),
 )
 
@@ -238,7 +237,7 @@ sqrt_normalized_vd(name1, name2) = VisualStringDistances.visual_distance(name1, 
 const guideline_distance_check = Guideline(;
     info = "Name is not too similar to existing package names",
     docs = """
-  To prevent confusion between similarly named packages, the names of new packages must also satisfy the following three checks: (for more information, please see the \"Name similarity distance check\" subsection under the \"Additional information\" section below)
+  To prevent confusion between similarly named packages, the names of new packages must also satisfy the following three checks: (for more information, please see the \"Name similarity distance check\" subsection under \"Additional information\" below)
       - the [Damerau–Levenshtein
         distance](https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance)
         between the package name and the name of any existing package must be at
@@ -339,7 +338,7 @@ const guideline_normal_capitalization = Guideline(;
     docs = string(
         "The package name should start with an uppercase letter, ",
         "contain only ASCII alphanumeric characters, ",
-        "and contain at least one lowercase letter",
+        "and contain at least one lowercase letter.",
     ),
     check = data -> meets_normal_capitalization(data.pkg),
 )
@@ -354,7 +353,7 @@ function meets_normal_capitalization(pkg)
 end
 
 const guideline_repo_url_requirement = Guideline(;
-    info = "Repo URL ends with /PackageName.jl.git",
+    info = "Repo URL ends with `/PackageName.jl.git`.",
     check = data -> meets_repo_url_requirement(
         data.pkg;
         registry_head = data.registry_head,
@@ -452,7 +451,7 @@ function meets_sequential_version_number(pkg::String,
 end
 
 const guideline_standard_initial_version_number = Guideline(;
-    info = "Standard initial version number. Must be one of: 0.0.1, 0.1.0, 1.0.0, or X.0.0",
+    info = "Standard initial version number. Must be one of: `0.0.1`, `0.1.0`, `1.0.0`, or `X.0.0`.",
     check = data -> meets_standard_initial_version_number(data.version),
 )
 
@@ -477,8 +476,7 @@ function _is_x_0_0(version::VersionNumber)
 end
 
 const guideline_code_can_be_downloaded = Guideline(;
-    info = "Code can be downloaded",
-    docs = "Code can be downloaded",
+    info = "Code can be downloaded.",
     check = data -> meets_code_can_be_downloaded(data.registry_head, data.pkg, data.version, data.pr; pkg_code_path = data.pkg_code_path),
 )
 
@@ -526,7 +524,7 @@ is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HT
 
 const guideline_version_can_be_pkg_added = Guideline(;
     info = "Version can be `Pkg.add`ed",
-    docs = "Package installation: The package should be installable (`Pkg.add(\"PackageName\")`)",
+    docs = "Package installation: The package should be installable (`Pkg.add(\"PackageName\")`).",
     check = data -> meets_version_can_be_pkg_added(
         data.registry_head,
         data.pkg,
@@ -582,7 +580,7 @@ const guideline_version_has_osi_license = Guideline(;
         "License: The package should have an ",
         "[OSI-approved software license](https://opensource.org/licenses/alphabetical) ",
         "located in the top-level directory of the package code, ",
-        "e.g. in a file named `LICENSE` or `LICENSE.md`",
+        "e.g. in a file named `LICENSE` or `LICENSE.md`.",
     ),
     check = data -> meets_version_has_osi_license(
         data.pkg;
@@ -629,7 +627,7 @@ end
 
 const guideline_version_can_be_imported = Guideline(;
     info = "Version can be `import`ed",
-    docs = "Package loading: The package should be loadable (`import PackageName`)",
+    docs = "Package loading: The package should be loadable (`import PackageName`).",
     check = data -> meets_version_can_be_imported(
         data.registry_head,
         data.pkg,

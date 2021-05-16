@@ -20,10 +20,7 @@ end
 
 const guideline_allowed_jll_nonrecursive_dependencies = Guideline(;
     info = "If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
-    docs = """
-    If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages
-    """,
-    include_in_docs = false,
+    docs = nothing,
     check = data -> meets_allowed_jll_nonrecursive_dependencies(
         data.registry_head,
         data.pkg,
