@@ -1,9 +1,13 @@
 import HTTP
 
-const guideline_registry_consistency_tests_pass =
-    Guideline("Registy consistency tests",
-              data -> meets_registry_consistency_tests_pass(data.registry_head,
-                                                            data.registry_deps))
+const guideline_registry_consistency_tests_pass = Guideline(;
+    info = "Registy consistency tests",
+    include_in_docs = false,
+    check = data -> meets_registry_consistency_tests_pass(
+        data.registry_head,
+        data.registry_deps,
+    ),
+)
 
 function meets_registry_consistency_tests_pass(registry_head::String,
                                                registry_deps::Vector{String})
@@ -16,11 +20,18 @@ function meets_registry_consistency_tests_pass(registry_head::String,
     return false, "The registry consistency tests failed"
 end
 
-const guideline_compat_for_julia =
-    Guideline("Compat with upper bound for julia",
-              data -> meets_compat_for_julia(data.registry_head,
-                                             data.pkg,
-                                             data.version))
+const guideline_compat_for_julia = Guideline(;
+    info = "Compat with upper bound for julia",
+    docs = string(
+        "There is an upper-bounded `[compat]` entry for `julia` that ",
+        "only includes a finite number of breaking releases of Julia",
+    ),
+    check = data -> meets_compat_for_julia(
+        data.registry_head,
+        data.pkg,
+        data.version,
+    ),
+)
 
 function meets_compat_for_julia(working_directory::AbstractString, pkg, version)
     compat = Pkg.TOML.parsefile(joinpath(working_directory, uppercase(pkg[1:1]), pkg, "Compat.toml"))
@@ -54,11 +65,19 @@ function meets_compat_for_julia(working_directory::AbstractString, pkg, version)
     return false, "There is no compat entry for `julia`."
 end
 
-const guideline_compat_for_all_deps =
-    Guideline("Compat (with upper bound) for all dependencies",
-              data -> meets_compat_for_all_deps(data.registry_head,
-                                                data.pkg,
-                                                data.version))
+const guideline_compat_for_all_deps = Guideline(;
+    info = "Compat (with upper bound) for all dependencies",
+    docs = string(
+        "Dependencies: All dependencies should have `[compat]` entries that ",
+        "are upper-bounded and only include a finite number of breaking releases. ",
+        "For more information, please see the \"Name similarity distance check\" subsection under the \"Additional information\" section below.",
+    ),
+    check = data -> meets_compat_for_all_deps(
+        data.registry_head,
+        data.pkg,
+        data.version,
+    ),
+)
 
 function meets_compat_for_all_deps(working_directory::AbstractString, pkg, version)
     deps = Pkg.TOML.parsefile(joinpath(working_directory, uppercase(pkg[1:1]), pkg, "Deps.toml"))
@@ -123,12 +142,15 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
     end
 end
 
-const guideline_patch_release_does_not_narrow_julia_compat =
-    Guideline("If it is a patch release, then it does not narrow the Julia compat range",
-              data -> meets_patch_release_does_not_narrow_julia_compat(data.pkg,
-                                                                       data.version;
-                                                                       registry_head = data.registry_head,
-                                                                       registry_master = data.registry_master))
+const guideline_patch_release_does_not_narrow_julia_compat = Guideline(;
+    info = "If it is a patch release, then it does not narrow the `[compat]` range for `julia`.",
+    check = data -> meets_patch_release_does_not_narrow_julia_compat(
+        data.pkg,
+        data.version;
+        registry_head = data.registry_head,
+        registry_master = data.registry_master,
+    ),
+)
 
 function meets_patch_release_does_not_narrow_julia_compat(pkg::String,
                                                           new_version::VersionNumber;
@@ -164,22 +186,28 @@ function meets_patch_release_does_not_narrow_julia_compat(pkg::String,
     end
 end
 
-const guideline_name_length =
-    Guideline("Name not too short",
-              data -> meets_name_length(data.pkg))
+const _AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH = 5
+
+const guideline_name_length = Guideline(;
+    info = "Name not too short",
+    docs = "The name is at least $(_AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH) characters long.",
+    check = data -> meets_name_length(data.pkg),
+)
 
 function meets_name_length(pkg)
-    meets_this_guideline = length(pkg) >= 5
+    meets_this_guideline = length(pkg) >= _AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH
     if meets_this_guideline
         return true, ""
     else
-        return false, "Name is not at least five characters long"
+        return false, "Name is not at least $(_AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH) characters long"
     end
 end
 
-const guideline_name_ascii =
-    Guideline("Name is composed of ASCII characters only",
-              data -> meets_name_ascii(data.pkg))
+const guideline_name_ascii = Guideline(;
+    info = "Name is composed of ASCII characters only",
+    docs = "Name is composed of ASCII characters only",
+    check = data -> meets_name_ascii(data.pkg),
+)
 
 function meets_name_ascii(pkg)
     if isascii(pkg)
@@ -189,9 +217,10 @@ function meets_name_ascii(pkg)
     end
 end
 
-const guideline_julia_name_check =
-    Guideline("Name does not include \"julia\" or start with \"Ju\"",
-              data -> meets_julia_name_check(data.pkg))
+const guideline_julia_name_check = Guideline(;
+    info = "Name does not include \"julia\" or start with \"Ju\"",
+    check = data -> meets_julia_name_check(data.pkg),
+)
 
 function meets_julia_name_check(pkg)
     if occursin("julia", lowercase(pkg))
@@ -206,9 +235,27 @@ end
 damerau_levenshtein(name1, name2) = StringDistances.DamerauLevenshtein()(name1, name2)
 sqrt_normalized_vd(name1, name2) = VisualStringDistances.visual_distance(name1, name2; normalize=x -> 5 + sqrt(x))
 
-const guideline_distance_check =
-    Guideline("Name is not too similar to existing package names",
-              data -> meets_distance_check(data.pkg, data.registry_master))
+const guideline_distance_check = Guideline(;
+    info = "Name is not too similar to existing package names",
+    docs = """
+  To prevent confusion between similarly named packages, the names of new packages must also satisfy the following three checks: (for more information, please see the \"Name similarity distance check\" subsection under the \"Additional information\" section below)
+      - the [Damerau–Levenshtein
+        distance](https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance)
+        between the package name and the name of any existing package must be at
+        least 3.
+      - the Damerau–Levenshtein distance between the lowercased version of a
+        package name and the lowercased version of the name of any existing
+        package must be at least 2.
+      - and a visual distance from
+        [VisualStringDistances.jl](https://github.com/ericphanson/VisualStringDistances.jl)
+        between the package name and any existing package must exceeds a certain
+        a hand-chosen threshold (currently 2.5).
+    """,
+    check = data -> meets_distance_check(
+        data.pkg,
+        data.registry_master,
+    ),
+)
 
 function meets_distance_check(pkg_name::AbstractString,
                               registry_master::AbstractString;
@@ -276,7 +323,7 @@ function meets_distance_check(pkg_name::AbstractString,
         message *=  """
                       <details>
                       <summary>Similar package names</summary>
-                      
+
                     """
     end
     numbers = string.("  ", 1:length(problem_messages))
@@ -287,9 +334,15 @@ function meets_distance_check(pkg_name::AbstractString,
     return (false, message)
 end
 
-const guideline_normal_capitalization =
-    Guideline("Normal capitalization",
-              data -> meets_normal_capitalization(data.pkg))
+const guideline_normal_capitalization = Guideline(;
+    info = "Normal capitalization",
+    docs = string(
+        "The package name should start with an uppercase letter, ",
+        "contain only ASCII alphanumeric characters, ",
+        "and contain at least one lowercase letter",
+    ),
+    check = data -> meets_normal_capitalization(data.pkg),
+)
 
 function meets_normal_capitalization(pkg)
     meets_this_guideline = occursin(r"^[A-Z]\w*[a-z]\w*[0-9]?$", pkg)
@@ -300,10 +353,13 @@ function meets_normal_capitalization(pkg)
     end
 end
 
-const guideline_repo_url_requirement =
-    Guideline("Repo URL ends with /name.jl.git",
-              data -> meets_repo_url_requirement(data.pkg;
-                                                 registry_head = data.registry_head))
+const guideline_repo_url_requirement = Guideline(;
+    info = "Repo URL ends with /PackageName.jl.git",
+    check = data -> meets_repo_url_requirement(
+        data.pkg;
+        registry_head = data.registry_head,
+    ),
+)
 
 function meets_repo_url_requirement(pkg::String; registry_head::String)
     package_toml_parsed = Pkg.TOML.parsefile(
@@ -347,12 +403,24 @@ function _valid_change(old_version::VersionNumber, new_version::VersionNumber)
     end
 end
 
-const guideline_sequential_version_number =
-    Guideline("Sequential version number",
-              data -> meets_sequential_version_number(data.pkg,
-                                                      data.version;
-                                                      registry_head = data.registry_head,
-                                                      registry_master = data.registry_master))
+const guideline_sequential_version_number = Guideline(;
+    info = "Sequential version number",
+    docs = string(
+        "Version number: Should be a standard increment and not skip versions. ",
+        "This means incrementing the patch/minor/major version with +1 compared to ",
+        "previous (if any) releases. ",
+        "If, for example, `1.0.0` and `1.1.0` are existing versions, ",
+        "valid new versions are `1.0.1`, `1.1.1`, `1.2.0` and `2.0.0`. ",
+        "Invalid new versions include `1.0.2` (skips `1.0.1`), ",
+        "`1.3.0` (skips `1.2.0`), `3.0.0` (skips `2.0.0`) etc.",
+    ),
+    check = data -> meets_sequential_version_number(
+        data.pkg,
+        data.version;
+        registry_head = data.registry_head,
+        registry_master = data.registry_master,
+    ),
+)
 
 function meets_sequential_version_number(existing::Vector{VersionNumber}, ver::VersionNumber)
     always_assert(!isempty(existing))
@@ -383,9 +451,10 @@ function meets_sequential_version_number(pkg::String,
     return meets_sequential_version_number(_all_versions, new_version)
 end
 
-const guideline_standard_initial_version_number =
-    Guideline("Standard initial version number ",
-              data -> meets_standard_initial_version_number(data.version))
+const guideline_standard_initial_version_number = Guideline(;
+    info = "Standard initial version number. Must be one of: 0.0.1, 0.1.0, 1.0.0, or X.0.0",
+    check = data -> meets_standard_initial_version_number(data.version),
+)
 
 function meets_standard_initial_version_number(version)
     if _has_prerelease_andor_build_data(version)
@@ -407,11 +476,11 @@ function _is_x_0_0(version::VersionNumber)
     return result
 end
 
-const guideline_code_can_be_downloaded =
-    Guideline("Code can be downloaded",
-              data -> meets_code_can_be_downloaded(data.registry_head,
-                                                   data.pkg, data.version, data.pr;
-                                                     pkg_code_path = data.pkg_code_path))
+const guideline_code_can_be_downloaded = Guideline(;
+    info = "Code can be downloaded",
+    docs = "Code can be downloaded",
+    check = data -> meets_code_can_be_downloaded(data.registry_head, data.pkg, data.version, data.pr; pkg_code_path = data.pkg_code_path),
+)
 
 function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_path)
     uuid, package_repo, subdir, tree_hash_from_toml = parse_registry_pkg_info(registry_head, pkg, version)
@@ -448,7 +517,6 @@ function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_
     end
 end
 
-
 function _generate_pkg_add_command(pkg::String,
                                    version::VersionNumber)::String
     return "Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\", version=v\"$(string(version))\"));"
@@ -456,12 +524,16 @@ end
 
 is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str))
 
-const guideline_version_can_be_pkg_added =
-    Guideline("Version can be `Pkg.add`ed",
-              data -> meets_version_can_be_pkg_added(data.registry_head,
-                                                     data.pkg,
-                                                     data.version;
-                                                     registry_deps = data.registry_deps))
+const guideline_version_can_be_pkg_added = Guideline(;
+    info = "Version can be `Pkg.add`ed",
+    docs = "Package installation: The package should be installable (`Pkg.add(\"PackageName\")`)",
+    check = data -> meets_version_can_be_pkg_added(
+        data.registry_head,
+        data.pkg,
+        data.version;
+        registry_deps = data.registry_deps,
+    ),
+)
 
 function meets_version_can_be_pkg_added(working_directory::String,
                                         pkg::String,
@@ -504,10 +576,19 @@ function meets_version_can_be_pkg_added(working_directory::String,
 end
 
 
-const guideline_version_has_osi_license =
-    Guideline("Version has OSI-approved license",
-              data -> meets_version_has_osi_license(data.pkg; pkg_code_path = data.pkg_code_path))
-
+const guideline_version_has_osi_license = Guideline(;
+    info = "Version has OSI-approved license",
+    docs = string(
+        "License: The package should have an ",
+        "[OSI-approved software license](https://opensource.org/licenses/alphabetical) ",
+        "located in the top-level directory of the package code, ",
+        "e.g. in a file named `LICENSE` or `LICENSE.md`",
+    ),
+    check = data -> meets_version_has_osi_license(
+        data.pkg;
+        pkg_code_path = data.pkg_code_path,
+    ),
+)
 
 function meets_version_has_osi_license(pkg::String; pkg_code_path)
     pkgdir = pkg_code_path
@@ -546,12 +627,16 @@ function meets_version_has_osi_license(pkg::String; pkg_code_path)
     end
 end
 
-const guideline_version_can_be_imported =
-    Guideline("Version can be `import`ed",
-              data -> meets_version_can_be_imported(data.registry_head,
-                                                    data.pkg,
-                                                    data.version;
-                                                    registry_deps = data.registry_deps))
+const guideline_version_can_be_imported = Guideline(;
+    info = "Version can be `import`ed",
+    docs = "Package loading: The package should be loadable (`import PackageName`)",
+    check = data -> meets_version_can_be_imported(
+        data.registry_head,
+        data.pkg,
+        data.version;
+        registry_deps = data.registry_deps,
+    ),
+)
 
 function meets_version_can_be_imported(working_directory::String,
                                        pkg::String,
@@ -665,3 +750,65 @@ function rmdir(dir)
 end
 
 url_has_correct_ending(url, pkg) = endswith(url, "/$(pkg).jl.git")
+
+function get_automerge_guidelines_new_packages(; check_license::Bool,
+                                                 this_is_jll_package::Bool,
+                                                 this_pr_can_use_special_jll_exceptions::Bool)
+    guidelines = [
+        (guideline_registry_consistency_tests_pass, true),
+        (guideline_pr_only_changes_allowed_files, true),
+        # (guideline_only_changes_specified_package, true), # not yet implemented
+        (guideline_normal_capitalization, !this_pr_can_use_special_jll_exceptions),
+        (guideline_name_length, !this_pr_can_use_special_jll_exceptions),
+        (guideline_julia_name_check, true),
+        (guideline_repo_url_requirement, true),
+        (guideline_compat_for_julia, true),
+        (guideline_compat_for_all_deps, true),
+        (guideline_allowed_jll_nonrecursive_dependencies,
+        this_is_jll_package),
+        (guideline_name_ascii, true),
+        (:update_status, true),
+        (guideline_version_can_be_pkg_added, true),
+        (guideline_code_can_be_downloaded, true),
+        # `guideline_version_has_osi_license` must be run
+        # after `guideline_code_can_be_downloaded` so
+        # that it can use the downloaded code!
+        (guideline_version_has_osi_license, check_license),
+        (guideline_version_can_be_imported, true),
+        (:update_status, true),
+        (guideline_dependency_confusion, true),
+        # We always run the `guideline_distance_check`
+        # check last, because if the check fails, it
+        # prints the list of similar package names in
+        # the automerge comment. To make the comment easy
+        # to read, we want this list to be at the end.
+        (guideline_distance_check, true),
+    ]
+    return guidelines
+end
+
+function get_automerge_guidelines_new_versions(; check_license::Bool,
+                                                 this_is_jll_package::Bool,
+                                                 this_pr_can_use_special_jll_exceptions::Bool)
+    guidelines = [
+        (guideline_registry_consistency_tests_pass, true),
+        (guideline_pr_only_changes_allowed_files, true),
+        (guideline_sequential_version_number,
+        !this_pr_can_use_special_jll_exceptions),
+        (guideline_compat_for_julia, true),
+        (guideline_compat_for_all_deps, true),
+        (guideline_patch_release_does_not_narrow_julia_compat,
+        !this_pr_can_use_special_jll_exceptions),
+        (guideline_allowed_jll_nonrecursive_dependencies,
+        this_is_jll_package),
+        (:update_status, true),
+        (guideline_version_can_be_pkg_added, true),
+        (guideline_code_can_be_downloaded, true),
+        # `guideline_version_has_osi_license` must be run
+        # after `guideline_code_can_be_downloaded` so
+        # that it can use the downloaded code!
+        (guideline_version_has_osi_license, check_license),
+        (guideline_version_can_be_imported, true),
+    ]
+    return guidelines
+end

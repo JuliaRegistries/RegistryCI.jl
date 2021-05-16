@@ -1,6 +1,3 @@
-struct AlwaysAssertionError <: Exception
-    msg::String
-end
 AlwaysAssertionError() = AlwaysAssertionError("")
 
 # The documentation for the `Base.@assert` macro says: "Warning: An assert might be

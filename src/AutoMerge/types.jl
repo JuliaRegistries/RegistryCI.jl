@@ -1,3 +1,7 @@
+struct AlwaysAssertionError <: Exception
+    msg::String
+end
+
 struct NewPackage end
 struct NewVersion end
 
@@ -106,26 +110,26 @@ function GitHubAutoMergeData(; kwargs...)
     return GitHubAutoMergeData(getindex.(Ref(kwargs), fields)...)
 end
 
-mutable struct Guideline
+Base.@kwdef mutable struct Guideline
     # Short description of the guideline. Only used for logging.
     info::String
+
+    # Documentation for the guideline
+    docs::String = info
+
+    include_in_docs::Bool = true
+
     # Function that is run in order to determine whether a guideline
     # is met. Input is an instance of `GitHubAutoMergeData` and output
     # is passed status plus a user facing message explaining the
     # guideline result.
     check::Function
-    # Saved result of the `check` function.
-    passed::Bool
-    # Saved output message from the `check` function.
-    message::String
-end
 
-function Guideline(info::String, check::Function)
-    # This initial status and message are overwritten when the check
-    # has been run.
-    passed = false
-    message = "Internal error. A check that was supposed to run never did: $info"
-    return Guideline(info, check, passed, message)
+    # Saved result of the `check` function.
+    passed::Bool = false
+
+    # Saved output message from the `check` function.
+    message::String = "Internal error. A check that was supposed to run never did: $(info)"
 end
 
 passed(guideline::Guideline) = guideline.passed

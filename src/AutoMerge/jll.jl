@@ -18,11 +18,19 @@ function _get_all_dependencies_nonrecursive(working_directory::AbstractString,
     return all_dependencies
 end
 
-const guideline_allowed_jll_nonrecursive_dependencies =
-    Guideline("If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
-              data -> meets_allowed_jll_nonrecursive_dependencies(data.registry_head,
-                                                                  data.pkg,
-                                                                  data.version))
+const guideline_allowed_jll_nonrecursive_dependencies = Guideline(;
+    info = "If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
+    docs = """
+    If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages
+    """,
+    include_in_docs = false,
+    check = data -> meets_allowed_jll_nonrecursive_dependencies(
+        data.registry_head,
+        data.pkg,
+        data.version,
+    ),
+)
+
 
 function meets_allowed_jll_nonrecursive_dependencies(working_directory::AbstractString,
                                                      pkg,
