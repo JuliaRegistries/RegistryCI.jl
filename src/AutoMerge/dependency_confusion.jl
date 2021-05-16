@@ -1,11 +1,15 @@
 # TODO: Add a more thorough explanation of the dependency confusion
 # vulnerability and how this guideline mitigates it.
 
-const guideline_dependency_confusion =
-    Guideline("No UUID conflict with other registries.",
-              data -> has_no_dependency_confusion(data.pkg,
-                                                  data.registry_head,
-                                                  data.public_registries))
+const guideline_dependency_confusion = Guideline(;
+    info = "No UUID conflict with other registries.",
+    docs = nothing,
+    check = data -> has_no_dependency_confusion(
+        data.pkg,
+        data.registry_head,
+        data.public_registries,
+    ),
+)
 
 # TODO: Needs a strategy to handle connection failures for the public
 # registries. Preferably they should also be cloned only once and then

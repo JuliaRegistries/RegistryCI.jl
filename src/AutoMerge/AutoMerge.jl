@@ -17,26 +17,25 @@ import RegistryTools
 import ..RegistryCI
 import Tar
 
-include("assert.jl")
-
 include("types.jl")
-
 include("ciservice.jl")
-include("public.jl")
 
 include("api_rate_limiting.jl")
+include("assert.jl")
 include("automerge_comment.jl")
 include("changed_files.jl")
 include("cron.jl")
+include("dependency_confusion.jl")
 include("github.jl")
 include("guidelines.jl")
 include("jll.jl")
 include("new-package.jl")
 include("new-version.jl")
 include("not-automerge-applicable.jl")
+include("public.jl")
 include("pull-requests.jl")
 include("semver.jl")
+include("update_status.jl")
 include("util.jl")
-include("dependency_confusion.jl")
 
 end # module
