@@ -111,7 +111,8 @@ end
 
 function comment_text_pass(::NewVersion,
                            suggest_onepointzero::Bool,
-                           version::VersionNumber)
+                           version::VersionNumber,
+                           is_jll::Bool)
     result = string("Your `new version` pull request met all of the ",
                     "guidelines for auto-merging and is scheduled to ",
                     "be merged in the next round.",
