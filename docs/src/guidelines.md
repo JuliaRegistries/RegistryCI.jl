@@ -11,7 +11,8 @@ import RegistryCI
 import Markdown
 
 function guidelines_to_markdown_output(guidelines_function::Function)
-    guidelines = guidelines_function(;
+    guidelines = guidelines_function(
+        registration_type;
         check_license = true,
         this_is_jll_package = false,
         this_pr_can_use_special_jll_exceptions = false,
@@ -24,7 +25,8 @@ function guidelines_to_markdown_output(guidelines_function::Function)
     return output_markdown
 end
 
-const guidelines_function = RegistryCI.AutoMerge.get_automerge_guidelines_new_packages
+const guidelines_function = RegistryCI.AutoMerge.get_automerge_guidelines
+const registration_type = RegistryCI.AutoMerge.NewPackage()
 const output_markdown = guidelines_to_markdown_output(guidelines_function)
 
 return output_markdown
@@ -37,7 +39,8 @@ import RegistryCI
 import Markdown
 
 function guidelines_to_markdown_output(guidelines_function::Function)
-    guidelines = guidelines_function(;
+    guidelines = guidelines_function(
+        registration_type;
         check_license = true,
         this_is_jll_package = false,
         this_pr_can_use_special_jll_exceptions = false,
@@ -50,7 +53,8 @@ function guidelines_to_markdown_output(guidelines_function::Function)
     return output_markdown
 end
 
-const guidelines_function = RegistryCI.AutoMerge.get_automerge_guidelines_new_versions
+const guidelines_function = RegistryCI.AutoMerge.get_automerge_guidelines
+const registration_type = RegistryCI.AutoMerge.NewVersion()
 const output_markdown = guidelines_to_markdown_output(guidelines_function)
 
 return output_markdown

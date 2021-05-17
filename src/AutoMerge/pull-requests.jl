@@ -84,43 +84,7 @@ function pull_request_build(api::GitHub.GitHubAPI,
     if current_pr_head_commit_sha != _github_api_pr_head_commit_sha
         throw(AutoMergeShaMismatch("Current commit sha (\"$(current_pr_head_commit_sha)\") does not match what the GitHub API tells us (\"$(_github_api_pr_head_commit_sha)\")"))
     end
-    result = pull_request_build(api,
-                                pr,
-                                current_pr_head_commit_sha,
-                                registry,
-                                registry_head;
-                                auth=auth,
-                                authorized_authors=authorized_authors,
-                                authorized_authors_special_jll_exceptions=authorized_authors_special_jll_exceptions,
-                                error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
-                                master_branch=master_branch,
-                                master_branch_is_default_branch=master_branch_is_default_branch,
-                                suggest_onepointzero=suggest_onepointzero,
-                                whoami=whoami,
-                                registry_deps=registry_deps,
-                                check_license=check_license,
-                                public_registries=public_registries,
-                                read_only=read_only)
-    return result
-end
 
-function pull_request_build(api::GitHub.GitHubAPI,
-                            pr::GitHub.PullRequest,
-                            current_pr_head_commit_sha::String,
-                            registry::GitHub.Repo,
-                            registry_head::String;
-                            auth::GitHub.Authorization,
-                            authorized_authors::Vector{String},
-                            authorized_authors_special_jll_exceptions::Vector{String},
-                            error_exit_if_automerge_not_applicable::Bool,
-                            master_branch::String,
-                            master_branch_is_default_branch::Bool,
-                            suggest_onepointzero::Bool,
-                            whoami::String,
-                            registry_deps::Vector{<:AbstractString} = String[],
-                            check_license::Bool,
-                            public_registries::Vector{<:AbstractString} = String[],
-                            read_only::Bool)::Nothing
     # 1. Check if the PR is open, if not quit.
     # 2. Determine if it is a new package or new version of an
     #    existing package, if neither quit.
@@ -179,7 +143,79 @@ function pull_request_build(api::GitHub.GitHubAPI,
                                registry_deps = registry_deps,
                                public_registries = public_registries,
                                read_only = read_only)
-    pull_request_build(data, registration_type; check_license=check_license)
+    pull_request_build(data; check_license=check_license)
     rm(registry_master; force = true, recursive = true)
     return nothing
 end
+
+function pull_request_build(data::GitHubAutoMergeData; check_license)::Nothing
+    kind = package_or_version(data.registration_type)
+    this_is_jll_package = is_jll_name(data.pkg)
+    @info("This is a new $kind pull request",
+          pkg = data.pkg,
+          version = data.version,
+          this_is_jll_package)
+
+    update_status(data;
+                  state = "pending",
+                  context = "automerge/decision",
+                  description = "New $kind. Pending.")
+
+    this_pr_can_use_special_jll_exceptions =
+        this_is_jll_package && data.authorization == :jll
+
+    guidelines = get_automerge_guidelines(
+        data.registration_type;
+        check_license = check_license,
+        this_is_jll_package = this_is_jll_package,
+        this_pr_can_use_special_jll_exceptions = this_pr_can_use_special_jll_exceptions,
+    )
+    checked_guidelines = Guideline[]
+
+    for (guideline, applicable) in guidelines
+        applicable || continue
+        if guideline == :update_status
+            if !all(passed, checked_guidelines)
+                update_status(data;
+                              state = "failure",
+                              context = "automerge/decision",
+                              description = "New version. Failed.")
+            end
+        else
+            check!(guideline, data)
+            @info(guideline.info,
+                  meets_this_guideline = passed(guideline),
+                  message = message(guideline))
+            push!(checked_guidelines, guideline)
+        end
+    end
+
+    if all(passed, checked_guidelines) # success
+        description = "New $kind. Approved. name=\"$(data.pkg)\". sha=\"$(data.current_pr_head_commit_sha)\""
+        update_status(data;
+                      state = "success",
+                      context = "automerge/decision",
+                      description = description)
+        this_pr_comment_pass = comment_text_pass(data.registration_type,
+                                                 data.suggest_onepointzero,
+                                                 data.version,
+                                                 this_pr_can_use_special_jll_exceptions)
+        my_retry(() -> update_automerge_comment!(data, this_pr_comment_pass))
+    else # failure
+        update_status(data;
+                      state = "failure",
+                      context = "automerge/decision",
+                      description = "New $kind. Failed.")
+        failing_messages = message.(filter(!passed, checked_guidelines))
+        this_pr_comment_fail = comment_text_fail(data.registration_type,
+                                                 failing_messages,
+                                                 data.suggest_onepointzero,
+                                                 data.version)
+        my_retry(() -> update_automerge_comment!(data, this_pr_comment_fail))
+        throw(AutoMergeGuidelinesNotMet("The automerge guidelines were not met."))
+    end
+    return nothing
+end
+
+package_or_version(::NewPackage) = "package"
+package_or_version(::NewVersion) = "version"

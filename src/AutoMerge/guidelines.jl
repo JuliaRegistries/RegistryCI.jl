@@ -751,9 +751,10 @@ end
 
 url_has_correct_ending(url, pkg) = endswith(url, "/$(pkg).jl.git")
 
-function get_automerge_guidelines_new_packages(; check_license::Bool,
-                                                 this_is_jll_package::Bool,
-                                                 this_pr_can_use_special_jll_exceptions::Bool)
+function get_automerge_guidelines(::NewPackage;
+                                  check_license::Bool,
+                                  this_is_jll_package::Bool,
+                                  this_pr_can_use_special_jll_exceptions::Bool)
     guidelines = [
         (guideline_registry_consistency_tests_pass, true),
         (guideline_pr_only_changes_allowed_files, true),
@@ -787,9 +788,10 @@ function get_automerge_guidelines_new_packages(; check_license::Bool,
     return guidelines
 end
 
-function get_automerge_guidelines_new_versions(; check_license::Bool,
-                                                 this_is_jll_package::Bool,
-                                                 this_pr_can_use_special_jll_exceptions::Bool)
+function get_automerge_guidelines(::NewVersion;
+                                  check_license::Bool,
+                                  this_is_jll_package::Bool,
+                                  this_pr_can_use_special_jll_exceptions::Bool)
     guidelines = [
         (guideline_registry_consistency_tests_pass, true),
         (guideline_pr_only_changes_allowed_files, true),
