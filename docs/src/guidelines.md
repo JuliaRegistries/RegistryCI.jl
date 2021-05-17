@@ -4,6 +4,12 @@ CurrentModule = RegistryCI
 
 # Automatic merging guidelines
 
+These are the guidelines that a pull request must pass in order to be automatically merged.
+
+All of those guidelines are enabled on the General registry.
+
+For private registries, some of these guidelines can be disabled.
+
 ## New packages
 
 ```@eval
