@@ -714,6 +714,7 @@ function _run_pkg_commands(working_directory::String,
         "JULIA_REGISTRYCI_AUTOMERGE" => "true",
         "PYTHON" => "",
         "R_HOME" => "*",
+        "JULIA_PKG_PRECOMPILE_AUTO" => "0",
     )
     for k in ("HOME", "PATH", "HTTP_PROXY", "HTTPS_PROXY", "JULIA_PKG_SERVER")
         if haskey(ENV, k)
