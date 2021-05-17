@@ -150,6 +150,13 @@ function comment_text_pass(::NewPackage,
     return result
 end
 
+const _please_read_these_documents = string(
+    "Please make sure that you have read the ",
+    "[General registry README](https://github.com/JuliaRegistries/General/blob/master/README.md) ",
+    "and the ",
+    "[AutoMerge guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/). ",
+)
+
 function comment_text_fail(::NewPackage,
                            reasons::Vector{String},
                            suggest_onepointzero::Bool,
@@ -157,8 +164,7 @@ function comment_text_fail(::NewPackage,
     reasons_formatted = join(string.("- ", reasons), "\n")
     result = string("Your `new package` pull request does not meet ",
                     "the guidelines for auto-merging. ",
-                    "Please make sure that you have read the ",
-                    "[General registry README](https://github.com/JuliaRegistries/General/blob/master/README.md). ",
+                    _please_read_these_documents,
                     "The following guidelines were not met:\n\n",
                     reasons_formatted,
                     _comment_disclaimer(),
@@ -181,8 +187,7 @@ function comment_text_fail(::NewVersion,
     reasons_formatted = join(string.("- ", reasons), "\n")
     result = string("Your `new version` pull request does not meet ",
                     "the guidelines for auto-merging. ",
-                    "Please make sure that you have read the ",
-                    "[General registry README](https://github.com/JuliaRegistries/General/blob/master/README.md). ",
+                    _please_read_these_documents,
                     "The following guidelines were not met:\n\n",
                     reasons_formatted,
                     _comment_disclaimer(),
