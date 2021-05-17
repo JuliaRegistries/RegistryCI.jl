@@ -661,6 +661,7 @@ function meets_version_can_be_imported(working_directory::String,
         $(pkg_add_command)
         @info("Successfully `Pkg.add`ed package");
         @info("Attempting to `import` package");
+        Pkg.precompile()
         import $(pkg);
         @info("Successfully `import`ed package");
         """
