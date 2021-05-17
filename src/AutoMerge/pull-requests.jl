@@ -84,43 +84,7 @@ function pull_request_build(api::GitHub.GitHubAPI,
     if current_pr_head_commit_sha != _github_api_pr_head_commit_sha
         throw(AutoMergeShaMismatch("Current commit sha (\"$(current_pr_head_commit_sha)\") does not match what the GitHub API tells us (\"$(_github_api_pr_head_commit_sha)\")"))
     end
-    result = pull_request_build(api,
-                                pr,
-                                current_pr_head_commit_sha,
-                                registry,
-                                registry_head;
-                                auth=auth,
-                                authorized_authors=authorized_authors,
-                                authorized_authors_special_jll_exceptions=authorized_authors_special_jll_exceptions,
-                                error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
-                                master_branch=master_branch,
-                                master_branch_is_default_branch=master_branch_is_default_branch,
-                                suggest_onepointzero=suggest_onepointzero,
-                                whoami=whoami,
-                                registry_deps=registry_deps,
-                                check_license=check_license,
-                                public_registries=public_registries,
-                                read_only=read_only)
-    return result
-end
 
-function pull_request_build(api::GitHub.GitHubAPI,
-                            pr::GitHub.PullRequest,
-                            current_pr_head_commit_sha::String,
-                            registry::GitHub.Repo,
-                            registry_head::String;
-                            auth::GitHub.Authorization,
-                            authorized_authors::Vector{String},
-                            authorized_authors_special_jll_exceptions::Vector{String},
-                            error_exit_if_automerge_not_applicable::Bool,
-                            master_branch::String,
-                            master_branch_is_default_branch::Bool,
-                            suggest_onepointzero::Bool,
-                            whoami::String,
-                            registry_deps::Vector{<:AbstractString} = String[],
-                            check_license::Bool,
-                            public_registries::Vector{<:AbstractString} = String[],
-                            read_only::Bool)::Nothing
     # 1. Check if the PR is open, if not quit.
     # 2. Determine if it is a new package or new version of an
     #    existing package, if neither quit.
