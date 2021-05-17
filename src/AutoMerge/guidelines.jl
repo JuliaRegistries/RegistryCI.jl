@@ -661,6 +661,7 @@ function meets_version_can_be_imported(working_directory::String,
         $(pkg_add_command)
         @info("Successfully `Pkg.add`ed package");
         @info("Attempting to `import` package");
+        Pkg.precompile()
         import $(pkg);
         @info("Successfully `import`ed package");
         """
@@ -714,6 +715,7 @@ function _run_pkg_commands(working_directory::String,
         "JULIA_REGISTRYCI_AUTOMERGE" => "true",
         "PYTHON" => "",
         "R_HOME" => "*",
+        "JULIA_PKG_PRECOMPILE_AUTO" => "0",
     )
     for k in ("HOME", "PATH", "HTTP_PROXY", "HTTPS_PROXY", "JULIA_PKG_SERVER")
         if haskey(ENV, k)
