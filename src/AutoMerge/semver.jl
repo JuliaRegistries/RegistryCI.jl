@@ -70,14 +70,22 @@ function is_breaking(a::VersionNumber, b::VersionNumber)::Bool
 end
 
 function all_versions(pkg::String, registry_path::String)
-    return VersionNumber.(keys(Pkg.TOML.parsefile(joinpath(registry_path, uppercase(pkg[1:1]), pkg, "Versions.toml"))))
+    package_relpath = get_package_relpath_in_registry(;
+        package_name = pkg,
+        registry_path = registry_path,
+    )
+    return VersionNumber.(keys(Pkg.TOML.parsefile(joinpath(registry_path, package_relpath, "Versions.toml"))))
 end
 
 latest_version(pkg::String, registry_path::String) = maximum(all_versions(pkg, registry_path))
 
 function julia_compat(pkg::String, version::VersionNumber, registry_path::String)
+    package_relpath = get_package_relpath_in_registry(;
+        package_name = pkg,
+        registry_path = registry_path,
+    )
     all_compat_entries_for_julia = Pkg.Types.VersionRange[]
-    compat = Pkg.TOML.parsefile(joinpath(registry_path, uppercase(pkg[1:1]), pkg, "Compat.toml"))
+    compat = Pkg.TOML.parsefile(joinpath(registry_path, package_relpath, "Compat.toml"))
     for version_range in keys(compat)
         if version in Pkg.Types.VersionRange(version_range)
             for compat_entry in compat[version_range]

@@ -1,18 +1,26 @@
 function allowed_changed_files(::NewPackage, pkg::String)
-    first_letter = uppercase(pkg[1:1])
-    result = String["Registry.toml",
-                    "$(first_letter)/$(pkg)/Compat.toml",
-                    "$(first_letter)/$(pkg)/Deps.toml",
-                    "$(first_letter)/$(pkg)/Package.toml",
-                    "$(first_letter)/$(pkg)/Versions.toml"]
+    _package_relpath_per_scheme = _get_package_relpath_per_name_scheme(;
+        package_name = pkg,
+    )
+    result = String[
+        "Registry.toml",
+        "$(_package_relpath_per_scheme)/Compat.toml",
+        "$(_package_relpath_per_scheme)/Deps.toml",
+        "$(_package_relpath_per_scheme)/Package.toml",
+        "$(_package_relpath_per_scheme)/Versions.toml",
+    ]
     return result
 end
 
 function allowed_changed_files(::NewVersion, pkg::String)
-    first_letter = uppercase(pkg[1:1])
-    result = String["$(first_letter)/$(pkg)/Compat.toml",
-                    "$(first_letter)/$(pkg)/Deps.toml",
-                    "$(first_letter)/$(pkg)/Versions.toml"]
+    _package_relpath_per_scheme = _get_package_relpath_per_name_scheme(;
+        package_name = pkg,
+    )
+    result = String[
+        "$(_package_relpath_per_scheme)/Compat.toml",
+        "$(_package_relpath_per_scheme)/Deps.toml",
+        "$(_package_relpath_per_scheme)/Versions.toml",
+    ]
     return result
 end
 
