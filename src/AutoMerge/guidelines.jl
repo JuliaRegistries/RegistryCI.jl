@@ -593,7 +593,7 @@ const guideline_version_has_osi_license = Guideline(;
         "located in the top-level directory of the package code, ",
         "e.g. in a file named `LICENSE` or `LICENSE.md`. ",
         "This check is required for the General registry. ",
-        "For private registries, registry maintainers have the option to disable this check.",
+        "For other registries, registry maintainers have the option to disable this check.",
     ),
     check = data -> meets_version_has_osi_license(
         data.pkg;
