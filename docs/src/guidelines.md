@@ -8,7 +8,7 @@ These are the guidelines that a pull request must pass in order to be automatica
 
 All of those guidelines are enabled on the General registry.
 
-For private registries, some of these guidelines can be disabled.
+For other registries, some of these guidelines can be disabled.
 
 ## New packages
 
