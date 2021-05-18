@@ -6,7 +6,11 @@ function _get_all_dependencies_nonrecursive(working_directory::AbstractString,
                                             pkg,
                                             version)
     all_dependencies = String[]
-    deps = Pkg.TOML.parsefile(joinpath(working_directory, uppercase(pkg[1:1]), pkg, "Deps.toml"))
+    package_relpath = get_package_relpath_in_registry(;
+        package_name = pkg,
+        registry_path = working_directory,
+    )
+    deps = Pkg.TOML.parsefile(joinpath(working_directory, package_relpath, "Deps.toml"))
     for version_range in keys(deps)
         if version in Pkg.Types.VersionRange(version_range)
             for name in keys(deps[version_range])

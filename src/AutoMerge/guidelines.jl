@@ -34,7 +34,11 @@ const guideline_compat_for_julia = Guideline(;
 )
 
 function meets_compat_for_julia(working_directory::AbstractString, pkg, version)
-    compat = Pkg.TOML.parsefile(joinpath(working_directory, uppercase(pkg[1:1]), pkg, "Compat.toml"))
+    package_relpath = get_package_relpath_in_registry(;
+        package_name = pkg,
+        registry_path = working_directory,
+    )
+    compat = Pkg.TOML.parsefile(joinpath(working_directory, package_relpath, "Compat.toml"))
     # Go through all the compat entries looking for the julia compat
     # of the new version. When found, test
     # 1. that it is a bounded range,
@@ -80,8 +84,12 @@ const guideline_compat_for_all_deps = Guideline(;
 )
 
 function meets_compat_for_all_deps(working_directory::AbstractString, pkg, version)
-    deps = Pkg.TOML.parsefile(joinpath(working_directory, uppercase(pkg[1:1]), pkg, "Deps.toml"))
-    compat = Pkg.TOML.parsefile(joinpath(working_directory, uppercase(pkg[1:1]), pkg, "Compat.toml"))
+    package_relpath = get_package_relpath_in_registry(;
+        package_name = pkg,
+        registry_path = working_directory,
+    )
+    deps = Pkg.TOML.parsefile(joinpath(working_directory, package_relpath, "Deps.toml"))
+    compat = Pkg.TOML.parsefile(joinpath(working_directory, package_relpath, "Compat.toml"))
     # First, we construct a Dict in which the keys are the package's
     # dependencies, and the value is always false.
     dep_has_compat_with_upper_bound = Dict{String, Bool}()
@@ -336,7 +344,7 @@ end
 const guideline_normal_capitalization = Guideline(;
     info = "Normal capitalization",
     docs = string(
-        "The package name should start with an uppercase letter, ",
+        "The package name should start with an upper-case letter, ",
         "contain only ASCII alphanumeric characters, ",
         "and contain at least one lowercase letter.",
     ),
@@ -348,7 +356,7 @@ function meets_normal_capitalization(pkg)
     if meets_this_guideline
         return true, ""
     else
-        return false, "Name does not meet all of the following: starts with an uppercase letter, ASCII alphanumerics only, not all letters are uppercase."
+        return false, "Name does not meet all of the following: starts with an upper-case letter, ASCII alphanumerics only, not all letters are upper-case."
     end
 end
 
@@ -361,11 +369,14 @@ const guideline_repo_url_requirement = Guideline(;
 )
 
 function meets_repo_url_requirement(pkg::String; registry_head::String)
+    package_relpath = get_package_relpath_in_registry(;
+        package_name = pkg,
+        registry_path = registry_head,
+    )
     package_toml_parsed = Pkg.TOML.parsefile(
         joinpath(
             registry_head,
-            uppercase(pkg[1:1]),
-            pkg,
+            package_relpath,
             "Package.toml",
         )
     )
@@ -608,12 +619,12 @@ function meets_version_has_osi_license(pkg::String; pkg_code_path)
     non_osi_results = [ string(r.identifier, " license in ", r.filename) for r in flat_results if !r.approved ]
 
     osi_string = string("Found OSI-approved license(s): ", join(osi_results, ", ", ", and "), ".")
-    non_osi_string = string("found non-OSI license(s): ", join(non_osi_results, ", ", ", and "), ".")
+    non_osi_string = string("Found non-OSI license(s): ", join(non_osi_results, ", ", ", and "), ".")
 
     # Failure mode 2: no OSI-approved licenses, but has some kind of license detected
     if isempty(osi_results)
         @error "Found no OSI-approved licenses" non_osi_string
-        return false, string("Found no OSI-approved licenses. ",  uppercasefirst(non_osi_string))
+        return false, string("Found no OSI-approved licenses. ",  non_osi_string)
     end
 
     # Pass: at least one OSI-approved license, possibly other licenses.
