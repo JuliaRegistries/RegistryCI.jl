@@ -415,8 +415,11 @@ end
         # and add some packages to inspect.
         tmp_path = mktempdir()
         has_osi_license_in_depot(pkg) = AutoMerge.meets_version_has_osi_license(pkg; pkg_code_path=pkgdir_from_depot(tmp_path, pkg))
+        withenv("JULIA_DEPOT_PATH" => tmp_path, "JULIA_PKG_SERVER" => "") do
+            run(`julia -e 'import Pkg; Pkg.Registry.add("General")'`)
+        end
         withenv("JULIA_DEPOT_PATH" => tmp_path) do
-            run(`julia -e 'using Pkg; Pkg.add(["RegistryCI"])'`)
+            run(`julia -e 'import Pkg; Pkg.add(["RegistryCI"])'`)
         end
         # Let's test ourselves and some of our dependencies that just have MIT licenses:
         result = has_osi_license_in_depot("RegistryCI")
