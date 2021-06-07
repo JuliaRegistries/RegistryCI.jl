@@ -27,8 +27,8 @@ jobs:
 
 function should_fixup(repo, issue)
     return fixup_comment_exists(repo, issue) &&
-        !fixup_done(repo) &&
-        tagbot_file(repo; issue_comments=true) === nothing
+           !fixup_done(repo) &&
+           tagbot_file(repo; issue_comments=true) === nothing
 end
 
 function get_fork(repo)
@@ -44,21 +44,36 @@ end
 
 function open_fixup_pr(repo; branch="tagbot/$(randstring())", fork=get_fork(repo))
     head = GH.commit(fork, "HEAD"; auth=AUTH[])
-    GH.create_reference(fork; auth=AUTH[], params=(;
-        sha=head.sha,
-        ref="refs/heads/$branch",
-    ))
+    GH.create_reference(
+        fork; auth=AUTH[], params=(; sha=head.sha, ref="refs/heads/$branch")
+    )
     path, contents = tagbot_file(fork)
-    GH.update_file(fork, path; auth=AUTH[], params=(;
-        branch=branch,
-        content=base64encode(TAGBOT_YML),
-        message=FIXUP_COMMIT_MESSAGE,
-        sha=bytes2hex(sha1("blob $(length(contents))\0$contents")),
-    ))
-    result = try 
-        GH.create_pull_request(repo; auth=AUTH[], params=(;title=FIXUP_PR_TITLE,body=FIXUP_PR_BODY,head="$(TAGBOT_USER[]):$branch",base=fork.default_branch,))
-    catch ex 
-        @error "Encountered an error while trying to create the fixup PR" exception=(ex, catch_backtrace())
+    GH.update_file(
+        fork,
+        path;
+        auth=AUTH[],
+        params=(;
+            branch=branch,
+            content=base64encode(TAGBOT_YML),
+            message=FIXUP_COMMIT_MESSAGE,
+            sha=bytes2hex(sha1("blob $(length(contents))\0$contents")),
+        ),
+    )
+    result = try
+        GH.create_pull_request(
+            repo;
+            auth=AUTH[],
+            params=(;
+                title=FIXUP_PR_TITLE,
+                body=FIXUP_PR_BODY,
+                head="$(TAGBOT_USER[]):$branch",
+                base=fork.default_branch,
+            ),
+        )
+    catch ex
+        @error "Encountered an error while trying to create the fixup PR" exception = (
+            ex, catch_backtrace()
+        )
         nothing
     end
     return result
@@ -87,10 +102,9 @@ function is_fixup_trigger(comment)
 end
 
 function fixup_done(repo)
-    pulls, _ = GH.pull_requests(repo; auth=AUTH[], params=(;
-        creator=TAGBOT_USER[],
-        state="all",
-    ))
+    pulls, _ = GH.pull_requests(
+        repo; auth=AUTH[], params=(; creator=TAGBOT_USER[], state="all")
+    )
     for pull in pulls
         if pull.title == FIXUP_PR_TITLE
             return true

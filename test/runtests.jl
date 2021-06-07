@@ -37,7 +37,8 @@ ENV["JULIA_PKG_SERVER"] = ""
         include("automerge-unit.jl")
     end
 
-    AUTOMERGE_RUN_INTEGRATION_TESTS = get(ENV, "AUTOMERGE_RUN_INTEGRATION_TESTS", "")::String
+    AUTOMERGE_RUN_INTEGRATION_TESTS =
+        get(ENV, "AUTOMERGE_RUN_INTEGRATION_TESTS", "")::String
     if AUTOMERGE_RUN_INTEGRATION_TESTS == "true"
         @testset "AutoMerge.jl integration tests" begin
             @info("Running the AutoMerge.jl integration tests")

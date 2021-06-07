@@ -4,19 +4,26 @@ const new_version_title_regex = r"^New version: (\w*?) v(\S*?)$"
 
 const commit_regex = r"(?:^|\n|\r\n)(?:\-|\*) Commit: (\w*?)(?:$|\n|\r\n)"
 
-is_new_package(pull_request::GitHub.PullRequest) = occursin(new_package_title_regex, title(pull_request))
+function is_new_package(pull_request::GitHub.PullRequest)
+    return occursin(new_package_title_regex, title(pull_request))
+end
 
-is_new_version(pull_request::GitHub.PullRequest) = occursin(new_version_title_regex, title(pull_request))
+function is_new_version(pull_request::GitHub.PullRequest)
+    return occursin(new_version_title_regex, title(pull_request))
+end
 
-function check_authorization(pkg, pr_author_login, authorized_authors,
-                             authorized_authors_special_jll_exceptions,
-                             error_exit_if_automerge_not_applicable)
-    if pr_author_login ∉ vcat(authorized_authors,
-                              authorized_authors_special_jll_exceptions)
+function check_authorization(
+    pkg,
+    pr_author_login,
+    authorized_authors,
+    authorized_authors_special_jll_exceptions,
+    error_exit_if_automerge_not_applicable,
+)
+    if pr_author_login ∉ vcat(authorized_authors, authorized_authors_special_jll_exceptions)
         throw_not_automerge_applicable(
             AutoMergeAuthorNotAuthorized,
             "Author $(pr_author_login) is not authorized to automerge. Exiting...";
-            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable
+            error_exit_if_automerge_not_applicable=error_exit_if_automerge_not_applicable,
         )
         return :not_authorized
     end
@@ -28,7 +35,7 @@ function check_authorization(pkg, pr_author_login, authorized_authors,
         throw_not_automerge_applicable(
             AutoMergeAuthorNotAuthorized,
             "This package is not a JLL package. Author $(pr_author_login) is not authorized to register non-JLL packages. Exiting...";
-            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable
+            error_exit_if_automerge_not_applicable=error_exit_if_automerge_not_applicable,
         )
         return :not_authorized
     end
@@ -40,8 +47,7 @@ function check_authorization(pkg, pr_author_login, authorized_authors,
     return :normal
 end
 
-function parse_pull_request_title(::NewVersion,
-                                  pull_request::GitHub.PullRequest)
+function parse_pull_request_title(::NewVersion, pull_request::GitHub.PullRequest)
     m = match(new_version_title_regex, title(pull_request))
     pkg = convert(String, m.captures[1])::String
     version = VersionNumber(m.captures[2])
@@ -54,35 +60,40 @@ function commit_from_pull_request_body(pull_request::GitHub.PullRequest)
     return convert(String, m.captures[1])::String
 end
 
-function parse_pull_request_title(::NewPackage,
-                                  pull_request::GitHub.PullRequest)
+function parse_pull_request_title(::NewPackage, pull_request::GitHub.PullRequest)
     m = match(new_package_title_regex, title(pull_request))
     pkg = convert(String, m.captures[1])::String
     version = VersionNumber(m.captures[2])
     return pkg, version
 end
 
-function pull_request_build(api::GitHub.GitHubAPI,
-                            pr_number::Integer,
-                            current_pr_head_commit_sha::String,
-                            registry::GitHub.Repo,
-                            registry_head::String;
-                            whoami::String,
-                            auth::GitHub.Authorization,
-                            authorized_authors::Vector{String},
-                            authorized_authors_special_jll_exceptions::Vector{String},
-                            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
-                            master_branch::String,
-                            master_branch_is_default_branch::Bool,
-                            suggest_onepointzero::Bool,
-                            registry_deps::Vector{<:AbstractString} = String[],
-                            check_license::Bool,
-                            public_registries::Vector{<:AbstractString} = String[],
-                            read_only::Bool)::Nothing
+function pull_request_build(
+    api::GitHub.GitHubAPI,
+    pr_number::Integer,
+    current_pr_head_commit_sha::String,
+    registry::GitHub.Repo,
+    registry_head::String;
+    whoami::String,
+    auth::GitHub.Authorization,
+    authorized_authors::Vector{String},
+    authorized_authors_special_jll_exceptions::Vector{String},
+    error_exit_if_automerge_not_applicable=error_exit_if_automerge_not_applicable,
+    master_branch::String,
+    master_branch_is_default_branch::Bool,
+    suggest_onepointzero::Bool,
+    registry_deps::Vector{<:AbstractString}=String[],
+    check_license::Bool,
+    public_registries::Vector{<:AbstractString}=String[],
+    read_only::Bool,
+)::Nothing
     pr = my_retry(() -> GitHub.pull_request(api, registry, pr_number; auth=auth))
     _github_api_pr_head_commit_sha = pull_request_head_sha(pr)
     if current_pr_head_commit_sha != _github_api_pr_head_commit_sha
-        throw(AutoMergeShaMismatch("Current commit sha (\"$(current_pr_head_commit_sha)\") does not match what the GitHub API tells us (\"$(_github_api_pr_head_commit_sha)\")"))
+        throw(
+            AutoMergeShaMismatch(
+                "Current commit sha (\"$(current_pr_head_commit_sha)\") does not match what the GitHub API tells us (\"$(_github_api_pr_head_commit_sha)\")",
+            ),
+        )
     end
 
     # 1. Check if the PR is open, if not quit.
@@ -94,7 +105,7 @@ function pull_request_build(api::GitHub.GitHubAPI,
         throw_not_automerge_applicable(
             AutoMergePullRequestNotOpen,
             "The pull request is not open. Exiting...";
-            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable
+            error_exit_if_automerge_not_applicable=error_exit_if_automerge_not_applicable,
         )
         return nothing
     end
@@ -107,17 +118,20 @@ function pull_request_build(api::GitHub.GitHubAPI,
         throw_not_automerge_applicable(
             AutoMergeNeitherNewPackageNorNewVersion,
             "Neither a new package nor a new version. Exiting...";
-            error_exit_if_automerge_not_applicable = error_exit_if_automerge_not_applicable,
+            error_exit_if_automerge_not_applicable=error_exit_if_automerge_not_applicable,
         )
         return nothing
     end
 
     pkg, version = parse_pull_request_title(registration_type, pr)
     pr_author_login = author_login(pr)
-    authorization = check_authorization(pkg, pr_author_login,
-                                        authorized_authors,
-                                        authorized_authors_special_jll_exceptions,
-                                        error_exit_if_automerge_not_applicable)
+    authorization = check_authorization(
+        pkg,
+        pr_author_login,
+        authorized_authors,
+        authorized_authors_special_jll_exceptions,
+        error_exit_if_automerge_not_applicable,
+    )
 
     if authorization == :not_authorized
         return nothing
@@ -127,48 +141,54 @@ function pull_request_build(api::GitHub.GitHubAPI,
     if !master_branch_is_default_branch
         checkout_branch(registry_master, master_branch)
     end
-    data = GitHubAutoMergeData(;api = api,
-                               registration_type = registration_type,
-                               pr = pr,
-                               pkg = pkg,
-                               version = version,
-                               current_pr_head_commit_sha = current_pr_head_commit_sha,
-                               registry = registry,
-                               auth = auth,
-                               authorization = authorization,
-                               registry_head = registry_head,
-                               registry_master = registry_master,
-                               suggest_onepointzero = suggest_onepointzero,
-                               whoami = whoami,
-                               registry_deps = registry_deps,
-                               public_registries = public_registries,
-                               read_only = read_only)
+    data = GitHubAutoMergeData(;
+        api=api,
+        registration_type=registration_type,
+        pr=pr,
+        pkg=pkg,
+        version=version,
+        current_pr_head_commit_sha=current_pr_head_commit_sha,
+        registry=registry,
+        auth=auth,
+        authorization=authorization,
+        registry_head=registry_head,
+        registry_master=registry_master,
+        suggest_onepointzero=suggest_onepointzero,
+        whoami=whoami,
+        registry_deps=registry_deps,
+        public_registries=public_registries,
+        read_only=read_only,
+    )
     pull_request_build(data; check_license=check_license)
-    rm(registry_master; force = true, recursive = true)
+    rm(registry_master; force=true, recursive=true)
     return nothing
 end
 
 function pull_request_build(data::GitHubAutoMergeData; check_license)::Nothing
     kind = package_or_version(data.registration_type)
     this_is_jll_package = is_jll_name(data.pkg)
-    @info("This is a new $kind pull request",
-          pkg = data.pkg,
-          version = data.version,
-          this_is_jll_package)
+    @info(
+        "This is a new $kind pull request",
+        pkg = data.pkg,
+        version = data.version,
+        this_is_jll_package
+    )
 
-    update_status(data;
-                  state = "pending",
-                  context = "automerge/decision",
-                  description = "New $kind. Pending.")
+    update_status(
+        data;
+        state="pending",
+        context="automerge/decision",
+        description="New $kind. Pending.",
+    )
 
     this_pr_can_use_special_jll_exceptions =
         this_is_jll_package && data.authorization == :jll
 
     guidelines = get_automerge_guidelines(
         data.registration_type;
-        check_license = check_license,
-        this_is_jll_package = this_is_jll_package,
-        this_pr_can_use_special_jll_exceptions = this_pr_can_use_special_jll_exceptions,
+        check_license=check_license,
+        this_is_jll_package=this_is_jll_package,
+        this_pr_can_use_special_jll_exceptions=this_pr_can_use_special_jll_exceptions,
     )
     checked_guidelines = Guideline[]
 
@@ -176,41 +196,50 @@ function pull_request_build(data::GitHubAutoMergeData; check_license)::Nothing
         applicable || continue
         if guideline == :update_status
             if !all(passed, checked_guidelines)
-                update_status(data;
-                              state = "failure",
-                              context = "automerge/decision",
-                              description = "New version. Failed.")
+                update_status(
+                    data;
+                    state="failure",
+                    context="automerge/decision",
+                    description="New version. Failed.",
+                )
             end
         else
             check!(guideline, data)
-            @info(guideline.info,
-                  meets_this_guideline = passed(guideline),
-                  message = message(guideline))
+            @info(
+                guideline.info,
+                meets_this_guideline = passed(guideline),
+                message = message(guideline)
+            )
             push!(checked_guidelines, guideline)
         end
     end
 
     if all(passed, checked_guidelines) # success
         description = "New $kind. Approved. name=\"$(data.pkg)\". sha=\"$(data.current_pr_head_commit_sha)\""
-        update_status(data;
-                      state = "success",
-                      context = "automerge/decision",
-                      description = description)
-        this_pr_comment_pass = comment_text_pass(data.registration_type,
-                                                 data.suggest_onepointzero,
-                                                 data.version,
-                                                 this_pr_can_use_special_jll_exceptions)
+        update_status(
+            data; state="success", context="automerge/decision", description=description
+        )
+        this_pr_comment_pass = comment_text_pass(
+            data.registration_type,
+            data.suggest_onepointzero,
+            data.version,
+            this_pr_can_use_special_jll_exceptions,
+        )
         my_retry(() -> update_automerge_comment!(data, this_pr_comment_pass))
     else # failure
-        update_status(data;
-                      state = "failure",
-                      context = "automerge/decision",
-                      description = "New $kind. Failed.")
+        update_status(
+            data;
+            state="failure",
+            context="automerge/decision",
+            description="New $kind. Failed.",
+        )
         failing_messages = message.(filter(!passed, checked_guidelines))
-        this_pr_comment_fail = comment_text_fail(data.registration_type,
-                                                 failing_messages,
-                                                 data.suggest_onepointzero,
-                                                 data.version)
+        this_pr_comment_fail = comment_text_fail(
+            data.registration_type,
+            failing_messages,
+            data.suggest_onepointzero,
+            data.version,
+        )
         my_retry(() -> update_automerge_comment!(data, this_pr_comment_fail))
         throw(AutoMergeGuidelinesNotMet("The automerge guidelines were not met."))
     end

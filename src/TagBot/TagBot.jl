@@ -51,7 +51,7 @@ function repo_and_version_of_pull_request_body(body)
     end
     m = match(r"Repository: .*github\.com[:/](.*)", body)
     repo = m === nothing ? nothing : strip(m[1])
-    repo !== nothing && endswith(repo, ".git") && (repo = repo[1:end-4])
+    repo !== nothing && endswith(repo, ".git") && (repo = repo[1:(end - 4)])
     m = match(r"Version: (.*)", body)
     version = m === nothing ? nothing : strip(m[1])
     return repo, version
@@ -77,18 +77,14 @@ function tagbot_file(repo; issue_comments=false)
 end
 
 function get_repo_notification_issue(repo)
-    issues, _ = GH.issues(repo; auth=AUTH[], params=(;
-        creator=TAGBOT_USER[],
-        state="closed",
-    ))
+    issues, _ = GH.issues(
+        repo; auth=AUTH[], params=(; creator=TAGBOT_USER[], state="closed")
+    )
     filter!(x -> x.pull_request === nothing, issues)
     return if isempty(issues)
         @info "Creating new notification issue"
         issue = try
-            GH.create_issue(repo; auth=AUTH[], params=(;
-                title=ISSUE_TITLE,
-                body=ISSUE_BODY,
-            ))
+            GH.create_issue(repo; auth=AUTH[], params=(; title=ISSUE_TITLE, body=ISSUE_BODY))
         catch e
             occursin("Issues are disabled", e.msg) || rethrow()
             @info "Issues are disabled on $repo"
@@ -120,7 +116,7 @@ function tag_exists(repo, version)
         true
     catch e
         if !occursin("404", e.msg)
-            @warn "Unknown error when checking for existing tag" ex=(e, catch_backtrace())
+            @warn "Unknown error when checking for existing tag" ex = (e, catch_backtrace())
         end
         false
     end
@@ -130,23 +126,23 @@ function maybe_notify(event, repo, version; cron=false)
     @info "Processing version $version of $repo"
     if tagbot_file(repo) === nothing
         @info "TagBot is not enabled on $repo"
-        return
+        return nothing
     end
     if cron && tag_exists(repo, version)
         @info "Tag $version already exists for $repo"
-        return
+        return nothing
     end
     issue = get_repo_notification_issue(repo)
     if issue === nothing
         @info "Couldn't get notification issue for $repo"
-        return
+        return nothing
     end
     if cron && should_fixup(repo, issue)
         @info "Opening fixup PR for $repo"
         open_fixup_pr(repo)
     end
     body = notification_body(event; cron=cron)
-    notify(repo, issue, body)
+    return notify(repo, issue, body)
 end
 
 end

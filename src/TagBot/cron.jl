@@ -12,12 +12,11 @@ end
 
 function collect_pulls(repo)
     acc = GH.PullRequest[]
-    kwargs = Dict(:auth => AUTH[], :page_limit => 1, :params => (;
-        state="closed",
-        sort="updated",
-        direction="desc",
-        per_page=100,
-    ))
+    kwargs = Dict(
+        :auth => AUTH[],
+        :page_limit => 1,
+        :params => (; state="closed", sort="updated", direction="desc", per_page=100),
+    )
     done = false
     while !done
         pulls, pages = get_pulls(repo; kwargs...)
@@ -39,8 +38,10 @@ function collect_pulls(repo)
     return acc
 end
 
-get_pulls(args...; kwargs...) = retry(
-    () -> GH.pull_requests(args...; kwargs...);
-    check=(s, e) -> occursin("Server error", e.msg),
-    delays=ExponentialBackOff(n=5, first_delay=1, factor=2),
-)()
+function get_pulls(args...; kwargs...)
+    return retry(
+        () -> GH.pull_requests(args...; kwargs...);
+        check=(s, e) -> occursin("Server error", e.msg),
+        delays=ExponentialBackOff(; n=5, first_delay=1, factor=2),
+    )()
+end

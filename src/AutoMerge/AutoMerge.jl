@@ -1,21 +1,21 @@
 module AutoMerge
 
-import Dates
+using Dates: Dates
 # import GitCommand
-import GitHub
-import HTTP
-import LibGit2
-import Pkg
-import TimeZones
-import JSON
-import VisualStringDistances
-import StringDistances
-import LicenseCheck
-import TOML
-import Printf
-import RegistryTools
-import ..RegistryCI
-import Tar
+using GitHub: GitHub
+using HTTP: HTTP
+using LibGit2: LibGit2
+using Pkg: Pkg
+using TimeZones: TimeZones
+using JSON: JSON
+using VisualStringDistances: VisualStringDistances
+using StringDistances: StringDistances
+using LicenseCheck: LicenseCheck
+using TOML: TOML
+using Printf: Printf
+using RegistryTools: RegistryTools
+using ..RegistryCI: RegistryCI
+using Tar: Tar
 
 include("types.jl")
 include("ciservice.jl")

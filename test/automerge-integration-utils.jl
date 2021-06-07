@@ -12,10 +12,15 @@ const AutoMerge = RegistryCI.AutoMerge
 
 const timestamp_regex = r"integration\/(\d\d\d\d-\d\d-\d\d-\d\d-\d\d-\d\d-\d\d\d)\/"
 
-function wait_pr_compute_mergeability(api::GitHub.GitHubAPI, repo::GitHub.Repo, pr::GitHub.PullRequest; auth::GitHub.Authorization)
+function wait_pr_compute_mergeability(
+    api::GitHub.GitHubAPI,
+    repo::GitHub.Repo,
+    pr::GitHub.PullRequest;
+    auth::GitHub.Authorization,
+)
     while !(pr.mergeable isa Bool)
         sleep(5)
-        pr = GitHub.pull_request(api, repo, pr.number; auth = auth)
+        pr = GitHub.pull_request(api, repo, pr.number; auth=auth)
     end
     return pr
 end
@@ -29,7 +34,8 @@ function templates(parts...)
 end
 
 function get_random_number_from_system()
-    result = parse(Int, strip(read(pipeline(`cat /dev/random`, `od -vAn -N4 -D`), String)))::Int
+    result =
+        parse(Int, strip(read(pipeline(`cat /dev/random`, `od -vAn -N4 -D`), String)))::Int
     return result
 end
 
@@ -43,7 +49,7 @@ function my_two_times_now()
     _now_utc, _now_et = my_two_datetimes_now()
     utc_string = @sprintf "%02d:%02d UTC" hour(_now_utc) minute(_now_utc)
     et_string = @sprintf "%02d:%02d %s" hour(_now_et) minute(_now_et) _now_et.zone.name
-    result = "$(et_string) ($(utc_string))"
+    return result = "$(et_string) ($(utc_string))"
 end
 
 function utc_to_string(zdt::ZonedDateTime)
@@ -76,13 +82,13 @@ function list_all_origin_branches(git_repo_dir; GIT)
     b = split(strip(a), '\n')
     b_length = length(b)
     c = Vector{String}(undef, b_length)
-    for i = 1:b_length
+    for i in 1:b_length
         c[i] = strip(strip(strip(b[i]), '*'))
         c[i] = first(split(c[i], "->"))
         c[i] = strip(c[i])
     end
     my_regex = r"^remotes\/origin\/(.*)$"
-    for i = 1:b_length
+    for i in 1:b_length
         if occursin(my_regex, c[i])
             m = match(my_regex, c[i])
             if m[1] != "HEAD"
@@ -103,9 +109,10 @@ function get_age_of_commit(commit)
 end
 
 function delete_old_pull_request_branches(AUTOMERGE_INTEGRATION_TEST_REPO, older_than; GIT)
-    with_cloned_repo(AUTOMERGE_INTEGRATION_TEST_REPO; GIT = GIT) do git_repo_dir
+    with_cloned_repo(AUTOMERGE_INTEGRATION_TEST_REPO; GIT=GIT) do git_repo_dir
         cd(git_repo_dir)
-        all_origin_branches = list_all_origin_branches(git_repo_dir; GIT=GIT)::Vector{String}
+        all_origin_branches =
+            list_all_origin_branches(git_repo_dir; GIT=GIT)::Vector{String}
         for branch_name in all_origin_branches
             if occursin(timestamp_regex, branch_name)
                 commit = strip(read(`git rev-parse origin/$(branch_name)`, String))
@@ -114,7 +121,9 @@ function delete_old_pull_request_branches(AUTOMERGE_INTEGRATION_TEST_REPO, older
                     try
                         run(`$(GIT) push origin --delete $(branch_name)`)
                     catch ex
-                        @info "Encountered an error while trying to delete branch" exception=(ex, catch_backtrace()) branch_name
+                        @info "Encountered an error while trying to delete branch" exception = (
+                            ex, catch_backtrace()
+                        ) branch_name
                     end
                 end
             end
@@ -129,7 +138,7 @@ function empty_git_repo(git_repo_dir::AbstractString)
     for x in readdir(git_repo_dir)
         if x != ".git"
             path = joinpath(git_repo_dir, x)
-            rm(path; force = true, recursive = true)
+            rm(path; force=true, recursive=true)
         end
     end
     cd(original_working_directory)
@@ -139,11 +148,11 @@ end
 function with_temp_dir(f)
     original_working_directory = pwd()
     tmp_dir = mktempdir()
-    atexit(() -> rm(tmp_dir; force = true, recursive = true))
+    atexit(() -> rm(tmp_dir; force=true, recursive=true))
     cd(tmp_dir)
     result = f(tmp_dir)
     cd(original_working_directory)
-    rm(tmp_dir; force = true, recursive = true)
+    rm(tmp_dir; force=true, recursive=true)
     return result
 end
 
@@ -171,12 +180,11 @@ function get_git_current_head(dir)
     return result
 end
 
-function with_pr_merge_commit(f::Function,
-                              pr::GitHub.PullRequest,
-                              repo_url::AbstractString;
-                              GIT)
+function with_pr_merge_commit(
+    f::Function, pr::GitHub.PullRequest, repo_url::AbstractString; GIT
+)
     original_working_directory = pwd()
-    result = with_cloned_repo(repo_url; GIT = GIT) do git_repo_dir
+    result = with_cloned_repo(repo_url; GIT=GIT) do git_repo_dir
         cd(git_repo_dir)
         number = pr.number
         run(`$(GIT) fetch origin +refs/pull/$(number)/merge`)
@@ -199,14 +207,16 @@ function _generate_branch_name(name::AbstractString)
     return b
 end
 
-function generate_branch(name::AbstractString,
-                         path_to_content::AbstractString,
-                         parent_branch::AbstractString = "master";
-                         GIT,
-                         repo_url)
+function generate_branch(
+    name::AbstractString,
+    path_to_content::AbstractString,
+    parent_branch::AbstractString="master";
+    GIT,
+    repo_url,
+)
     original_working_directory = pwd()
     b = _generate_branch_name(name)
-    with_cloned_repo(repo_url; GIT = GIT) do git_repo_dir
+    with_cloned_repo(repo_url; GIT=GIT) do git_repo_dir
         cd(git_repo_dir)
         run(`$(GIT) checkout $(parent_branch)`)
         run(`$(GIT) branch $(b)`)
@@ -215,8 +225,8 @@ function generate_branch(name::AbstractString,
         for x in readdir(path_to_content)
             src = joinpath(path_to_content, x)
             dst = joinpath(git_repo_dir, x)
-            rm(dst; force = true, recursive = true)
-            cp(src, dst; force = true)
+            rm(dst; force=true, recursive=true)
+            cp(src, dst; force=true)
         end
         cd(git_repo_dir)
         try
@@ -232,62 +242,54 @@ function generate_branch(name::AbstractString,
         catch
         end
         cd(original_working_directory)
-        rm(git_repo_dir; force = true, recursive = true)
+        rm(git_repo_dir; force=true, recursive=true)
     end
     return b
 end
 
-function generate_master_branch(path_to_content::AbstractString,
-                                parent_branch::AbstractString = "master";
-                                GIT,
-                                repo_url)
+function generate_master_branch(
+    path_to_content::AbstractString, parent_branch::AbstractString="master"; GIT, repo_url
+)
     name = "master"
-    b = generate_branch(name, path_to_content, parent_branch; GIT = GIT, repo_url = repo_url)
+    b = generate_branch(name, path_to_content, parent_branch; GIT=GIT, repo_url=repo_url)
     return b
 end
 
-function generate_feature_branch(path_to_content::AbstractString,
-                                 parent_branch::AbstractString;
-                                 GIT,
-                                 repo_url)
+function generate_feature_branch(
+    path_to_content::AbstractString, parent_branch::AbstractString; GIT, repo_url
+)
     name = "feature"
-    b = generate_branch(name,
-                        path_to_content,
-                        parent_branch;
-                        GIT = GIT,
-                        repo_url = repo_url)
+    b = generate_branch(name, path_to_content, parent_branch; GIT=GIT, repo_url=repo_url)
     return b
 end
 
-function with_master_branch(f::Function,
-                            path_to_content::AbstractString,
-                            parent_branch::AbstractString;
-                            GIT,
-                            repo_url)
-    b = generate_master_branch(path_to_content,
-                               parent_branch;
-                               GIT = GIT,
-                               repo_url = repo_url)
+function with_master_branch(
+    f::Function,
+    path_to_content::AbstractString,
+    parent_branch::AbstractString;
+    GIT,
+    repo_url,
+)
+    b = generate_master_branch(path_to_content, parent_branch; GIT=GIT, repo_url=repo_url)
     result = f(b)
     return result
 end
 
-function with_feature_branch(f::Function,
-                             path_to_content::AbstractString,
-                             parent_branch::AbstractString;
-                             GIT,
-                             repo_url)
-    b = generate_feature_branch(path_to_content,
-                                parent_branch;
-                                GIT = GIT,
-                                repo_url = repo_url)
+function with_feature_branch(
+    f::Function,
+    path_to_content::AbstractString,
+    parent_branch::AbstractString;
+    GIT,
+    repo_url,
+)
+    b = generate_feature_branch(path_to_content, parent_branch; GIT=GIT, repo_url=repo_url)
     result = f(b)
     return result
 end
 
 function generate_public_registry(public_dir::AbstractString, GIT)
     public_git_repo = mktempdir()
-    cp(templates(public_dir), public_git_repo, force = true)
+    cp(templates(public_dir), public_git_repo; force=true)
     run(`$(GIT) -C $(public_git_repo) init`)
     run(`$(GIT) -C $(public_git_repo) add .`)
     run(`$(GIT) -C $(public_git_repo) commit -m "create"`)

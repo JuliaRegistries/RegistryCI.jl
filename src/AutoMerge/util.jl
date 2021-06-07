@@ -1,7 +1,7 @@
-function checkout_branch(dir::AbstractString,
-    branch::AbstractString;
-    git_command::AbstractString = "git")
-    Base.run(Cmd(`$(git_command) checkout $(branch)`; dir=dir))
+function checkout_branch(
+    dir::AbstractString, branch::AbstractString; git_command::AbstractString="git"
+)
+    return Base.run(Cmd(`$(git_command) checkout $(branch)`; dir=dir))
 end
 
 clone_repo(repo::GitHub.Repo) = clone_repo(repo_url(repo))
@@ -16,7 +16,7 @@ end
 
 function _clone_repo_into_dir(url::AbstractString, repo_dir)
     @info("Attempting to clone...")
-    rm(repo_dir; force = true, recursive = true)
+    rm(repo_dir; force=true, recursive=true)
     mkpath(repo_dir)
     LibGit2.clone(url, repo_dir)
     return repo_dir
@@ -30,7 +30,9 @@ then extract the files and folders from a given `tree_hash`, placing them in `de
 
 Returns a boolean indicating if the cloning succeeded.
 """
-function load_files_from_url_and_tree_hash(f, destination::String, url::String, tree_hash::String)
+function load_files_from_url_and_tree_hash(
+    f, destination::String, url::String, tree_hash::String
+)
     pkg_clone_dir = mktempdir()
     clone_success = try
         _clone_repo_into_dir(url, pkg_clone_dir)
@@ -66,87 +68,98 @@ function parse_registry_pkg_info(registry_path, pkg, version=nothing)
     always_assert(length(packages) == 1)
     uuid = convert(String, first(keys(packages)))
     # Also need to find out the package repository.
-    package = TOML.parsefile(joinpath(registry_path, packages[uuid]["path"], "Package.toml"))
+    package = TOML.parsefile(
+        joinpath(registry_path, packages[uuid]["path"], "Package.toml")
+    )
     repo = convert(String, package["repo"])
     subdir = convert(String, get(package, "subdir", ""))
     if version === nothing
         tree_hash = nothing
     else
-        versions = TOML.parsefile(joinpath(registry_path, packages[uuid]["path"], "Versions.toml"))
+        versions = TOML.parsefile(
+            joinpath(registry_path, packages[uuid]["path"], "Versions.toml")
+        )
         tree_hash = convert(String, versions[string(version)]["git-tree-sha1"])
     end
     return (; uuid=uuid, repo=repo, subdir=subdir, tree_hash=tree_hash)
 end
 
 function _comment_disclaimer()
-    result = string("\n\n",
-                    "Note that the guidelines are only required for the pull request ",
-                    "to be merged automatically. However, it is **strongly recommended** ",
-                    "to follow them, since otherwise the pull request needs to be ",
-                    "manually reviewed and merged by a human.",
-                    "\n\n",
-                    "After you have fixed the AutoMerge issues, simple retrigger Registrator, ",
-                    "which will automatically update this pull request. ",
-                    "You do not need to change the version number in your `Project.toml` file ",
-                    "(unless of course the AutoMerge issue is that you skipped a version number, ",
-                    "in which case you should change the version number).",
-                    "",
-                    "\n\n",
-                    "If you do not want to fix the AutoMerge issues, please post a comment ",
-                    "explaining why you would like this pull request to be manually merged.",
-                    "",
-                    )
+    result = string(
+        "\n\n",
+        "Note that the guidelines are only required for the pull request ",
+        "to be merged automatically. However, it is **strongly recommended** ",
+        "to follow them, since otherwise the pull request needs to be ",
+        "manually reviewed and merged by a human.",
+        "\n\n",
+        "After you have fixed the AutoMerge issues, simple retrigger Registrator, ",
+        "which will automatically update this pull request. ",
+        "You do not need to change the version number in your `Project.toml` file ",
+        "(unless of course the AutoMerge issue is that you skipped a version number, ",
+        "in which case you should change the version number).",
+        "",
+        "\n\n",
+        "If you do not want to fix the AutoMerge issues, please post a comment ",
+        "explaining why you would like this pull request to be manually merged.",
+        "",
+    )
     return result
 end
 
 function _comment_noblock()
-    result = string("\n\n---\n",
-                    "If you want to prevent this pull request from ",
-                    "being auto-merged, simply leave a comment. ",
-                    "If you want to post a comment without blocking ",
-                    "auto-merging, you must include the text ",
-                    "`[noblock]` in your comment.")
+    result = string(
+        "\n\n---\n",
+        "If you want to prevent this pull request from ",
+        "being auto-merged, simply leave a comment. ",
+        "If you want to post a comment without blocking ",
+        "auto-merging, you must include the text ",
+        "`[noblock]` in your comment.",
+    )
     return result
 end
 
-function comment_text_pass(::NewVersion,
-                           suggest_onepointzero::Bool,
-                           version::VersionNumber,
-                           is_jll::Bool)
-    result = string("Your `new version` pull request met all of the ",
-                    "guidelines for auto-merging and is scheduled to ",
-                    "be merged in the next round.",
-                    _comment_noblock(),
-                    _onepointzero_suggestion(suggest_onepointzero, version),
-                    "\n<!-- [noblock] -->")
+function comment_text_pass(
+    ::NewVersion, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool
+)
+    result = string(
+        "Your `new version` pull request met all of the ",
+        "guidelines for auto-merging and is scheduled to ",
+        "be merged in the next round.",
+        _comment_noblock(),
+        _onepointzero_suggestion(suggest_onepointzero, version),
+        "\n<!-- [noblock] -->",
+    )
     return result
 end
 
-function comment_text_pass(::NewPackage,
-                           suggest_onepointzero::Bool,
-                           version::VersionNumber,
-                           is_jll::Bool)
+function comment_text_pass(
+    ::NewPackage, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool
+)
     if is_jll
-      result = string("Your `new _jll package` pull request met all of the ",
-                      "guidelines for auto-merging and is scheduled to ",
-                      "be merged in the next round.",
-                      "\n\n",
-                      _comment_noblock(),
-                      _onepointzero_suggestion(suggest_onepointzero, version),
-                      "\n<!-- [noblock] -->")
+        result = string(
+            "Your `new _jll package` pull request met all of the ",
+            "guidelines for auto-merging and is scheduled to ",
+            "be merged in the next round.",
+            "\n\n",
+            _comment_noblock(),
+            _onepointzero_suggestion(suggest_onepointzero, version),
+            "\n<!-- [noblock] -->",
+        )
     else
-      result = string("Your `new package` pull request met all of the ",
-                      "guidelines for auto-merging and is scheduled to ",
-                      "be merged when the mandatory waiting period (3 days) has elapsed.",
-                      "\n\n",
-                      "Since you are registering a new package, ",
-                      "please make sure that you have read the ",
-                      "package naming guidelines: ",
-                      "https://julialang.github.io/Pkg.jl/dev/creating-packages/#Package-naming-guidelines-1",
-                      "\n\n",
-                      _comment_noblock(),
-                      _onepointzero_suggestion(suggest_onepointzero, version),
-                      "\n<!-- [noblock] -->")
+        result = string(
+            "Your `new package` pull request met all of the ",
+            "guidelines for auto-merging and is scheduled to ",
+            "be merged when the mandatory waiting period (3 days) has elapsed.",
+            "\n\n",
+            "Since you are registering a new package, ",
+            "please make sure that you have read the ",
+            "package naming guidelines: ",
+            "https://julialang.github.io/Pkg.jl/dev/creating-packages/#Package-naming-guidelines-1",
+            "\n\n",
+            _comment_noblock(),
+            _onepointzero_suggestion(suggest_onepointzero, version),
+            "\n<!-- [noblock] -->",
+        )
     end
     return result
 end
@@ -158,51 +171,61 @@ const _please_read_these_documents = string(
     "[AutoMerge guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/). ",
 )
 
-function comment_text_fail(::NewPackage,
-                           reasons::Vector{String},
-                           suggest_onepointzero::Bool,
-                           version::VersionNumber)
+function comment_text_fail(
+    ::NewPackage,
+    reasons::Vector{String},
+    suggest_onepointzero::Bool,
+    version::VersionNumber,
+)
     reasons_formatted = join(string.("- ", reasons), "\n")
-    result = string("Your `new package` pull request does not meet ",
-                    "the guidelines for auto-merging. ",
-                    _please_read_these_documents,
-                    "The following guidelines were not met:\n\n",
-                    reasons_formatted,
-                    _comment_disclaimer(),
-                    "\n\n",
-                    "Since you are registering a new package, ",
-                    "please make sure that you have also read the ",
-                    "package naming guidelines: ",
-                    "https://julialang.github.io/Pkg.jl/dev/creating-packages/#Package-naming-guidelines-1",
-                    "\n\n",
-                    _comment_noblock(),
-                    _onepointzero_suggestion(suggest_onepointzero, version),
-                    "\n<!-- [noblock] -->")
+    result = string(
+        "Your `new package` pull request does not meet ",
+        "the guidelines for auto-merging. ",
+        _please_read_these_documents,
+        "The following guidelines were not met:\n\n",
+        reasons_formatted,
+        _comment_disclaimer(),
+        "\n\n",
+        "Since you are registering a new package, ",
+        "please make sure that you have also read the ",
+        "package naming guidelines: ",
+        "https://julialang.github.io/Pkg.jl/dev/creating-packages/#Package-naming-guidelines-1",
+        "\n\n",
+        _comment_noblock(),
+        _onepointzero_suggestion(suggest_onepointzero, version),
+        "\n<!-- [noblock] -->",
+    )
     return result
 end
 
-function comment_text_fail(::NewVersion,
-                           reasons::Vector{String},
-                           suggest_onepointzero::Bool,
-                           version::VersionNumber)
+function comment_text_fail(
+    ::NewVersion,
+    reasons::Vector{String},
+    suggest_onepointzero::Bool,
+    version::VersionNumber,
+)
     reasons_formatted = join(string.("- ", reasons), "\n")
-    result = string("Your `new version` pull request does not meet ",
-                    "the guidelines for auto-merging. ",
-                    _please_read_these_documents,
-                    "The following guidelines were not met:\n\n",
-                    reasons_formatted,
-                    _comment_disclaimer(),
-                    _comment_noblock(),
-                    _onepointzero_suggestion(suggest_onepointzero, version),
-                    "\n<!-- [noblock] -->")
+    result = string(
+        "Your `new version` pull request does not meet ",
+        "the guidelines for auto-merging. ",
+        _please_read_these_documents,
+        "The following guidelines were not met:\n\n",
+        reasons_formatted,
+        _comment_disclaimer(),
+        _comment_noblock(),
+        _onepointzero_suggestion(suggest_onepointzero, version),
+        "\n<!-- [noblock] -->",
+    )
     return result
 end
 
 function comment_text_merge_now()
-    result = string("The mandatory waiting period has elapsed.\n\n",
-                    "Your pull request is ready to merge.\n\n",
-                    "I will now merge this pull request.",
-                    "\n<!-- [noblock] -->")
+    result = string(
+        "The mandatory waiting period has elapsed.\n\n",
+        "Your pull request is ready to merge.\n\n",
+        "I will now merge this pull request.",
+        "\n<!-- [noblock] -->",
+    )
     return result
 end
 
@@ -225,21 +248,22 @@ function now_utc()
     return Dates.now(utc)
 end
 
-function _onepointzero_suggestion(suggest_onepointzero::Bool,
-                                  version::VersionNumber)
+function _onepointzero_suggestion(suggest_onepointzero::Bool, version::VersionNumber)
     if suggest_onepointzero && version < v"1.0.0"
-        result = string("\n\n---\n",
-                        "On a separate note, I see that you are registering ",
-                        "a release with a version number of the form ",
-                        "`v0.X.Y`.\n\n",
-                        "Does your package have a stable public API? ",
-                        "If so, then it's time for you to register version ",
-                        "`v1.0.0` of your package. ",
-                        "(This is not a requirement. ",
-                        "It's just a recommendation.)\n\n",
-                        "If your package does not yet have a stable public ",
-                        "API, then of course you are not yet ready to ",
-                        "release version `v1.0.0`.")
+        result = string(
+            "\n\n---\n",
+            "On a separate note, I see that you are registering ",
+            "a release with a version number of the form ",
+            "`v0.X.Y`.\n\n",
+            "Does your package have a stable public API? ",
+            "If so, then it's time for you to register version ",
+            "`v1.0.0` of your package. ",
+            "(This is not a requirement. ",
+            "It's just a recommendation.)\n\n",
+            "If your package does not yet have a stable public ",
+            "API, then of course you are not yet ready to ",
+            "release version `v1.0.0`.",
+        )
         return result
     else
         return ""
@@ -248,7 +272,7 @@ end
 
 function time_is_already_in_utc(dt::Dates.DateTime)
     utc = TimeZones.tz"UTC"
-    return TimeZones.ZonedDateTime(dt, utc; from_utc = true)
+    return TimeZones.ZonedDateTime(dt, utc; from_utc=true)
 end
 
 """
@@ -258,7 +282,10 @@ Given a path to the directory holding a registry, returns the names of all the n
 defined in that registry, along with the names of Julia's standard libraries.
 """
 function get_all_non_jll_package_names(registry_dir::AbstractString)
-    packages = [x["name"] for x in values(TOML.parsefile(joinpath(registry_dir, "Registry.toml"))["packages"])]
+    packages = [
+        x["name"] for
+        x in values(TOML.parsefile(joinpath(registry_dir, "Registry.toml"))["packages"])
+    ]
     sort!(packages)
     append!(packages, values(RegistryTools.stdlibs()))
     filter!(x -> !endswith(x, "_jll"), packages)

@@ -2,13 +2,10 @@ function is_jll_name(name::AbstractString)::Bool
     return endswith(name, "_jll")
 end
 
-function _get_all_dependencies_nonrecursive(working_directory::AbstractString,
-                                            pkg,
-                                            version)
+function _get_all_dependencies_nonrecursive(working_directory::AbstractString, pkg, version)
     all_dependencies = String[]
     package_relpath = get_package_relpath_in_registry(;
-        package_name = pkg,
-        registry_path = working_directory,
+        package_name=pkg, registry_path=working_directory
     )
     deps = Pkg.TOML.parsefile(joinpath(working_directory, package_relpath, "Deps.toml"))
     for version_range in keys(deps)
@@ -23,19 +20,16 @@ function _get_all_dependencies_nonrecursive(working_directory::AbstractString,
 end
 
 const guideline_allowed_jll_nonrecursive_dependencies = Guideline(;
-    info = "If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
-    docs = nothing,
-    check = data -> meets_allowed_jll_nonrecursive_dependencies(
-        data.registry_head,
-        data.pkg,
-        data.version,
+    info="If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
+    docs=nothing,
+    check=data -> meets_allowed_jll_nonrecursive_dependencies(
+        data.registry_head, data.pkg, data.version
     ),
 )
 
-
-function meets_allowed_jll_nonrecursive_dependencies(working_directory::AbstractString,
-                                                     pkg,
-                                                     version)
+function meets_allowed_jll_nonrecursive_dependencies(
+    working_directory::AbstractString, pkg, version
+)
     # If you are a JLL package, you are only allowed to have five kinds of dependencies:
     # 1. Pkg
     # 2. Libdl
@@ -43,13 +37,12 @@ function meets_allowed_jll_nonrecursive_dependencies(working_directory::Abstract
     # 4. JLLWrappers
     # 5. LazyArtifacts
     # 6. other JLL packages
-    all_dependencies = _get_all_dependencies_nonrecursive(working_directory,
-                                                          pkg,
-                                                          version)
+    all_dependencies = _get_all_dependencies_nonrecursive(working_directory, pkg, version)
     allowed_dependencies = ("Pkg", "Libdl", "Artifacts", "JLLWrappers", "LazyArtifacts")
     for dep in all_dependencies
         if dep ∉ allowed_dependencies && !is_jll_name(dep)
-            return false, "JLL packages are only allowed to depend on $(join(allowed_dependencies, ", ")) and other JLL packages"
+            return false,
+            "JLL packages are only allowed to depend on $(join(allowed_dependencies, ", ")) and other JLL packages"
         end
     end
     return true, ""
