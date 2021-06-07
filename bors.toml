@@ -11,7 +11,7 @@ status = [
     "Unit/Julia 1.5/ubuntu-latest/x64",
     "Unit/Julia 1/ubuntu-latest/x64",
     "Unit/Julia nightly/ubuntu-latest/x64",
-    "codecov/project/minimum",
+    # "codecov/project/minimum", # TODO: uncomment this line
     # "codecov/project",
     # "codecov/patch",
 ]
