@@ -24,7 +24,4 @@ makedocs(;
     strict=true,
 )
 
-deploydocs(;
-    repo="github.com/JuliaRegistries/RegistryCI.jl",
-    push_preview=false,
-)
+deploydocs(; repo="github.com/JuliaRegistries/RegistryCI.jl", push_preview=false)

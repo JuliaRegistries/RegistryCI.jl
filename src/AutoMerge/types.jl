@@ -5,8 +5,7 @@ end
 struct NewPackage end
 struct NewVersion end
 
-abstract type AutoMergeException <: Exception
-end
+abstract type AutoMergeException <: Exception end
 
 struct AutoMergeAuthorNotAuthorized <: AutoMergeException
     msg::String
@@ -43,7 +42,7 @@ struct GitHubAutoMergeData
 
     # Whether the registry PR refers to a new package or a new version
     # of an existing package.
-    registration_type::Union{NewPackage, NewVersion}
+    registration_type::Union{NewPackage,NewVersion}
 
     # The GitHub pull request data.
     pr::GitHub.PullRequest

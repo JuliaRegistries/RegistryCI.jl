@@ -14,7 +14,9 @@ function difference(x::VersionNumber, y::VersionNumber)
     elseif y.patch > x.patch
         return VersionNumber(y.major - x.major, y.minor - x.minor, y.patch - x.patch)
     else
-        throw(ArgumentError("first argument must be strictly less than the second argument"))
+        throw(
+            ArgumentError("first argument must be strictly less than the second argument")
+        )
     end
 end
 
@@ -65,24 +67,28 @@ function is_breaking(a::VersionNumber, b::VersionNumber)::Bool
             end
         end
     else
-        throw(ArgumentError("first argument must be strictly less than the second argument"))
+        throw(
+            ArgumentError("first argument must be strictly less than the second argument")
+        )
     end
 end
 
 function all_versions(pkg::String, registry_path::String)
     package_relpath = get_package_relpath_in_registry(;
-        package_name = pkg,
-        registry_path = registry_path,
+        package_name=pkg, registry_path=registry_path
     )
-    return VersionNumber.(keys(Pkg.TOML.parsefile(joinpath(registry_path, package_relpath, "Versions.toml"))))
+    return VersionNumber.(
+        keys(Pkg.TOML.parsefile(joinpath(registry_path, package_relpath, "Versions.toml")))
+    )
 end
 
-latest_version(pkg::String, registry_path::String) = maximum(all_versions(pkg, registry_path))
+function latest_version(pkg::String, registry_path::String)
+    return maximum(all_versions(pkg, registry_path))
+end
 
 function julia_compat(pkg::String, version::VersionNumber, registry_path::String)
     package_relpath = get_package_relpath_in_registry(;
-        package_name = pkg,
-        registry_path = registry_path,
+        package_name=pkg, registry_path=registry_path
     )
     all_compat_entries_for_julia = Pkg.Types.VersionRange[]
     compat = Pkg.TOML.parsefile(joinpath(registry_path, package_relpath, "Compat.toml"))
@@ -116,7 +122,12 @@ function _has_upper_bound(r::Pkg.Types.VersionRange)
     a = r.upper != Pkg.Types.VersionBound("*")
     b = r.upper != Pkg.Types.VersionBound("0")
     c = !(Base.VersionNumber(0, typemax(Base.VInt), typemax(Base.VInt)) in r)
-    d = !(Base.VersionNumber(typemax(Base.VInt), typemax(Base.VInt), typemax(Base.VInt)) in r)
+    d =
+        !(
+            Base.VersionNumber(
+                typemax(Base.VInt), typemax(Base.VInt), typemax(Base.VInt)
+            ) in r
+        )
     e = !(typemax(Base.VersionNumber) in r)
     result = a && b && c && d && e
     return result
@@ -127,7 +138,9 @@ function range_did_not_narrow(r1::Pkg.Types.VersionRange, r2::Pkg.Types.VersionR
     return result
 end
 
-function range_did_not_narrow(v1::Vector{Pkg.Types.VersionRange}, v2::Vector{Pkg.Types.VersionRange})
+function range_did_not_narrow(
+    v1::Vector{Pkg.Types.VersionRange}, v2::Vector{Pkg.Types.VersionRange}
+)
     @debug("", v1, v2, repr(v1), repr(v2))
     if isempty(v1) || isempty(v2)
         return false
@@ -135,8 +148,8 @@ function range_did_not_narrow(v1::Vector{Pkg.Types.VersionRange}, v2::Vector{Pkg
         n_1 = length(v1)
         n_2 = length(v2)
         results = falses(n_1, n_2) # v1 along the rows, v2 along the columns
-        for i = 1:n_1
-            for j = 1:n_2
+        for i in 1:n_1
+            for j in 1:n_2
                 results[i, j] = range_did_not_narrow(v1[i], v2[j])
             end
         end
@@ -149,6 +162,12 @@ thispatch(v::VersionNumber) = VersionNumber(v.major, v.minor, v.patch)
 thisminor(v::VersionNumber) = VersionNumber(v.major, v.minor, 0)
 thismajor(v::VersionNumber) = VersionNumber(v.major, 0, 0)
 
-nextpatch(v::VersionNumber) = v < thispatch(v) ? thispatch(v) : VersionNumber(v.major, v.minor, v.patch+1)
-nextminor(v::VersionNumber) = v < thisminor(v) ? thisminor(v) : VersionNumber(v.major, v.minor+1, 0)
-nextmajor(v::VersionNumber) = v < thismajor(v) ? thismajor(v) : VersionNumber(v.major+1, 0, 0)
+function nextpatch(v::VersionNumber)
+    return v < thispatch(v) ? thispatch(v) : VersionNumber(v.major, v.minor, v.patch + 1)
+end
+function nextminor(v::VersionNumber)
+    return v < thisminor(v) ? thisminor(v) : VersionNumber(v.major, v.minor + 1, 0)
+end
+function nextmajor(v::VersionNumber)
+    return v < thismajor(v) ? thismajor(v) : VersionNumber(v.major + 1, 0, 0)
+end

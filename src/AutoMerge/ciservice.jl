@@ -50,7 +50,9 @@ function conditions_met_for_pr_build(cfg::GitHubActions; env=ENV, kwargs...)
     # TODO: Should also check the PR is against "master" or maybe thats done later?
     return get(env, "GITHUB_EVENT_NAME", nothing) == "pull_request"
 end
-function conditions_met_for_merge_build(cfg::GitHubActions; env=ENV, master_branch, kwargs...)
+function conditions_met_for_merge_build(
+    cfg::GitHubActions; env=ENV, master_branch, kwargs...
+)
     ## Check that we are on the correct branch
     m = match(r"^refs\/heads\/(.*)$", get(env, "GITHUB_REF", ""))
     branch_ok = m !== nothing && m.captures[1] == master_branch
@@ -87,8 +89,7 @@ end
 ##############
 ## TeamCity ##
 ##############
-struct TeamCity <: CIService
-end
+struct TeamCity <: CIService end
 
 function conditions_met_for_pr_build(cfg::TeamCity; env=ENV, kwargs...)
     pr_number_ok = tryparse(Int, get(env, "teamcity_pullRequest_number", "")) !== nothing

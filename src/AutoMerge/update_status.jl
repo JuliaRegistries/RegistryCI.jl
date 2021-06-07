@@ -3,9 +3,13 @@ function update_status(data::GitHubAutoMergeData; kwargs...)
         @info "`read_only` mode; skipping updating the status"
         return nothing
     end
-    my_retry(() -> GitHub.create_status(data.api,
-                                        data.registry,
-                                        data.current_pr_head_commit_sha;
-                                        auth = data.auth,
-                                        params = Dict(kwargs...)))
+    return my_retry(
+        () -> GitHub.create_status(
+            data.api,
+            data.registry,
+            data.current_pr_head_commit_sha;
+            auth=data.auth,
+            params=Dict(kwargs...),
+        ),
+    )
 end

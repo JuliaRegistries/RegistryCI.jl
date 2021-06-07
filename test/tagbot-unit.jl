@@ -10,8 +10,7 @@ const GH = TB.GH
 TB.AUTH[] = GH.OAuth2(get(ENV, "GITHUB_TOKEN", "abcdef"))
 TB.TAGBOT_USER[] = "JuliaTagBot"
 BrokenRecord.configure!(;
-    path=joinpath(@__DIR__, "cassettes"),
-    ignore_headers=["Authorization"],
+    path=joinpath(@__DIR__, "cassettes"), ignore_headers=["Authorization"]
 )
 
 @testset "is_merged_pull_request" begin
@@ -53,11 +52,11 @@ end
 
 @testset "get_repo_notification_issue" begin
     playback("get_repo_notification_issue.bson") do
-        @test_logs match_mode=:any (:info, "Creating new notification issue") begin
+        @test_logs match_mode = :any (:info, "Creating new notification issue") begin
             issue = TB.get_repo_notification_issue("christopher-dG/TestRepo")
             @test issue.number == 11
         end
-        @test_logs match_mode=:any (:info, "Found existing notification issue") begin
+        @test_logs match_mode = :any (:info, "Found existing notification issue") begin
             issue = TB.get_repo_notification_issue("christopher-dG/TestRepo")
             @test issue.number == 11
         end
@@ -100,12 +99,12 @@ end
 end
 
 @testset "maybe_notify" begin
-    @test_logs match_mode=:any (:info, r"not enabled") begin
+    @test_logs match_mode = :any (:info, r"not enabled") begin
         mock(TB.tagbot_file => Mock(nothing)) do _tf
             TB.maybe_notify((), "repo", "v")
         end
     end
-    @test_logs match_mode=:any (:info, r"already exists") begin
+    @test_logs match_mode = :any (:info, r"already exists") begin
         mock(TB.tagbot_file => Mock(true), TB.tag_exists => Mock(true)) do tf, te
             TB.maybe_notify((), "repo", "v"; cron=true)
         end
@@ -159,7 +158,7 @@ end
     playback("fixup_comment_exists.bson") do
         no = GH.issue("christopher-dG/TestRepo", 7; auth=TB.AUTH[])
         yes = GH.issue("christopher-dG/TestRepo", 8; auth=TB.AUTH[])
-        @test !TB.fixup_comment_exists("christopher-dG/TestRepo",no)
+        @test !TB.fixup_comment_exists("christopher-dG/TestRepo", no)
         @test TB.fixup_comment_exists("christopher-dG/TestRepo", yes)
     end
 end

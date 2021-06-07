@@ -1,42 +1,36 @@
-import HTTP
+using HTTP: HTTP
 
 const guideline_registry_consistency_tests_pass = Guideline(;
-    info = "Registy consistency tests",
-    docs = nothing,
-    check = data -> meets_registry_consistency_tests_pass(
-        data.registry_head,
-        data.registry_deps,
-    ),
+    info="Registy consistency tests",
+    docs=nothing,
+    check=data ->
+        meets_registry_consistency_tests_pass(data.registry_head, data.registry_deps),
 )
 
-function meets_registry_consistency_tests_pass(registry_head::String,
-                                               registry_deps::Vector{String})
+function meets_registry_consistency_tests_pass(
+    registry_head::String, registry_deps::Vector{String}
+)
     try
-        RegistryCI.test(registry_head; registry_deps = registry_deps)
+        RegistryCI.test(registry_head; registry_deps=registry_deps)
         return true, ""
     catch ex
-        @error "" exception=(ex, catch_backtrace())
+        @error "" exception = (ex, catch_backtrace())
     end
     return false, "The registry consistency tests failed"
 end
 
 const guideline_compat_for_julia = Guideline(;
-    info = "Compat with upper bound for julia",
-    docs = string(
+    info="Compat with upper bound for julia",
+    docs=string(
         "There is an upper-bounded `[compat]` entry for `julia` that ",
         "only includes a finite number of breaking releases of Julia.",
     ),
-    check = data -> meets_compat_for_julia(
-        data.registry_head,
-        data.pkg,
-        data.version,
-    ),
+    check=data -> meets_compat_for_julia(data.registry_head, data.pkg, data.version),
 )
 
 function meets_compat_for_julia(working_directory::AbstractString, pkg, version)
     package_relpath = get_package_relpath_in_registry(;
-        package_name = pkg,
-        registry_path = working_directory,
+        package_name=pkg, registry_path=working_directory
     )
     compat = Pkg.TOML.parsefile(joinpath(working_directory, package_relpath, "Compat.toml"))
     # Go through all the compat entries looking for the julia compat
@@ -48,17 +42,20 @@ function meets_compat_for_julia(working_directory::AbstractString, pkg, version)
         if version in Pkg.Types.VersionRange(version_range)
             if haskey(compat[version_range], "julia")
                 julia_compat = Pkg.Types.VersionSpec(compat[version_range]["julia"])
-                if !isempty(intersect(julia_compat,
-                                      Pkg.Types.VersionSpec("$(typemax(Base.VInt))-*")))
+                if !isempty(
+                    intersect(
+                        julia_compat, Pkg.Types.VersionSpec("$(typemax(Base.VInt))-*")
+                    ),
+                )
                     return false, "The compat entry for `julia` is unbounded."
-                elseif !isempty(intersect(julia_compat,
-                                          Pkg.Types.VersionSpec("2-*")))
-                    return false, "The compat entry for `julia` has an upper bound of 2 or higher."
-                elseif isempty(intersect(julia_compat,
-                                         Pkg.Types.VersionSpec("1")))
+                elseif !isempty(intersect(julia_compat, Pkg.Types.VersionSpec("2-*")))
+                    return false,
+                    "The compat entry for `julia` has an upper bound of 2 or higher."
+                elseif isempty(intersect(julia_compat, Pkg.Types.VersionSpec("1")))
                     # For completeness, although this seems rather
                     # unlikely to occur.
-                    return false, "The compat entry for `julia` doesn't include any 1.x version."
+                    return false,
+                    "The compat entry for `julia` doesn't include any 1.x version."
                 else
                     return true, ""
                 end
@@ -70,29 +67,24 @@ function meets_compat_for_julia(working_directory::AbstractString, pkg, version)
 end
 
 const guideline_compat_for_all_deps = Guideline(;
-    info = "Compat (with upper bound) for all dependencies",
-    docs = string(
+    info="Compat (with upper bound) for all dependencies",
+    docs=string(
         "Dependencies: All dependencies should have `[compat]` entries that ",
         "are upper-bounded and only include a finite number of breaking releases. ",
         "For more information, please see the \"Upper bounded `[compat]` entries\" subsection under \"Additional information\" below.",
     ),
-    check = data -> meets_compat_for_all_deps(
-        data.registry_head,
-        data.pkg,
-        data.version,
-    ),
+    check=data -> meets_compat_for_all_deps(data.registry_head, data.pkg, data.version),
 )
 
 function meets_compat_for_all_deps(working_directory::AbstractString, pkg, version)
     package_relpath = get_package_relpath_in_registry(;
-        package_name = pkg,
-        registry_path = working_directory,
+        package_name=pkg, registry_path=working_directory
     )
     deps = Pkg.TOML.parsefile(joinpath(working_directory, package_relpath, "Deps.toml"))
     compat = Pkg.TOML.parsefile(joinpath(working_directory, package_relpath, "Compat.toml"))
     # First, we construct a Dict in which the keys are the package's
     # dependencies, and the value is always false.
-    dep_has_compat_with_upper_bound = Dict{String, Bool}()
+    dep_has_compat_with_upper_bound = Dict{String,Bool}()
     for version_range in keys(deps)
         if version in Pkg.Types.VersionRange(version_range)
             for name in keys(deps[version_range])
@@ -114,14 +106,18 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
                         value_ranges = Pkg.Types.VersionRange.(value)
                         each_range_has_upper_bound = _has_upper_bound.(value_ranges)
                         if all(each_range_has_upper_bound)
-                            @debug("Dependency \"$(name)\" has compat entries that all have upper bounds")
+                            @debug(
+                                "Dependency \"$(name)\" has compat entries that all have upper bounds"
+                            )
                             dep_has_compat_with_upper_bound[name] = true
                         end
                     end
                 else
                     value_range = Pkg.Types.VersionRange(value)
                     if _has_upper_bound(value_range)
-                        @debug("Dependency \"$(name)\" has a compat entry with an upper bound")
+                        @debug(
+                            "Dependency \"$(name)\" has a compat entry with an upper bound"
+                        )
                         dep_has_compat_with_upper_bound[name] = true
                     end
                 end
@@ -135,7 +131,9 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
         bad_dependencies = Vector{String}()
         for name in keys(dep_has_compat_with_upper_bound)
             if !(dep_has_compat_with_upper_bound[name])
-                @error("Dependency \"$(name)\" does not have a compat entry that has an upper bound")
+                @error(
+                    "Dependency \"$(name)\" does not have a compat entry that has an upper bound"
+                )
                 push!(bad_dependencies, name)
             end
         end
@@ -144,26 +142,25 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
             "The following dependencies do not have a `[compat]` entry ",
             "that is upper-bounded and only includes a finite number ",
             "of breaking releases: ",
-            join(bad_dependencies, ", ")
+            join(bad_dependencies, ", "),
         )
         return false, message
     end
 end
 
 const guideline_patch_release_does_not_narrow_julia_compat = Guideline(;
-    info = "If it is a patch release, then it does not narrow the `[compat]` range for `julia`.",
-    check = data -> meets_patch_release_does_not_narrow_julia_compat(
+    info="If it is a patch release, then it does not narrow the `[compat]` range for `julia`.",
+    check=data -> meets_patch_release_does_not_narrow_julia_compat(
         data.pkg,
         data.version;
-        registry_head = data.registry_head,
-        registry_master = data.registry_master,
+        registry_head=data.registry_head,
+        registry_master=data.registry_master,
     ),
 )
 
-function meets_patch_release_does_not_narrow_julia_compat(pkg::String,
-                                                          new_version::VersionNumber;
-                                                          registry_head::String,
-                                                          registry_master::String)
+function meets_patch_release_does_not_narrow_julia_compat(
+    pkg::String, new_version::VersionNumber; registry_head::String, registry_master::String
+)
     old_version = latest_version(pkg, registry_master)
     if old_version.major != new_version.major || old_version.minor != new_version.minor
         # Not a patch release.
@@ -174,18 +171,22 @@ function meets_patch_release_does_not_narrow_julia_compat(pkg::String,
     if Set(julia_compats_for_old_version) == Set(julia_compats_for_new_version)
         return true, ""
     end
-    meets_this_guideline = range_did_not_narrow(julia_compats_for_old_version, julia_compats_for_new_version)
+    meets_this_guideline = range_did_not_narrow(
+        julia_compats_for_old_version, julia_compats_for_new_version
+    )
     if meets_this_guideline
         return true, ""
     else
         if (old_version >= v"1") || (new_version >= v"1")
-            msg = string("A patch release is not allowed to narrow the ",
-                         "supported ranges of Julia versions. ",
-                         "The ranges have changed from ",
-                         "$(julia_compats_for_old_version) ",
-                         "(in $(old_version)) ",
-                         "to $(julia_compats_for_new_version) ",
-                         "(in $(new_version)).")
+            msg = string(
+                "A patch release is not allowed to narrow the ",
+                "supported ranges of Julia versions. ",
+                "The ranges have changed from ",
+                "$(julia_compats_for_old_version) ",
+                "(in $(old_version)) ",
+                "to $(julia_compats_for_new_version) ",
+                "(in $(new_version)).",
+            )
             return false, msg
         else
             @info("Narrows Julia compat, but it's OK since package is pre-1.0")
@@ -197,9 +198,9 @@ end
 const _AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH = 5
 
 const guideline_name_length = Guideline(;
-    info = "Name not too short",
-    docs = "The name is at least $(_AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH) characters long.",
-    check = data -> meets_name_length(data.pkg),
+    info="Name not too short",
+    docs="The name is at least $(_AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH) characters long.",
+    check=data -> meets_name_length(data.pkg),
 )
 
 function meets_name_length(pkg)
@@ -207,13 +208,14 @@ function meets_name_length(pkg)
     if meets_this_guideline
         return true, ""
     else
-        return false, "Name is not at least $(_AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH) characters long"
+        return false,
+        "Name is not at least $(_AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH) characters long"
     end
 end
 
 const guideline_name_ascii = Guideline(;
-    info = "Name is composed of ASCII characters only.",
-    check = data -> meets_name_ascii(data.pkg),
+    info="Name is composed of ASCII characters only.",
+    check=data -> meets_name_ascii(data.pkg),
 )
 
 function meets_name_ascii(pkg)
@@ -225,13 +227,14 @@ function meets_name_ascii(pkg)
 end
 
 const guideline_julia_name_check = Guideline(;
-    info = "Name does not include \"julia\" or start with \"Ju\".",
-    check = data -> meets_julia_name_check(data.pkg),
+    info="Name does not include \"julia\" or start with \"Ju\".",
+    check=data -> meets_julia_name_check(data.pkg),
 )
 
 function meets_julia_name_check(pkg)
     if occursin("julia", lowercase(pkg))
-        return false, "Lowercase package name $(lowercase(pkg)) contains the string \"julia\"."
+        return false,
+        "Lowercase package name $(lowercase(pkg)) contains the string \"julia\"."
     elseif startswith(pkg, "Ju")
         return false, "Package name starts with \"Ju\"."
     else
@@ -240,64 +243,77 @@ function meets_julia_name_check(pkg)
 end
 
 damerau_levenshtein(name1, name2) = StringDistances.DamerauLevenshtein()(name1, name2)
-sqrt_normalized_vd(name1, name2) = VisualStringDistances.visual_distance(name1, name2; normalize=x -> 5 + sqrt(x))
+function sqrt_normalized_vd(name1, name2)
+    return VisualStringDistances.visual_distance(name1, name2; normalize=x -> 5 + sqrt(x))
+end
 
 const guideline_distance_check = Guideline(;
-    info = "Name is not too similar to existing package names",
-    docs = """
-  To prevent confusion between similarly named packages, the names of new packages must also satisfy the following three checks: (for more information, please see the \"Name similarity distance check\" subsection under \"Additional information\" below)
-      - the [Damerau–Levenshtein
-        distance](https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance)
-        between the package name and the name of any existing package must be at
-        least 3.
-      - the Damerau–Levenshtein distance between the lowercased version of a
-        package name and the lowercased version of the name of any existing
-        package must be at least 2.
-      - and a visual distance from
-        [VisualStringDistances.jl](https://github.com/ericphanson/VisualStringDistances.jl)
-        between the package name and any existing package must exceeds a certain
-        a hand-chosen threshold (currently 2.5).
-    """,
-    check = data -> meets_distance_check(
-        data.pkg,
-        data.registry_master,
-    ),
+    info="Name is not too similar to existing package names",
+    docs="""
+To prevent confusion between similarly named packages, the names of new packages must also satisfy the following three checks: (for more information, please see the \"Name similarity distance check\" subsection under \"Additional information\" below)
+    - the [Damerau–Levenshtein
+      distance](https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance)
+      between the package name and the name of any existing package must be at
+      least 3.
+    - the Damerau–Levenshtein distance between the lowercased version of a
+      package name and the lowercased version of the name of any existing
+      package must be at least 2.
+    - and a visual distance from
+      [VisualStringDistances.jl](https://github.com/ericphanson/VisualStringDistances.jl)
+      between the package name and any existing package must exceeds a certain
+      a hand-chosen threshold (currently 2.5).
+  """,
+    check=data -> meets_distance_check(data.pkg, data.registry_master),
 )
 
-function meets_distance_check(pkg_name::AbstractString,
-                              registry_master::AbstractString;
-                              kwargs...)
+function meets_distance_check(
+    pkg_name::AbstractString, registry_master::AbstractString; kwargs...
+)
     other_packages = get_all_non_jll_package_names(registry_master)
     return meets_distance_check(pkg_name, other_packages; kwargs...)
 end
 
-function meets_distance_check(pkg_name::AbstractString,
-                              other_packages::Vector;
-                              DL_lowercase_cutoff = 1,
-                              DL_cutoff = 2,
-                              sqrt_normalized_vd_cutoff = 2.5,
-                              comment_collapse_cutoff = 10)
-    problem_messages = Tuple{String, Tuple{Float64, Float64, Float64}}[]
+function meets_distance_check(
+    pkg_name::AbstractString,
+    other_packages::Vector;
+    DL_lowercase_cutoff=1,
+    DL_cutoff=2,
+    sqrt_normalized_vd_cutoff=2.5,
+    comment_collapse_cutoff=10,
+)
+    problem_messages = Tuple{String,Tuple{Float64,Float64,Float64}}[]
     for other_pkg in other_packages
         if pkg_name == other_pkg
             # We short-circuit in this case; more information doesn't help.
-            return  (false, "Package name already exists in the registry.")
+            return (false, "Package name already exists in the registry.")
         elseif lowercase(pkg_name) == lowercase(other_pkg)
             # We'll sort this first
-            push!(problem_messages, ("Package name matches existing package name $(other_pkg) up to case.", (0,0,0)))
+            push!(
+                problem_messages,
+                (
+                    "Package name matches existing package name $(other_pkg) up to case.",
+                    (0, 0, 0),
+                ),
+            )
         else
             msg = ""
 
             # Distance check 1: DL distance
             dl = damerau_levenshtein(pkg_name, other_pkg)
             if dl <= DL_cutoff
-                msg = string(msg, " Damerau-Levenshtein distance $dl is at or below cutoff of $(DL_cutoff).")
+                msg = string(
+                    msg,
+                    " Damerau-Levenshtein distance $dl is at or below cutoff of $(DL_cutoff).",
+                )
             end
 
             # Distance check 2: lowercase DL distance
             dl_lowercase = damerau_levenshtein(lowercase(pkg_name), lowercase(other_pkg))
             if dl_lowercase <= DL_lowercase_cutoff
-                msg = string(msg, " Damerau-Levenshtein distance $(dl_lowercase) between lowercased names is at or below cutoff of $(DL_lowercase_cutoff).")
+                msg = string(
+                    msg,
+                    " Damerau-Levenshtein distance $(dl_lowercase) between lowercased names is at or below cutoff of $(DL_lowercase_cutoff).",
+                )
             end
 
             # Distance check 3: normalized visual distance,
@@ -305,7 +321,14 @@ function meets_distance_check(pkg_name::AbstractString,
             if (sqrt_normalized_vd_cutoff > 0 && dl <= 4)
                 nrm_vd = sqrt_normalized_vd(pkg_name, other_pkg)
                 if nrm_vd <= sqrt_normalized_vd_cutoff
-                    msg = string(msg, " Normalized visual distance ", Printf.@sprintf("%.2f", nrm_vd), " is at or below cutoff of ", Printf.@sprintf("%.2f", sqrt_normalized_vd_cutoff), ".")
+                    msg = string(
+                        msg,
+                        " Normalized visual distance ",
+                        Printf.@sprintf("%.2f", nrm_vd),
+                        " is at or below cutoff of ",
+                        Printf.@sprintf("%.2f", sqrt_normalized_vd_cutoff),
+                        ".",
+                    )
                 end
             else
                 # need to choose something for sorting purposes
@@ -314,24 +337,30 @@ function meets_distance_check(pkg_name::AbstractString,
 
             if msg != ""
                 # We must have found a clash.
-                push!(problem_messages, (string("Similar to $(other_pkg).", msg), (dl, dl_lowercase, nrm_vd)))
+                push!(
+                    problem_messages,
+                    (string("Similar to $(other_pkg).", msg), (dl, dl_lowercase, nrm_vd)),
+                )
             end
         end
     end
 
     isempty(problem_messages) && return (true, "")
-    sort!(problem_messages, by = Base.tail)
-    message = string("Package name similar to $(length(problem_messages)) existing package",
-                    length(problem_messages) > 1 ? "s" : "", ".\n")
+    sort!(problem_messages; by=Base.tail)
+    message = string(
+        "Package name similar to $(length(problem_messages)) existing package",
+        length(problem_messages) > 1 ? "s" : "",
+        ".\n",
+    )
     use_spoiler = length(problem_messages) > comment_collapse_cutoff
     # we indent each line by two spaces in all the following
     # so that it nests properly in the outer list.
     if use_spoiler
-        message *=  """
-                      <details>
-                      <summary>Similar package names</summary>
+        message *= """
+                     <details>
+                     <summary>Similar package names</summary>
 
-                    """
+                   """
     end
     numbers = string.("  ", 1:length(problem_messages))
     message *= join(join.(zip(numbers, first.(problem_messages)), Ref(". ")), '\n')
@@ -342,13 +371,13 @@ function meets_distance_check(pkg_name::AbstractString,
 end
 
 const guideline_normal_capitalization = Guideline(;
-    info = "Normal capitalization",
-    docs = string(
+    info="Normal capitalization",
+    docs=string(
         "The package name should start with an upper-case letter, ",
         "contain only ASCII alphanumeric characters, ",
         "and contain at least one lowercase letter.",
     ),
-    check = data -> meets_normal_capitalization(data.pkg),
+    check=data -> meets_normal_capitalization(data.pkg),
 )
 
 function meets_normal_capitalization(pkg)
@@ -356,29 +385,22 @@ function meets_normal_capitalization(pkg)
     if meets_this_guideline
         return true, ""
     else
-        return false, "Name does not meet all of the following: starts with an upper-case letter, ASCII alphanumerics only, not all letters are upper-case."
+        return false,
+        "Name does not meet all of the following: starts with an upper-case letter, ASCII alphanumerics only, not all letters are upper-case."
     end
 end
 
 const guideline_repo_url_requirement = Guideline(;
-    info = "Repo URL ends with `/PackageName.jl.git`.",
-    check = data -> meets_repo_url_requirement(
-        data.pkg;
-        registry_head = data.registry_head,
-    ),
+    info="Repo URL ends with `/PackageName.jl.git`.",
+    check=data -> meets_repo_url_requirement(data.pkg; registry_head=data.registry_head),
 )
 
 function meets_repo_url_requirement(pkg::String; registry_head::String)
     package_relpath = get_package_relpath_in_registry(;
-        package_name = pkg,
-        registry_path = registry_head,
+        package_name=pkg, registry_path=registry_head
     )
     package_toml_parsed = Pkg.TOML.parsefile(
-        joinpath(
-            registry_head,
-            package_relpath,
-            "Package.toml",
-        )
+        joinpath(registry_head, package_relpath, "Package.toml")
     )
 
     url = package_toml_parsed["repo"]
@@ -414,8 +436,8 @@ function _valid_change(old_version::VersionNumber, new_version::VersionNumber)
 end
 
 const guideline_sequential_version_number = Guideline(;
-    info = "Sequential version number",
-    docs = string(
+    info="Sequential version number",
+    docs=string(
         "Version number: Should be a standard increment and not skip versions. ",
         "This means incrementing the patch/minor/major version with +1 compared to ",
         "previous (if any) releases. ",
@@ -424,53 +446,69 @@ const guideline_sequential_version_number = Guideline(;
         "Invalid new versions include `1.0.2` (skips `1.0.1`), ",
         "`1.3.0` (skips `1.2.0`), `3.0.0` (skips `2.0.0`) etc.",
     ),
-    check = data -> meets_sequential_version_number(
+    check=data -> meets_sequential_version_number(
         data.pkg,
         data.version;
-        registry_head = data.registry_head,
-        registry_master = data.registry_master,
+        registry_head=data.registry_head,
+        registry_master=data.registry_master,
     ),
 )
 
-function meets_sequential_version_number(existing::Vector{VersionNumber}, ver::VersionNumber)
+function meets_sequential_version_number(
+    existing::Vector{VersionNumber}, ver::VersionNumber
+)
     always_assert(!isempty(existing))
     if ver in existing
         return _invalid_sequential_version("version $ver already exists")
     end
     issorted(existing) || (existing = sort(existing))
     idx = searchsortedlast(existing, ver)
-    idx > 0 || return _invalid_sequential_version("version $ver less than least existing version $(existing[1])")
+    idx > 0 || return _invalid_sequential_version(
+        "version $ver less than least existing version $(existing[1])"
+    )
     prv = existing[idx]
     always_assert(ver != prv)
-    nxt = thismajor(ver) != thismajor(prv) ? nextmajor(prv) :
-          thisminor(ver) != thisminor(prv) ? nextminor(prv) : nextpatch(prv)
+    nxt = if thismajor(ver) != thismajor(prv)
+        nextmajor(prv)
+    elseif thisminor(ver) != thisminor(prv)
+        nextminor(prv)
+    else
+        nextpatch(prv)
+    end
     ver <= nxt || return _invalid_sequential_version("version $ver skips over $nxt")
     return _valid_change(prv, ver)
 end
 
-_has_prerelease_andor_build_data(version) = !isempty(version.prerelease) || !isempty(version.build)
+function _has_prerelease_andor_build_data(version)
+    return !isempty(version.prerelease) || !isempty(version.build)
+end
 
-function meets_sequential_version_number(pkg::String,
-                                         new_version::VersionNumber;
-                                         registry_head::String,
-                                         registry_master::String)
+function meets_sequential_version_number(
+    pkg::String, new_version::VersionNumber; registry_head::String, registry_master::String
+)
     if _has_prerelease_andor_build_data(new_version)
-        return false, "Version number is not allowed to contain prerelease or build data", :invalid
+        return false,
+        "Version number is not allowed to contain prerelease or build data",
+        :invalid
     end
     _all_versions = all_versions(pkg, registry_master)
     return meets_sequential_version_number(_all_versions, new_version)
 end
 
 const guideline_standard_initial_version_number = Guideline(;
-    info = "Standard initial version number. Must be one of: `0.0.1`, `0.1.0`, `1.0.0`, or `X.0.0`.",
-    check = data -> meets_standard_initial_version_number(data.version),
+    info="Standard initial version number. Must be one of: `0.0.1`, `0.1.0`, `1.0.0`, or `X.0.0`.",
+    check=data -> meets_standard_initial_version_number(data.version),
 )
 
 function meets_standard_initial_version_number(version)
     if _has_prerelease_andor_build_data(version)
         return false, "Version number is not allowed to contain prerelease or build data"
     end
-    meets_this_guideline = version == v"0.0.1" || version == v"0.1.0" || version == v"1.0.0" || _is_x_0_0(version)
+    meets_this_guideline =
+        version == v"0.0.1" ||
+        version == v"0.1.0" ||
+        version == v"1.0.0" ||
+        _is_x_0_0(version)
     if meets_this_guideline
         return true, ""
     else
@@ -487,12 +525,20 @@ function _is_x_0_0(version::VersionNumber)
 end
 
 const guideline_code_can_be_downloaded = Guideline(;
-    info = "Code can be downloaded.",
-    check = data -> meets_code_can_be_downloaded(data.registry_head, data.pkg, data.version, data.pr; pkg_code_path = data.pkg_code_path),
+    info="Code can be downloaded.",
+    check=data -> meets_code_can_be_downloaded(
+        data.registry_head,
+        data.pkg,
+        data.version,
+        data.pr;
+        pkg_code_path=data.pkg_code_path,
+    ),
 )
 
 function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_path)
-    uuid, package_repo, subdir, tree_hash_from_toml = parse_registry_pkg_info(registry_head, pkg, version)
+    uuid, package_repo, subdir, tree_hash_from_toml = parse_registry_pkg_info(
+        registry_head, pkg, version
+    )
 
     # We get the `tree_hash` two ways and check they agree, which helps ensures the `subdir` parameter is correct. Two ways:
     # 1. By the commit hash in the PR body and the subdir parameter
@@ -500,8 +546,10 @@ function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_
 
     commit_hash = commit_from_pull_request_body(pr)
 
-    local tree_hash_from_commit, tree_hash_from_commit_success
-    clone_success = load_files_from_url_and_tree_hash(pkg_code_path, package_repo, tree_hash_from_toml) do dir
+    local tree_hash_from_commit , tree_hash_from_commit_success
+    clone_success = load_files_from_url_and_tree_hash(
+        pkg_code_path, package_repo, tree_hash_from_toml
+    ) do dir
         tree_hash_from_commit, tree_hash_from_commit_success = try
             readchomp(Cmd(`git rev-parse $(commit_hash):$(subdir)`; dir=dir)), true
         catch e
@@ -515,41 +563,40 @@ function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_
     end
 
     if !tree_hash_from_commit_success
-        return false, "Could not obtain tree hash from commit hash and subdir parameter. Possibly this indicates that an incorrect `subdir` parameter was passed during registration."
+        return false,
+        "Could not obtain tree hash from commit hash and subdir parameter. Possibly this indicates that an incorrect `subdir` parameter was passed during registration."
     end
 
     if tree_hash_from_commit != tree_hash_from_toml
         @error "`tree_hash_from_commit != tree_hash_from_toml`" tree_hash_from_commit tree_hash_from_toml
-        return false, "Tree hash obtained from the commit message and subdirectory does not match the tree hash in the Versions.toml file. Possibly this indicates that an incorrect `subdir` parameter was passed during registration."
+        return false,
+        "Tree hash obtained from the commit message and subdirectory does not match the tree hash in the Versions.toml file. Possibly this indicates that an incorrect `subdir` parameter was passed during registration."
     else
         return true, ""
     end
 end
 
-function _generate_pkg_add_command(pkg::String,
-                                   version::VersionNumber)::String
+function _generate_pkg_add_command(pkg::String, version::VersionNumber)::String
     return "Pkg.add(Pkg.PackageSpec(name=\"$(pkg)\", version=v\"$(string(version))\"));"
 end
 
 is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str))
 
 const guideline_version_can_be_pkg_added = Guideline(;
-    info = "Version can be `Pkg.add`ed",
-    docs = "Package installation: The package should be installable (`Pkg.add(\"PackageName\")`).",
-    check = data -> meets_version_can_be_pkg_added(
-        data.registry_head,
-        data.pkg,
-        data.version;
-        registry_deps = data.registry_deps,
+    info="Version can be `Pkg.add`ed",
+    docs="Package installation: The package should be installable (`Pkg.add(\"PackageName\")`).",
+    check=data -> meets_version_can_be_pkg_added(
+        data.registry_head, data.pkg, data.version; registry_deps=data.registry_deps
     ),
 )
 
-function meets_version_can_be_pkg_added(working_directory::String,
-                                        pkg::String,
-                                        version::VersionNumber;
-                                        registry_deps::Vector{<:AbstractString} = String[])
-    pkg_add_command = _generate_pkg_add_command(pkg,
-                                                version)
+function meets_version_can_be_pkg_added(
+    working_directory::String,
+    pkg::String,
+    version::VersionNumber;
+    registry_deps::Vector{<:AbstractString}=String[],
+)
+    pkg_add_command = _generate_pkg_add_command(pkg, version)
     _registry_deps = convert(Vector{String}, registry_deps)
     _registry_deps_is_valid_url = is_valid_url.(_registry_deps)
     code = """
@@ -570,24 +617,30 @@ function meets_version_can_be_pkg_added(working_directory::String,
         @info("Successfully `Pkg.add`ed package");
         """
 
-    cmd_ran_successfully = _run_pkg_commands(working_directory, pkg,
-                                version; code = code,
-                                before_message = "Attempting to `Pkg.add` the package")
+    cmd_ran_successfully = _run_pkg_commands(
+        working_directory,
+        pkg,
+        version;
+        code=code,
+        before_message="Attempting to `Pkg.add` the package",
+    )
     if cmd_ran_successfully
         @info "Successfully `Pkg.add`ed the package"
         return true, ""
     else
         @error "Was not able to successfully `Pkg.add` the package"
-        return false, string("I was not able to install the package ",
-                             "(i.e. `Pkg.add(\"$(pkg)\")` failed). ",
-                             "See the CI logs for details.")
+        return false,
+        string(
+            "I was not able to install the package ",
+            "(i.e. `Pkg.add(\"$(pkg)\")` failed). ",
+            "See the CI logs for details.",
+        )
     end
 end
 
-
 const guideline_version_has_osi_license = Guideline(;
-    info = "Version has OSI-approved license",
-    docs = string(
+    info="Version has OSI-approved license",
+    docs=string(
         "License: The package should have an ",
         "[OSI-approved software license](https://opensource.org/licenses/alphabetical) ",
         "located in the top-level directory of the package code, ",
@@ -595,16 +648,14 @@ const guideline_version_has_osi_license = Guideline(;
         "This check is required for the General registry. ",
         "For other registries, registry maintainers have the option to disable this check.",
     ),
-    check = data -> meets_version_has_osi_license(
-        data.pkg;
-        pkg_code_path = data.pkg_code_path,
-    ),
+    check=data -> meets_version_has_osi_license(data.pkg; pkg_code_path=data.pkg_code_path),
 )
 
 function meets_version_has_osi_license(pkg::String; pkg_code_path)
     pkgdir = pkg_code_path
     if !isdir(pkgdir) || isempty(readdir(pkgdir))
-        return false, "Could not check license because could not access package code. Perhaps the `can_download_code` check failed earlier."
+        return false,
+        "Could not check license because could not access package code. Perhaps the `can_download_code` check failed earlier."
     end
 
     license_results = LicenseCheck.find_licenses(pkgdir)
@@ -612,21 +663,39 @@ function meets_version_has_osi_license(pkg::String; pkg_code_path)
     # Failure mode 1: no licenses
     if isempty(license_results)
         @error "Could not find any licenses"
-        return false, string("No licenses detected in the package's top-level folder. An OSI-approved license is required.")
+        return false,
+        string(
+            "No licenses detected in the package's top-level folder. An OSI-approved license is required.",
+        )
     end
 
-    flat_results = [(filename = lic.license_filename, identifier=identifier, approved=LicenseCheck.is_osi_approved(identifier)) for lic in license_results for identifier in lic.licenses_found ]
+    flat_results = [
+        (
+            filename=lic.license_filename,
+            identifier=identifier,
+            approved=LicenseCheck.is_osi_approved(identifier),
+        ) for lic in license_results for identifier in lic.licenses_found
+    ]
 
-    osi_results = [ string(r.identifier, " license in ", r.filename) for r in flat_results if r.approved ]
-    non_osi_results = [ string(r.identifier, " license in ", r.filename) for r in flat_results if !r.approved ]
+    osi_results = [
+        string(r.identifier, " license in ", r.filename) for r in flat_results if r.approved
+    ]
+    non_osi_results = [
+        string(r.identifier, " license in ", r.filename) for
+        r in flat_results if !r.approved
+    ]
 
-    osi_string = string("Found OSI-approved license(s): ", join(osi_results, ", ", ", and "), ".")
-    non_osi_string = string("Found non-OSI license(s): ", join(non_osi_results, ", ", ", and "), ".")
+    osi_string = string(
+        "Found OSI-approved license(s): ", join(osi_results, ", ", ", and "), "."
+    )
+    non_osi_string = string(
+        "Found non-OSI license(s): ", join(non_osi_results, ", ", ", and "), "."
+    )
 
     # Failure mode 2: no OSI-approved licenses, but has some kind of license detected
     if isempty(osi_results)
         @error "Found no OSI-approved licenses" non_osi_string
-        return false, string("Found no OSI-approved licenses. ",  non_osi_string)
+        return false, string("Found no OSI-approved licenses. ", non_osi_string)
     end
 
     # Pass: at least one OSI-approved license, possibly other licenses.
@@ -639,22 +708,20 @@ function meets_version_has_osi_license(pkg::String; pkg_code_path)
 end
 
 const guideline_version_can_be_imported = Guideline(;
-    info = "Version can be `import`ed",
-    docs = "Package loading: The package should be loadable (`import PackageName`).",
-    check = data -> meets_version_can_be_imported(
-        data.registry_head,
-        data.pkg,
-        data.version;
-        registry_deps = data.registry_deps,
+    info="Version can be `import`ed",
+    docs="Package loading: The package should be loadable (`import PackageName`).",
+    check=data -> meets_version_can_be_imported(
+        data.registry_head, data.pkg, data.version; registry_deps=data.registry_deps
     ),
 )
 
-function meets_version_can_be_imported(working_directory::String,
-                                       pkg::String,
-                                       version::VersionNumber;
-                                       registry_deps::Vector{<:AbstractString} = String[])
-    pkg_add_command = _generate_pkg_add_command(pkg,
-                                                version)
+function meets_version_can_be_imported(
+    working_directory::String,
+    pkg::String,
+    version::VersionNumber;
+    registry_deps::Vector{<:AbstractString}=String[],
+)
+    pkg_add_command = _generate_pkg_add_command(pkg, version)
     _registry_deps = convert(Vector{String}, registry_deps)
     _registry_deps_is_valid_url = is_valid_url.(_registry_deps)
     code = """
@@ -679,29 +746,34 @@ function meets_version_can_be_imported(working_directory::String,
         @info("Successfully `import`ed package");
         """
 
-    cmd_ran_successfully = _run_pkg_commands(working_directory, pkg,
-                                version; code = code,
-                                before_message = "Attempting to `import` the package")
+    cmd_ran_successfully = _run_pkg_commands(
+        working_directory,
+        pkg,
+        version;
+        code=code,
+        before_message="Attempting to `import` the package",
+    )
 
     if cmd_ran_successfully
         @info "Successfully `import`ed the package"
         return true, ""
     else
         @error "Was not able to successfully `import` the package"
-        return false, string("I was not able to load the package ",
-                             "(i.e. `import $(pkg)` failed). ",
-                             "See the CI logs for details.")
+        return false,
+        string(
+            "I was not able to load the package ",
+            "(i.e. `import $(pkg)` failed). ",
+            "See the CI logs for details.",
+        )
     end
 end
 
-function _run_pkg_commands(working_directory::String,
-                           pkg::String,
-                           version::VersionNumber;
-                           code,
-                           before_message)
+function _run_pkg_commands(
+    working_directory::String, pkg::String, version::VersionNumber; code, before_message
+)
     original_directory = pwd()
     tmp_dir_1 = mktempdir()
-    atexit(() -> rm(tmp_dir_1; force = true, recursive = true))
+    atexit(() -> rm(tmp_dir_1; force=true, recursive=true))
     cd(tmp_dir_1)
     # We need to be careful with what environment variables we pass to the child
     # process. For example, we don't want to pass an environment variable containing
@@ -746,7 +818,7 @@ function _run_pkg_commands(working_directory::String,
         pushfirst!(cmd.exec, xvfb)
     end
     @info(before_message)
-    cmd_ran_successfully = success(pipeline(cmd, stdout=stdout, stderr=stderr))
+    cmd_ran_successfully = success(pipeline(cmd; stdout=stdout, stderr=stderr))
     cd(original_directory)
 
     rmdir(tmp_dir_1)
@@ -756,18 +828,20 @@ end
 
 function rmdir(dir)
     try
-        chmod(dir, 0o700, recursive = true)
+        chmod(dir, 0o700; recursive=true)
     catch
     end
-    rm(dir; force = true, recursive = true)
+    return rm(dir; force=true, recursive=true)
 end
 
 url_has_correct_ending(url, pkg) = endswith(url, "/$(pkg).jl.git")
 
-function get_automerge_guidelines(::NewPackage;
-                                  check_license::Bool,
-                                  this_is_jll_package::Bool,
-                                  this_pr_can_use_special_jll_exceptions::Bool)
+function get_automerge_guidelines(
+    ::NewPackage;
+    check_license::Bool,
+    this_is_jll_package::Bool,
+    this_pr_can_use_special_jll_exceptions::Bool,
+)
     guidelines = [
         (guideline_registry_consistency_tests_pass, true),
         (guideline_pr_only_changes_allowed_files, true),
@@ -778,8 +852,7 @@ function get_automerge_guidelines(::NewPackage;
         (guideline_repo_url_requirement, true),
         (guideline_compat_for_julia, true),
         (guideline_compat_for_all_deps, true),
-        (guideline_allowed_jll_nonrecursive_dependencies,
-        this_is_jll_package),
+        (guideline_allowed_jll_nonrecursive_dependencies, this_is_jll_package),
         (guideline_name_ascii, true),
         (:update_status, true),
         (guideline_version_can_be_pkg_added, true),
@@ -801,21 +874,23 @@ function get_automerge_guidelines(::NewPackage;
     return guidelines
 end
 
-function get_automerge_guidelines(::NewVersion;
-                                  check_license::Bool,
-                                  this_is_jll_package::Bool,
-                                  this_pr_can_use_special_jll_exceptions::Bool)
+function get_automerge_guidelines(
+    ::NewVersion;
+    check_license::Bool,
+    this_is_jll_package::Bool,
+    this_pr_can_use_special_jll_exceptions::Bool,
+)
     guidelines = [
         (guideline_registry_consistency_tests_pass, true),
         (guideline_pr_only_changes_allowed_files, true),
-        (guideline_sequential_version_number,
-        !this_pr_can_use_special_jll_exceptions),
+        (guideline_sequential_version_number, !this_pr_can_use_special_jll_exceptions),
         (guideline_compat_for_julia, true),
         (guideline_compat_for_all_deps, true),
-        (guideline_patch_release_does_not_narrow_julia_compat,
-        !this_pr_can_use_special_jll_exceptions),
-        (guideline_allowed_jll_nonrecursive_dependencies,
-        this_is_jll_package),
+        (
+            guideline_patch_release_does_not_narrow_julia_compat,
+            !this_pr_can_use_special_jll_exceptions,
+        ),
+        (guideline_allowed_jll_nonrecursive_dependencies, this_is_jll_package),
         (:update_status, true),
         (guideline_version_can_be_pkg_added, true),
         (guideline_code_can_be_downloaded, true),

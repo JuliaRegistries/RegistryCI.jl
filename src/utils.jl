@@ -1,14 +1,14 @@
 function with_temp_dir(f::Function)
     original_working_directory = pwd()
-    
+
     temp_dir = mktempdir()
-    atexit(() -> rm(temp_dir; force = true, recursive = true))
-    
+    atexit(() -> rm(temp_dir; force=true, recursive=true))
+
     cd(temp_dir)
     result = f(temp_dir)
-    
+
     cd(original_working_directory)
-    rm(temp_dir; force = true, recursive = true)
+    rm(temp_dir; force=true, recursive=true)
     return result
 end
 
