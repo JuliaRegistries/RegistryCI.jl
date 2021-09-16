@@ -76,3 +76,14 @@ You will also have to make the following change in `.ci/stopwatch.jl`
 - registry = GitHub.Repo("JuliaRegistries/General")
 + registry = GitHub.Repo("MyOrg/MyRegistry")
 ```
+
+## Note regarding private registries
+
+In the case of a private registry, you might get permission errors when executing the `instantiate.sh` script.
+In that case you will also have to add the following
+```diff
+  - run: chmod 400 .ci/Project.toml
+  - run: chmod 400 .ci/Manifest.toml
++ - run: chmod +x .ci/instantiate.sh
+```
+in `ci.yml` and also `TagBotTriggers.yml` and `automerge.yml` (in which the above appears twice) files if those features are used.
