@@ -546,7 +546,7 @@ function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_
 
     commit_hash = commit_from_pull_request_body(pr)
 
-    local tree_hash_from_commit , tree_hash_from_commit_success
+    local tree_hash_from_commit, tree_hash_from_commit_success
     clone_success = load_files_from_url_and_tree_hash(
         pkg_code_path, package_repo, tree_hash_from_toml
     ) do dir
