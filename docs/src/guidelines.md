@@ -68,7 +68,7 @@ return output_markdown
 
 ## Additional information
 
-### Upper-bounded `[compat]` entries
+### Upper bounded `[compat]` entries
 
 For example, the following `[compat]` entries meet the criteria for automatic merging:
 ```toml
