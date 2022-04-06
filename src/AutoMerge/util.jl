@@ -287,7 +287,7 @@ function get_all_non_jll_package_names(registry_dir::AbstractString)
         x in values(TOML.parsefile(joinpath(registry_dir, "Registry.toml"))["packages"])
     ]
     sort!(packages)
-    append!(packages, values(RegistryTools.stdlibs()))
+    append!(packages, (RegistryTools.get_stdlib_name(x) for x in values(RegistryTools.stdlibs())))
     filter!(x -> !endswith(x, "_jll"), packages)
     unique!(packages)
     return packages
