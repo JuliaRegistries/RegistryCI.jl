@@ -43,12 +43,12 @@ _repos_are_the_same(::Nothing, ::GitHub.Repo) = false
 _repos_are_the_same(::Nothing, ::Nothing) = false
 function _repos_are_the_same(x::GitHub.Repo, y::GitHub.Repo)
     if x.name == y.name &&
-       x.full_name == y.full_name &&
-       x.owner == y.owner &&
-       x.id == y.id &&
-       x.url == y.url &&
-       x.html_url == y.html_url &&
-       x.fork == y.fork
+        x.full_name == y.full_name &&
+        x.owner == y.owner &&
+        x.id == y.id &&
+        x.url == y.url &&
+        x.html_url == y.html_url &&
+        x.fork == y.fork
         return true
     else
         return false
