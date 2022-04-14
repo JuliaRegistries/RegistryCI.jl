@@ -37,9 +37,10 @@ function meets_allowed_jll_nonrecursive_dependencies(
     # 4. JLLWrappers
     # 5. LazyArtifacts
     # 6. TOML
+    # 8. MPIPreferences
     # 7. other JLL packages
     all_dependencies = _get_all_dependencies_nonrecursive(working_directory, pkg, version)
-    allowed_dependencies = ("Pkg", "Libdl", "Artifacts", "JLLWrappers", "LazyArtifacts", "TOML")
+    allowed_dependencies = ("Pkg", "Libdl", "Artifacts", "JLLWrappers", "LazyArtifacts", "TOML", "MPIPreferences")
     for dep in all_dependencies
         if dep ∉ allowed_dependencies && !is_jll_name(dep)
             return false,
