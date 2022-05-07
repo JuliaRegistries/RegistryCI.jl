@@ -479,18 +479,9 @@ function meets_sequential_version_number(
     return _valid_change(prv, ver)
 end
 
-function _has_prerelease_andor_build_data(version)
-    return !isempty(version.prerelease) || !isempty(version.build)
-end
-
 function meets_sequential_version_number(
     pkg::String, new_version::VersionNumber; registry_head::String, registry_master::String
 )
-    if _has_prerelease_andor_build_data(new_version)
-        return false,
-        "Version number is not allowed to contain prerelease or build data",
-        :invalid
-    end
     _all_versions = all_versions(pkg, registry_master)
     return meets_sequential_version_number(_all_versions, new_version)
 end
@@ -501,9 +492,6 @@ const guideline_standard_initial_version_number = Guideline(;
 )
 
 function meets_standard_initial_version_number(version)
-    if _has_prerelease_andor_build_data(version)
-        return false, "Version number is not allowed to contain prerelease or build data"
-    end
     meets_this_guideline =
         version == v"0.0.1" ||
         version == v"0.1.0" ||
@@ -517,11 +505,37 @@ function meets_standard_initial_version_number(version)
 end
 
 function _is_x_0_0(version::VersionNumber)
-    if _has_prerelease_andor_build_data(version)
-        return false
-    end
     result = (version.major >= 1) && (version.minor == 0) && (version.patch == 0)
     return result
+end
+
+const guideline_version_number_no_prerelease = Guideline(;
+    info="No prerelease data in the version number",
+    docs = "Version number is not allowed to contain prerelease data",
+    check = data -> meets_version_number_no_prerelease(
+        data.version,
+    ),
+)
+const guideline_version_number_no_build = Guideline(;
+    info="No build data in the version number",
+    docs = "Version number is not allowed to contain build data",
+    check = data -> meets_version_number_no_build(
+        data.version,
+    ),
+)
+function meets_version_number_no_prerelease(version::VersionNumber)
+    if isempty(version.prerelease)
+        return true, ""
+    else
+        return false, "Version number is not allowed to contain prerelease data"
+    end
+end
+function meets_version_number_no_build(version::VersionNumber)
+    if isempty(version.build)
+        return true, ""
+    else
+        return false, "Version number is not allowed to contain build data"
+    end
 end
 
 const guideline_code_can_be_downloaded = Guideline(;
@@ -850,6 +864,8 @@ function get_automerge_guidelines(
         (guideline_name_length, !this_pr_can_use_special_jll_exceptions),
         (guideline_julia_name_check, true),
         (guideline_repo_url_requirement, true),
+        (guideline_version_number_no_prerelease, true),
+        (guideline_version_number_no_build, !this_pr_can_use_special_jll_exceptions),
         (guideline_compat_for_julia, true),
         (guideline_compat_for_all_deps, true),
         (guideline_allowed_jll_nonrecursive_dependencies, this_is_jll_package),
@@ -884,6 +900,8 @@ function get_automerge_guidelines(
         (guideline_registry_consistency_tests_pass, true),
         (guideline_pr_only_changes_allowed_files, true),
         (guideline_sequential_version_number, !this_pr_can_use_special_jll_exceptions),
+        (guideline_version_number_no_prerelease, true),
+        (guideline_version_number_no_build, !this_pr_can_use_special_jll_exceptions),
         (guideline_compat_for_julia, true),
         (guideline_compat_for_all_deps, true),
         (
