@@ -226,6 +226,21 @@ end
     end
 end
 
+@testset "Guidelines for both new packages and new versions" begin
+    @testset "Version numbers may not contain prerelease data" begin
+        @test AutoMerge.meets_version_number_no_prerelease(v"1.2.3")[1]
+        @test !AutoMerge.meets_version_number_no_prerelease(v"1.2.3-alpha")[1]
+        @test AutoMerge.meets_version_number_no_prerelease(v"1.2.3+456")[1]
+        @test !AutoMerge.meets_version_number_no_prerelease(v"1.2.3-alpha+456")[1]
+    end
+    @testset "Version numbers may not contain build data" begin
+        @test AutoMerge.meets_version_number_no_build(v"1.2.3")[1]
+        @test AutoMerge.meets_version_number_no_build(v"1.2.3-alpha")[1]
+        @test !AutoMerge.meets_version_number_no_build(v"1.2.3+456")[1]
+        @test !AutoMerge.meets_version_number_no_build(v"1.2.3-alpha+456")[1]
+    end
+end
+
 @testset "Unit tests" begin
     @testset "assert.jl" begin
         @test nothing == @test_nowarn AutoMerge.always_assert(1 == 1)
