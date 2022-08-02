@@ -98,6 +98,7 @@ function run(;
     # the `dependency_confusion.jl` file for details.
     public_registries::Vector{<:AbstractString}=String[],
     read_only::Bool=false,
+    environment_variables_to_pass::Vector{<:AbstractString}=String[],
 )::Nothing
     all_statuses = deepcopy(additional_statuses)
     all_check_runs = deepcopy(additional_check_runs)
@@ -155,6 +156,7 @@ function run(;
             check_license=check_license,
             public_registries=public_registries,
             read_only=read_only,
+            environment_variables_to_pass=environment_variables_to_pass,
         )
     else
         always_assert(run_merge_build)

@@ -600,7 +600,11 @@ const guideline_version_can_be_pkg_added = Guideline(;
     info="Version can be `Pkg.add`ed",
     docs="Package installation: The package should be installable (`Pkg.add(\"PackageName\")`).",
     check=data -> meets_version_can_be_pkg_added(
-        data.registry_head, data.pkg, data.version; registry_deps=data.registry_deps
+        data.registry_head,
+        data.pkg,
+        data.version;
+        registry_deps=data.registry_deps,
+        environment_variables_to_pass=data.environment_variables_to_pass,
     ),
 )
 
@@ -609,6 +613,7 @@ function meets_version_can_be_pkg_added(
     pkg::String,
     version::VersionNumber;
     registry_deps::Vector{<:AbstractString}=String[],
+    environment_variables_to_pass::Vector{String},
 )
     pkg_add_command = _generate_pkg_add_command(pkg, version)
     _registry_deps = convert(Vector{String}, registry_deps)
@@ -637,6 +642,7 @@ function meets_version_can_be_pkg_added(
         version;
         code=code,
         before_message="Attempting to `Pkg.add` the package",
+        environment_variables_to_pass=environment_variables_to_pass,
     )
     if cmd_ran_successfully
         @info "Successfully `Pkg.add`ed the package"
@@ -725,7 +731,11 @@ const guideline_version_can_be_imported = Guideline(;
     info="Version can be `import`ed",
     docs="Package loading: The package should be loadable (`import PackageName`).",
     check=data -> meets_version_can_be_imported(
-        data.registry_head, data.pkg, data.version; registry_deps=data.registry_deps
+        data.registry_head,
+        data.pkg,
+        data.version;
+        registry_deps=data.registry_deps,
+        environment_variables_to_pass=data.environment_variables_to_pass,
     ),
 )
 
@@ -734,6 +744,7 @@ function meets_version_can_be_imported(
     pkg::String,
     version::VersionNumber;
     registry_deps::Vector{<:AbstractString}=String[],
+    environment_variables_to_pass::Vector{String},
 )
     pkg_add_command = _generate_pkg_add_command(pkg, version)
     _registry_deps = convert(Vector{String}, registry_deps)
@@ -766,6 +777,7 @@ function meets_version_can_be_imported(
         version;
         code=code,
         before_message="Attempting to `import` the package",
+        environment_variables_to_pass=environment_variables_to_pass,
     )
 
     if cmd_ran_successfully
@@ -783,7 +795,12 @@ function meets_version_can_be_imported(
 end
 
 function _run_pkg_commands(
-    working_directory::String, pkg::String, version::VersionNumber; code, before_message
+    working_directory::String,
+    pkg::String,
+    version::VersionNumber;
+    code,
+    before_message,
+    environment_variables_to_pass::Vector{String},
 )
     original_directory = pwd()
     tmp_dir_1 = mktempdir()
@@ -808,15 +825,30 @@ function _run_pkg_commands(
     #    Python.
     # 8. R_HOME. We set R_HOME to "*".
     # 9. HOME. Lots of things need HOME.
+    #
+    # If registry maintainers need additional environment variables to be passed
+    # to the child process, they can do so by providing the `environment_variables_to_pass`
+    # kwarg to the `AutoMerge.run` function.
 
     env = Dict(
         "JULIA_DEPOT_PATH" => mktempdir(),
+        "JULIA_PKG_PRECOMPILE_AUTO" => "0",
         "JULIA_REGISTRYCI_AUTOMERGE" => "true",
         "PYTHON" => "",
         "R_HOME" => "*",
-        "JULIA_PKG_PRECOMPILE_AUTO" => "0",
     )
-    for k in ("HOME", "PATH", "HTTP_PROXY", "HTTPS_PROXY", "JULIA_PKG_SERVER")
+    default_environment_variables_to_pass = [
+        "HOME",
+        "JULIA_PKG_SERVER",
+        "PATH",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+    ]
+    all_environment_variables_to_pass = vcat(
+        default_environment_variables_to_pass,
+        environment_variables_to_pass,
+    )
+    for k in all_environment_variables_to_pass
         if haskey(ENV, k)
             env[k] = ENV[k]
         end

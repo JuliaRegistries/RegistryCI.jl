@@ -85,6 +85,7 @@ function pull_request_build(
     check_license::Bool,
     public_registries::Vector{<:AbstractString}=String[],
     read_only::Bool,
+    environment_variables_to_pass::Vector{<:AbstractString}=String[],
 )::Nothing
     pr = my_retry(() -> GitHub.pull_request(api, registry, pr_number; auth=auth))
     _github_api_pr_head_commit_sha = pull_request_head_sha(pr)
@@ -158,6 +159,7 @@ function pull_request_build(
         registry_deps=registry_deps,
         public_registries=public_registries,
         read_only=read_only,
+        environment_variables_to_pass=environment_variables_to_pass,
     )
     pull_request_build(data; check_license=check_license)
     rm(registry_master; force=true, recursive=true)

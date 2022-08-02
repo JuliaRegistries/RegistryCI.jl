@@ -97,6 +97,9 @@ struct GitHubAutoMergeData
 
     # whether only read-only actions should be taken
     read_only::Bool
+
+    # Environment variables to pass to the subprocess that does `Pkg.add("Foo")` and `import Foo`
+    environment_variables_to_pass::Vector{String}
 end
 
 # Constructor that requires all fields (except `pkg_code_path`) as named arguments.
