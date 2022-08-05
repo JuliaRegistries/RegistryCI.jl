@@ -149,7 +149,7 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
 end
 
 const guideline_patch_release_does_not_narrow_julia_compat = Guideline(;
-    info="If it is a patch release, then it does not narrow the `[compat]` range for `julia`.",
+    info="If it is a patch release on a post-1.0 package, then it does not narrow the `[compat]` range for `julia`.",
     check=data -> meets_patch_release_does_not_narrow_julia_compat(
         data.pkg,
         data.version;
