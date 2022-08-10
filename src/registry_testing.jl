@@ -224,7 +224,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     compressed = RegistryTools.Compress.compress(
                         compatfile, RegistryTools.Compress.load(compatfile)
                     )
-                    mapdict = (f, dict) -> Dict(f(k, v) for (k, v) in pairs(dict))
+                    mapdict = (f, dict) -> Dict(f(k, v) for (k, v) in dict)
                     f_inner = (k, v) -> (k, Pkg.Types.VersionRange.(v))
                     f_outer = (k, dict) -> (k, mapdict(f_inner, dict))
                     Test.@test mapdict(f_outer, compressed) == mapdict(f_outer, compat)
