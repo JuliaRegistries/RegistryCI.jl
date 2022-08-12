@@ -224,10 +224,10 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     compressed = RegistryTools.Compress.compress(
                         compatfile, RegistryTools.Compress.load(compatfile)
                     )
-                    mapdict = (f, dict) -> Dict(f(k, v) for (k, v) in dict)
-                    f_inner = (k, v) -> (k, Pkg.Types.VersionRange.(v))
-                    f_outer = (k, dict) -> (k, mapdict(f_inner, dict))
-                    Test.@test mapdict(f_outer, compressed) == mapdict(f_outer, compat)
+                    mapvalues = (f, dict) -> Dict(k => f(v) for (k, v) in dict)
+                    f_inner = v -> Pkg.Types.VersionRange.(v)
+                    f_outer = dict -> mapvalues(f_inner, dict)
+                    Test.@test mapvalues(f_outer, compressed) == mapvalues(f_outer, compat)
                 end
             end
             # Make sure all paths are unique
