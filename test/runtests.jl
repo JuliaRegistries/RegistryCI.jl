@@ -17,11 +17,6 @@ const AutoMerge = RegistryCI.AutoMerge
 ENV["JULIA_PKG_SERVER"] = ""
 
 @testset "RegistryCI.jl" begin
-    @testset "RegistryCI.jl unit tests" begin
-        @info("Running the RegistryCI.jl unit tests")
-        include("registryci_registry_testing.jl")
-    end
-
     @testset "TagBot.jl unit tests" begin
         # if v"1.0" <= VERSION < VersionNumber(1, 5, typemax(UInt32))
         if false
