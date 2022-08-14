@@ -523,6 +523,7 @@ end
         end
         env1 = copy(ENV)
         env1["JULIA_DEPOT_PATH"] = tmp_depot
+        delete!(env1, "JULIA_LOAD_PATH")
         delete!(env1, "JULIA_PROJECT")
         env2 = copy(env1)
         env2["JULIA_PKG_SERVER"] = ""
