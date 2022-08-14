@@ -520,10 +520,10 @@ end
                 pkg; pkg_code_path=pkgdir_from_depot(tmp_path, pkg)
             )
         end
-        withenv("JULIA_DEPOT_PATH" => tmp_path, "JULIA_PKG_SERVER" => "") do
+        withenv("JULIA_DEPOT_PATH" => tmp_path, "JULIA_PROJECT" => nothing, "JULIA_PKG_SERVER" => "") do
             run(`julia -e 'import Pkg; Pkg.Registry.add("General")'`)
         end
-        withenv("JULIA_DEPOT_PATH" => tmp_path) do
+        withenv("JULIA_DEPOT_PATH" => tmp_path, "JULIA_PROJECT" => nothing) do
             run(`julia -e 'import Pkg; Pkg.add(["RegistryCI"])'`)
         end
         # Let's test ourselves and some of our dependencies that just have MIT licenses:
