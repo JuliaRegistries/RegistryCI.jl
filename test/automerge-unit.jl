@@ -514,19 +514,22 @@ end
     @testset "`AutoMerge.meets_version_has_osi_license`" begin
         # Let's install a fresh depot in a temporary directory
         # and add some packages to inspect.
-        tmp_path = mktempdir()
+        tmp_depot = mktempdir()
+        tmp_working_dir = mktempdir()
         function has_osi_license_in_depot(pkg)
             return AutoMerge.meets_version_has_osi_license(
-                pkg; pkg_code_path=pkgdir_from_depot(tmp_path, pkg)
+                pkg; pkg_code_path=pkgdir_from_depot(tmp_depot, pkg)
             )
         end
-        withenv("JULIA_DEPOT_PATH" => tmp_path, "JULIA_PROJECT" => nothing, "JULIA_PKG_SERVER" => "") do
-            run(`julia -e 'import Pkg; Pkg.Registry.add("General")'`)
-        end
-        withenv("JULIA_DEPOT_PATH" => tmp_path, "JULIA_PROJECT" => nothing) do
-            run(`julia -e 'import Pkg; Pkg.status()'`)
-            run(`julia -e 'import Pkg; Pkg.add(["RegistryCI"])'`)
-        end
+        env1 = copy(ENV)
+        env["JULIA_DEPOT_PATH"] = tmp_depot
+        delete!(env, "JULIA_PROJECT")
+        env2 = copy(env1)
+        env2["JULIA_PKG_SERVER"] = ""
+        run(setenv(`julia -e 'import Pkg; Pkg.Registry.add("General")'`, env2))
+        run(setenv(`julia -e 'import Pkg; Pkg.status()'`, env1))
+        run(setenv(`julia -e 'import Pkg; Pkg.add(["RegistryCI"])'`, env1))
+
         # Let's test ourselves and some of our dependencies that just have MIT licenses:
         result = has_osi_license_in_depot("RegistryCI")
         @test result[1]
@@ -536,7 +539,7 @@ end
         @test result[1]
 
         # Now, what happens if there's also a non-OSI license in another file?
-        pkg_path = pkgdir_from_depot(tmp_path, "UnbalancedOptimalTransport")
+        pkg_path = pkgdir_from_depot(tmp_depot, "UnbalancedOptimalTransport")
         open(joinpath(pkg_path, "LICENSE2"); write=true) do io
             cc0_bytes = read(joinpath(@__DIR__, "license_data", "CC0.txt"))
             println(io)
@@ -551,7 +554,7 @@ end
         @test !result[1]
 
         # What about no license at all?
-        pkg_path = pkgdir_from_depot(tmp_path, "VisualStringDistances")
+        pkg_path = pkgdir_from_depot(tmp_depot, "VisualStringDistances")
         rm(joinpath(pkg_path, "LICENSE"))
         result = has_osi_license_in_depot("VisualStringDistances")
         @test !result[1]
