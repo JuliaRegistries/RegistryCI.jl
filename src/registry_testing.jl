@@ -218,11 +218,16 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     end
                     # Test that the way Pkg loads this data works
                     Test.@test load_compat(compatfile, vnums)
-                    # Make sure the content roundtrips through decompression/compression
+                    # Make sure the content roundtrips through decompression/compression.
+                    # However, before we check for equality, we change the compat ranges
+                    # from `String`s to `VersionRanges`.
                     compressed = RegistryTools.Compress.compress(
                         compatfile, RegistryTools.Compress.load(compatfile)
                     )
-                    Test.@test compressed == compat
+                    mapvalues = (f, dict) -> Dict(k => f(v) for (k, v) in dict)
+                    f_inner = v -> Pkg.Types.VersionRange.(v)
+                    f_outer = dict -> mapvalues(f_inner, dict)
+                    Test.@test mapvalues(f_outer, compressed) == mapvalues(f_outer, compat)
                 end
             end
             # Make sure all paths are unique
