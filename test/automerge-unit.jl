@@ -295,25 +295,23 @@ end
                 end
             end
             @testset "commit_regex" begin
-                @test occursin(
-                    AutoMerge.commit_regex, "- Foo\n- Commit: mycommithash123\n- Bar"
-                )
-                @test occursin(AutoMerge.commit_regex, "- Commit: mycommithash123\n- Bar")
-                @test occursin(AutoMerge.commit_regex, "- Foo\n- Commit: mycommithash123")
-                @test occursin(AutoMerge.commit_regex, "- Commit: mycommithash123")
-                @test occursin(
-                    AutoMerge.commit_regex, "* Foo\n* Commit: mycommithash123\n* Bar"
-                )
-                @test occursin(AutoMerge.commit_regex, "* Commit: mycommithash123\n* Bar")
-                @test occursin(AutoMerge.commit_regex, "* Foo\n* Commit: mycommithash123")
-                @test occursin(AutoMerge.commit_regex, "* Commit: mycommithash123")
+                commit_hash = "012345678901234567890123456789abcdef0000"
+                @test occursin(AutoMerge.commit_regex, "- Foo\n- Commit: $(commit_hash)\n- Bar")
+                @test occursin(AutoMerge.commit_regex, "- Commit: $(commit_hash)\n- Bar")
+                @test occursin(AutoMerge.commit_regex, "- Foo\n- Commit: $(commit_hash)")
+                @test occursin(AutoMerge.commit_regex, "- Commit: $(commit_hash)")
+                @test occursin(AutoMerge.commit_regex, "Commit: $(commit_hash)")
+                @test occursin(AutoMerge.commit_regex, "* Foo\n* Commit: $(commit_hash)\n* Bar")
+                @test occursin(AutoMerge.commit_regex, "* Commit: $(commit_hash)\n* Bar")
+                @test occursin(AutoMerge.commit_regex, "* Foo\n* Commit: $(commit_hash)")
+                @test occursin(AutoMerge.commit_regex, "* Commit: $(commit_hash)")
                 @test !occursin(AutoMerge.commit_regex, "- Commit: mycommit hash 123")
                 let
                     m = match(
-                        AutoMerge.commit_regex, "- Foo\n- Commit: mycommithash123\n- Bar"
+                        AutoMerge.commit_regex, "- Foo\n- Commit: $(commit_hash)\n- Bar"
                     )
                     @test length(m.captures) == 1
-                    @test m.captures[1] == "mycommithash123"
+                    @test m.captures[1] == "$(commit_hash)"
                 end
             end
         end
