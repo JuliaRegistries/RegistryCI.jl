@@ -2,7 +2,7 @@ const new_package_title_regex = r"^New package: (\w*?) v(\S*?)$"
 
 const new_version_title_regex = r"^New version: (\w*?) v(\S*?)$"
 
-const commit_regex = r"(?:^|\n|\r\n)(?:\-|\*) Commit: (\w*?)(?:$|\n|\r\n)"
+const commit_regex = r"Commit: ([0-9a-f]+)"
 
 function is_new_package(pull_request::GitHub.PullRequest)
     return occursin(new_package_title_regex, title(pull_request))
@@ -57,7 +57,9 @@ end
 function commit_from_pull_request_body(pull_request::GitHub.PullRequest)
     pr_body = body(pull_request)
     m = match(commit_regex, pr_body)
-    return convert(String, m.captures[1])::String
+    commit = convert(String, m.captures[1])::String
+    always_assert(length(commit) == 40)
+    return commit
 end
 
 function parse_pull_request_title(::NewPackage, pull_request::GitHub.PullRequest)

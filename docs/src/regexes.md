@@ -54,7 +54,7 @@ const row_3 = table_row(;
     regex = RegistryCI.AutoMerge.commit_regex,
     pr_field = "PR body",
     pr_type = "All",
-    example = "* Commit: mycommithash123",
+    example = "* Commit: 012345678901234567890123456789abcdef0000",
 )
 
 const rows = [
