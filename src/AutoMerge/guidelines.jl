@@ -71,7 +71,7 @@ const guideline_compat_for_all_deps = Guideline(;
     docs=string(
         "Dependencies: All dependencies should have `[compat]` entries that ",
         "are upper-bounded and only include a finite number of breaking releases. ",
-        "For more information, please see the \"Upper bounded `[compat]` entries\" subsection under \"Additional information\" below.",
+        "For more information, please see the \"Upper-bounded `[compat]` entries\" subsection under \"Additional information\" below.",
     ),
     check=data -> meets_compat_for_all_deps(data.registry_head, data.pkg, data.version),
 )
