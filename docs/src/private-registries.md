@@ -10,7 +10,7 @@ After you have the registry configured, you can setup CI using RegistryCI by fol
 
 ## Basic configuration
 
-You will first need to copy the `.ci` folder in the root of the General registry to the root of your own registry. This folder contains some resources required for the RegistryCI package to work and update itself. If you do not need AutoMerge support, there is now need to copy the
+You will first need to copy the `.ci` folder in the root of the General registry to the root of your own registry. This folder contains some resources required for the RegistryCI package to work and update itself. If you do not need AutoMerge support, there is no need to copy the
 `stopwatch.jl` file in the `.ci` folder.
 
 Next, you will need to copy the `ci.yml` and `update_manifest.yml` workflow files.
