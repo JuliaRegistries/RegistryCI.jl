@@ -23,6 +23,18 @@ If the packages in your registry depend on packages in other registries, they sh
 + run: julia --project=.ci/ --color=yes -e 'import RegistryCI; RegistryCI.test(registry_deps=["https://github.com/JuliaRegistries/General"])'
 ```
 
+You can optionally use the registry name instead of the URL:
+```diff
+- run: julia --project=.ci/ --color=yes -e 'import RegistryCI; RegistryCI.test()'
++ run: julia --project=.ci/ --color=yes -e 'import RegistryCI; RegistryCI.test(registry_deps=["General"])'
+```
+If Julia pkg server is available and recognized, then the Julia Pkg will try to download registry from it. This can be useful to reduce the
+unnecessary network traffic, for example, if you host a private pkg server in your local network(e.g., enterprise network with firewall)
+and properly set up the environment variable `JULIA_PKG_SERVER`, then the network traffic doesn't need to pass through the proxy to GitHub.
+
+!!! warning
+    Registry fetched from Julia pkg server currently has some observable latency(e.g., hours). Check [here](https://github.com/JuliaRegistries/General/issues/16777) for more information.
+
 The self-update mechanism mentioned above uses a `TAGBOT_TOKEN` secret in order to create a pull request with the update.
 This secret is a [personal access token](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line#creating-a-token) which must have the `repo` scope enabled.
 To create the repository secret follow the instructions [here](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets#creating-encrypted-secrets). Use the name `TAGBOT_TOKEN` and the new PAT as the value.
