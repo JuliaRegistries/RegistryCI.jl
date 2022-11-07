@@ -318,6 +318,13 @@ function _meets_distance_check!(problem_messages, pkg_name, other_pkg;
 
     if pkg_name == other_pkg
         # We short-circuit in this case; more information doesn't help.
+        push!(
+            problem_messages,
+            (
+                "Package name matches existing package name $(other_pkg) up to case.",
+                (0, 0, 0),
+            ),
+        )
         return (false, "Package name already exists in the registry.")
     elseif lowercase(pkg_name) == lowercase(other_pkg)
         # We'll sort this first
@@ -383,6 +390,7 @@ end
 function is_pkgname_similar(pkg_name, other_pkg; kwargs...)
     msgs = Tuple{String,Tuple{Float64,Float64,Float64}}[]
     _meets_distance_check!(msgs, pkg_name, other_pkg; kwargs...)
+    # @info x, msgs
     isempty(msgs) ? false : true
 end
 
