@@ -549,6 +549,37 @@ const guideline_code_can_be_downloaded = Guideline(;
     ),
 )
 
+function _find_lowercase_duplicates(v)
+    elts = Dict{String, String}()
+    for x in v
+        lower_x = lowercase(x)
+        if haskey(elts, lower_x)
+            return (elts[lower_x], x)
+        else
+            elts[lower_x] = x
+        end
+    end
+    return nothing
+end
+
+function meets_src_files_distinct(pkg_code_path)
+    src = joinpath(pkg_code_path, "src/")
+    isdir(src) || return false, "`src` directory not found"
+    for (root, dirs, files) in walkdir(src)
+        result = _find_lowercase_duplicates(Iterators.flatten((files, dirs)))
+        result === nothing && continue
+        x = joinpath(root, result[1])
+        y = joinpath(root, result[2])
+        return false, "Found files or directories in `src` which will cause problems on case insensitive filesystems: `$x` and `$y`"
+    end
+    return true, ""
+end
+
+const guideline_src_files_distinct = Guideline(;
+    info="`src` files distinct on case-insensitive systems",
+    check=data -> meets_src_files_distinct(data.pkg_code_path),
+)
+
 function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_path)
     uuid, package_repo, subdir, tree_hash_from_toml = parse_registry_pkg_info(
         registry_head, pkg, version
@@ -909,6 +940,7 @@ function get_automerge_guidelines(
         # after `guideline_code_can_be_downloaded` so
         # that it can use the downloaded code!
         (guideline_version_has_osi_license, check_license),
+        (guideline_src_files_distinct, true),
         (guideline_version_can_be_imported, true),
         (:update_status, true),
         (guideline_dependency_confusion, true),
@@ -948,6 +980,7 @@ function get_automerge_guidelines(
         # after `guideline_code_can_be_downloaded` so
         # that it can use the downloaded code!
         (guideline_version_has_osi_license, check_license),
+        (guideline_src_files_distinct, true),
         (guideline_version_can_be_imported, true),
     ]
     return guidelines
