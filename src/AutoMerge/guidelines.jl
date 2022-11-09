@@ -562,22 +562,54 @@ function _find_lowercase_duplicates(v)
     return nothing
 end
 
-function meets_src_files_distinct(pkg_code_path)
-    src = joinpath(pkg_code_path, "src/")
-    isdir(src) || return false, "`src` directory not found"
-    for (root, dirs, files) in walkdir(src)
-        result = _find_lowercase_duplicates(Iterators.flatten((files, dirs)))
-        result === nothing && continue
-        x = joinpath(root, result[1])
-        y = joinpath(root, result[2])
-        return false, "Found files or directories in `src` which will cause problems on case insensitive filesystems: `$x` and `$y`"
+const DISALLOWED_CHARS = ['/', '<', '>', ':', '"', '/', '\\', '|', '?', '*', Char.(0:31)...]
+
+const DISALLOWED_NAMES = ["CON", "PRN", "AUX", "NUL",
+                          ("COM$i" for i in 1:9)...,
+                          ("LPT$i" for i in 1:9)...]
+
+function meets_file_dir_name_check(name)
+    # https://stackoverflow.com/a/31976060
+    idx = findfirst(n -> contains(name, n), DISALLOWED_CHARS)
+    if idx !== nothing
+        return false, "contains character $(DISALLOWED_CHARS[idx]) which may not be valid as a file or directory name on some platforms"
+    end
+
+    base, ext = splitext(name)
+    if uppercase(name) in DISALLOWED_NAMES || uppercase(base) in DISALLOWED_NAMES
+        return false, "is not allowed"
+    end
+    if endswith(name, ".") || endswith(name, r"\s")
+        return false, "ends with `.` or space"
     end
     return true, ""
 end
 
-const guideline_src_files_distinct = Guideline(;
-    info="`src` files distinct on case-insensitive systems",
-    check=data -> meets_src_files_distinct(data.pkg_code_path),
+function meets_src_names_ok(pkg_code_path)
+    src = joinpath(pkg_code_path, "src/")
+    isdir(src) || return false, "`src` directory not found"
+    for (root, dirs, files) in walkdir(src)
+        files_dirs = Iterators.flatten((files, dirs))
+        result = _find_lowercase_duplicates(files_dirs)
+        if result !== nothing
+            x = joinpath(root, result[1])
+            y = joinpath(root, result[2])
+            return false, "Found files or directories in `src` which will cause problems on case insensitive filesystems: `$x` and `$y`"
+        end
+
+        for f in files_dirs
+            ok, msg = meets_file_dir_name_check(f)
+            if !ok
+                return false, "the name of file or directory $(joinpath(root, f)) $(msg). This can cause problems on some operating systems or file systems."
+            end
+        end
+    end
+    return true, ""
+end
+
+const guideline_src_names_OK = Guideline(;
+    info="`src` files and directories names are OK",
+    check=data -> meets_src_names_ok(data.pkg_code_path),
 )
 
 function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_path)
@@ -940,7 +972,7 @@ function get_automerge_guidelines(
         # after `guideline_code_can_be_downloaded` so
         # that it can use the downloaded code!
         (guideline_version_has_osi_license, check_license),
-        (guideline_src_files_distinct, true),
+        (guideline_src_names_OK, true),
         (guideline_version_can_be_imported, true),
         (:update_status, true),
         (guideline_dependency_confusion, true),
@@ -980,7 +1012,7 @@ function get_automerge_guidelines(
         # after `guideline_code_can_be_downloaded` so
         # that it can use the downloaded code!
         (guideline_version_has_osi_license, check_license),
-        (guideline_src_files_distinct, true),
+        (guideline_src_names_OK, true),
         (guideline_version_can_be_imported, true),
     ]
     return guidelines
