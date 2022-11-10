@@ -570,7 +570,7 @@ const DISALLOWED_NAMES = ["CON", "PRN", "AUX", "NUL",
 
 function meets_file_dir_name_check(name)
     # https://stackoverflow.com/a/31976060
-    idx = findfirst(n -> contains(name, n), DISALLOWED_CHARS)
+    idx = findfirst(n -> occursin(n, name), DISALLOWED_CHARS)
     if idx !== nothing
         return false, "contains character $(DISALLOWED_CHARS[idx]) which may not be valid as a file or directory name on some platforms"
     end
