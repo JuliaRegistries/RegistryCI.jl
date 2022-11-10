@@ -246,6 +246,67 @@ end
         @test nothing == @test_nowarn AutoMerge.always_assert(1 == 1)
         @test_throws AutoMerge.AlwaysAssertionError AutoMerge.always_assert(1 == 2)
     end
+    @testset "_find_lowercase_duplicates" begin
+        @test AutoMerge._find_lowercase_duplicates(("a", "b", "A")) == ("a", "A")
+        @test AutoMerge._find_lowercase_duplicates(("ab", "bb", "aB")) == ("ab", "aB")
+        @test AutoMerge._find_lowercase_duplicates(["ab", "bc"]) === nothing
+        @test AutoMerge._find_lowercase_duplicates(("ab", "bb", "aB", "AB")) == ("ab", "aB")
+    end
+    @testset "meets_file_dir_name_check" begin
+        @test AutoMerge.meets_file_dir_name_check("hi")[1]
+        @test AutoMerge.meets_file_dir_name_check("hi bye")[1]
+        @test AutoMerge.meets_file_dir_name_check("hi.txt")[1]
+        @test AutoMerge.meets_file_dir_name_check("hi.con")[1]
+        @test !AutoMerge.meets_file_dir_name_check("con")[1]
+        @test !AutoMerge.meets_file_dir_name_check("lpt5")[1]
+        @test !AutoMerge.meets_file_dir_name_check("hi.")[1]
+        @test !AutoMerge.meets_file_dir_name_check("hi.txt.")[1]
+        @test !AutoMerge.meets_file_dir_name_check("hi ")[1]
+        @test !AutoMerge.meets_file_dir_name_check("hi:")[1]
+        @test !AutoMerge.meets_file_dir_name_check("hi:bye")[1]
+        @test !AutoMerge.meets_file_dir_name_check("hi?bye")[1]
+        @test !AutoMerge.meets_file_dir_name_check("hi>bye")[1]
+    end
+    @testset "meets_src_names_ok: duplicates" begin
+        @test !AutoMerge.meets_src_names_ok("DOES NOT EXIST")[1]
+        tmp = mktempdir()
+        @test !AutoMerge.meets_src_names_ok(tmp)[1]
+        mkdir(joinpath(tmp, "src"))
+        @test AutoMerge.meets_src_names_ok(tmp)[1]
+        touch(joinpath(tmp, "src", "a"))
+        @test AutoMerge.meets_src_names_ok(tmp)[1]
+
+        if !isdir(joinpath(tmp, "SRC"))
+            mkdir(joinpath(tmp, "src", "A"))
+
+            # dir vs file fails
+            @test !AutoMerge.meets_src_names_ok(tmp)[1]
+            rm(joinpath(tmp, "src", "a"))
+
+            @test AutoMerge.meets_src_names_ok(tmp)[1]
+
+            touch(joinpath(tmp, "src", "A", "b"))
+            @test AutoMerge.meets_src_names_ok(tmp)[1]
+            touch(joinpath(tmp, "src", "b"))
+            # repetition at different levels is OK
+            @test AutoMerge.meets_src_names_ok(tmp)[1]
+
+            touch(joinpath(tmp, "src", "A", "B"))
+            # repetition at the same level is not OK
+            @test !AutoMerge.meets_src_names_ok(tmp)[1]
+        else
+            @warn "Case insensitive filesystem detected, so skipping some `meets_src_files_distinct` checks."
+        end
+    end
+    @testset "meets_src_names_ok: names" begin
+        tmp = mktempdir()
+        mkdir(joinpath(tmp, "src"))
+        @test AutoMerge.meets_src_names_ok(tmp)[1]
+        mkdir(joinpath(tmp, "src", "B"))
+        @test AutoMerge.meets_src_names_ok(tmp)[1]
+        touch(joinpath(tmp, "src", "B", "con"))
+        @test !AutoMerge.meets_src_names_ok(tmp)[1]
+    end
     @testset "pull-requests.jl" begin
         @testset "regexes" begin
             @testset "new_package_title_regex" begin
