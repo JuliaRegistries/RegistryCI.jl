@@ -282,7 +282,6 @@ end
             # dir vs file fails
             @test !AutoMerge.meets_src_names_ok(tmp)[1]
             rm(joinpath(tmp, "src", "a"))
-            mkdir(joinpath(tmp, "src", "A"))
 
             @test AutoMerge.meets_src_names_ok(tmp)[1]
 
