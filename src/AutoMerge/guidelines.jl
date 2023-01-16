@@ -857,6 +857,60 @@ function meets_version_can_be_imported(
     end
 end
 
+
+function linecounts_meet_thresholds(data::GitHubAutoMergeData)
+    analysis = PackageAnalyzer.analyze(data.pkg_code_path)
+    if isempty(p.lines_of_code)
+        return false, "PackageAnalyzer didn't find any lines of code."
+    end
+    issues = []
+    src_line_count = PackageAnalyzer.count_julia_loc(p, "src")
+    if !meets_threshold(env_threshold("README_MIN_LINES", 5),
+                         PackageAnalyzer.count_readme(analysis),
+                         src_line_count)
+        push!(issues, "Package README file is too short")
+    end
+    if !meets_threshold(env_threshold_count("SRC_MIN_LINES", 10),
+                         src_line_count)
+        push!(issues, "Too few linwes of source code.")
+    end
+    test_line_count = count_julia_loc(p, "test")
+    if !!meets_threshold(env_threshold("TEST_MIN_LINES", 0.1f0),
+                          test_line_count,
+                          test_line_count + src_line_count)
+        push!(issues, "Too few lines of test code.")
+    end
+    docs_line_count = PackageAnalyzer.count_docs(p)
+    if !meets_threshold(env_threshold("DOC_MIN_LINES", 0.1f0),
+                         docs_line_count,
+                         docs_line_count + src_line_count)
+        push!(issues, "Too few lines of documentation.")
+    end
+    if isempty(issues)
+        return true, ""
+    else
+        return false, join(issues, "\n")
+    end
+end
+
+const guideline_linecounts_meet_thresholds = Guideline(;
+    info="Test that lines of source, tests and documentation meet specified thresholds",
+    docs="""Make sure that various line counts meet or exceed specified thresholds.
+Thresholds are controlled by these environment variables:
+ * SRC_MIN_LINES:       Minimum number of lines of source code
+ * README_MIN_LINES:  % Minimum number of lines in the README file
+ * TEST_MIN_LINES:    % Minimum number of lines of code in the test directory
+ * DOC_MIN_LINES:     # Minimum number of lines of documentation
+
+Those marked with a % can be expressed as a count, or as a percentage
+of the number of lines of source code.  For TEST_MIN_LINES and
+DOC_MIN_LINES, the denominatttor of the percentage also includes the
+number of lines of test code.
+""",
+    check=linecounts_meet_thresholds
+)
+
+
 function _run_pkg_commands(
     working_directory::String,
     pkg::String,
@@ -1017,3 +1071,4 @@ function get_automerge_guidelines(
     ]
     return guidelines
 end
+
