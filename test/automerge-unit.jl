@@ -616,4 +616,11 @@ end
         result = has_osi_license_in_depot("VisualStringDistances")
         @test !result[1]
     end
+
+    @testset "`AutoMerge.linecounts_meet_thresholds" begin
+        tmp_depot = mktempdir()
+        pkg_path = pkgdir_from_depot(tmp_depot, "VisualStringDistances")
+        result = AutoMerge.linecounts_meet_thresholds(pkg_path)
+        @test result = (true, "")
+    end
 end
