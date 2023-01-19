@@ -112,6 +112,8 @@ function GitHubAutoMergeData(; kwargs...)
     return GitHubAutoMergeData(getindex.(Ref(kwargs), fields)...)
 end
 
+ALL_GUIDELINES = []
+
 Base.@kwdef mutable struct Guideline
     # Short description of the guideline. Only used for logging.
     info::String
@@ -130,6 +132,12 @@ Base.@kwdef mutable struct Guideline
 
     # Saved output message from the `check` function.
     message::String = "Internal error. A check that was supposed to run never did: $(info)"
+
+    function Guideline(info, docs, check, passed, message)
+        g = new(info, docs, check, passed, message)
+        push!(ALL_GUIDELINES, g)
+        g
+    end
 end
 
 passed(guideline::Guideline) = guideline.passed
