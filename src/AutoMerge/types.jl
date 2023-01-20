@@ -100,6 +100,12 @@ struct GitHubAutoMergeData
 
     # Environment variables to pass to the subprocess that does `Pkg.add("Foo")` and `import Foo`
     environment_variables_to_pass::Vector{String}
+
+    # Parameters for the linecounts_meet_thresholds guideline:
+    src_min_lines::Integer
+    readme_min_lines::Union{Integer, AbstractFloat}
+    test_min_lines::Union{Integer, AbstractFloat}
+    doc_min_lines::Union{Integer, AbstractFloat}
 end
 
 # Constructor that requires all fields (except `pkg_code_path`) as named arguments.
@@ -107,7 +113,11 @@ function GitHubAutoMergeData(; kwargs...)
     pkg_code_path = mktempdir(; cleanup=true)
     kwargs = (; pkg_code_path=pkg_code_path, kwargs...)
     fields = fieldnames(GitHubAutoMergeData)
-    always_assert(Set(keys(kwargs)) == Set(fields))
+    missing = setdiff(Set(keys(kwargs)), Set(fields))
+    if !isempty(missing)
+        @warn "Keyword argument discrepancy in GitHubAutoMergeData: $(join(missing, ", "))"
+    end
+    always_assert(isempty(missing))
     always_assert(kwargs[:authorization] ∈ (:normal, :jll))
     return GitHubAutoMergeData(getindex.(Ref(kwargs), fields)...)
 end
