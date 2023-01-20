@@ -115,7 +115,7 @@ function GitHubAutoMergeData(; kwargs...)
     fields = fieldnames(GitHubAutoMergeData)
     missing = setdiff(Set(keys(kwargs)), Set(fields))
     if !isempty(missing)
-        @warn "Keyword argument discrepancy in GitHubAutoMergeData: $(join(missing, ", "))"
+        @warn "Keyword/field mismatch while constructing a GitHubAutoMergeData: $(join(missing, ", "))"
     end
     always_assert(isempty(missing))
     always_assert(kwargs[:authorization] ∈ (:normal, :jll))
