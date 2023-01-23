@@ -45,25 +45,4 @@ ENV["JULIA_PKG_SERVER"] = ""
             include("automerge-integration.jl")
         end
     end
-
-    @testset "env_threshold" begin
-        e = RegistryCI.env_threshold
-        ENV["zero"] = "0"
-        ENV["zerodotzero"] = "0.0"
-        ENV["zerodotzeropct"] = "0.0%"
-        ENV["pct"] = "12%"
-        ENV["fracpct"] = "20.5%"
-        ENV["negcount"] = "-1"
-        ENV["count"] = "123"
-        # How can we test if a warning was logged?
-        @test e("zero", 0.1) == 0
-        @test e("zero", 0.1) isa Integer
-        @test e("zerodotzero", 0.1) == 0.1         # default
-        @test e("zerodotzeropct", 0.1) == 0.0
-        @test e("zerodotzeropct", 0.1) isa Float32
-        @test e("pct", 0) == 0.12f0
-        @test e("fracpct", 0) == 0.205f0
-        @test e("negcount", 10) == 10            # default
-        @test e("count", 0) == 123
-    end
 end
