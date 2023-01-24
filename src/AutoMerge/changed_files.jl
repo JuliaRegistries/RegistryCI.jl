@@ -3,7 +3,9 @@ function allowed_changed_files(::NewPackage, pkg::String)
     result = String[
         "Registry.toml",
         "$(_package_relpath_per_scheme)/Compat.toml",
+        "$(_package_relpath_per_scheme)/WeakCompat.toml",
         "$(_package_relpath_per_scheme)/Deps.toml",
+        "$(_package_relpath_per_scheme)/WeakDeps.toml",
         "$(_package_relpath_per_scheme)/Package.toml",
         "$(_package_relpath_per_scheme)/Versions.toml",
     ]
@@ -14,7 +16,9 @@ function allowed_changed_files(::NewVersion, pkg::String)
     _package_relpath_per_scheme = _get_package_relpath_per_name_scheme(; package_name=pkg)
     result = String[
         "$(_package_relpath_per_scheme)/Compat.toml",
+        "$(_package_relpath_per_scheme)/WeakCompat.toml",
         "$(_package_relpath_per_scheme)/Deps.toml",
+        "$(_package_relpath_per_scheme)/WeakDeps.toml",
         "$(_package_relpath_per_scheme)/Versions.toml",
     ]
     return result
