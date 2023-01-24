@@ -319,8 +319,7 @@ function meets_threshold(threshold::Integer, numerator::Integer, ::Integer)
 end
 
 function meets_threshold(threshold::AbstractFloat, numerator::Integer, denominator::Integer)
-    # @info("meets_threshold", threshold, numerator, denominator,
-          (numerator / denominator) >= threshold)
+    # @info("meets_threshold", threshold, numerator, denominator, (numerator / denominator) >= threshold)
     (numerator / denominator) >= threshold
 end
 
