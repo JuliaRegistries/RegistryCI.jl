@@ -113,11 +113,11 @@ function GitHubAutoMergeData(; kwargs...)
     pkg_code_path = mktempdir(; cleanup=true)
     kwargs = (; pkg_code_path=pkg_code_path, kwargs...)
     fields = fieldnames(GitHubAutoMergeData)
-    missing = setdiff(Set(keys(kwargs)), Set(fields))
-    if !isempty(missing)
-        @warn "Keyword/field mismatch while constructing a GitHubAutoMergeData: $(join(missing, ", "))"
+    mismatch = setdiff(Set(keys(kwargs)), Set(fields))
+    if !isempty(mismatch)
+        @warn "Keyword/field mismatch while constructing a GitHubAutoMergeData: $(join(mismatchmissing, ", "))"
     end
-    always_assert(isempty(missing))
+    always_assert(isempty(mismatch))
     always_assert(kwargs[:authorization] ∈ (:normal, :jll))
     return GitHubAutoMergeData(getindex.(Ref(kwargs), fields)...)
 end
@@ -152,6 +152,8 @@ end
 
 passed(guideline::Guideline) = guideline.passed
 message(guideline::Guideline) = guideline.message
-function check!(guideline::Guideline, data::GitHubAutoMergeData)
-    return guideline.passed, guideline.message = guideline.check(data)
+function check!(guideline::Guideline, data::GitHubAutoMergeData,
+                guideline_parameters::Dict{Symbol, Any},)
+    return guideline.passed, guideline.message =
+        guideline.check(data, guideline_parameters)
 end

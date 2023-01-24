@@ -71,6 +71,7 @@ end
 
 function pull_request_build(
     api::GitHub.GitHubAPI,
+    guideline_parameters::Dict{Symbol, Any},
     pr_number::Integer,
     current_pr_head_commit_sha::String,
     registry::GitHub.Repo,
@@ -163,12 +164,15 @@ function pull_request_build(
         read_only=read_only,
         environment_variables_to_pass=environment_variables_to_pass,
     )
-    pull_request_build(data; check_license=check_license)
+    pull_request_build(data, guideline_parameters;
+                       check_license=check_license)
     rm(registry_master; force=true, recursive=true)
     return nothing
 end
 
-function pull_request_build(data::GitHubAutoMergeData; check_license)::Nothing
+function pull_request_build(data::GitHubAutoMergeData,
+                            guideline_parameters::Dict{Symbol, Any},;
+                            check_license)::Nothing
     kind = package_or_version(data.registration_type)
     this_is_jll_package = is_jll_name(data.pkg)
     @info(
@@ -208,7 +212,7 @@ function pull_request_build(data::GitHubAutoMergeData; check_license)::Nothing
                 )
             end
         else
-            check!(guideline, data)
+            check!(guideline, data, guideline_parameters)
             @info(
                 guideline.info,
                 meets_this_guideline = passed(guideline),

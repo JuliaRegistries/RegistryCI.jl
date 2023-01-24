@@ -48,36 +48,3 @@ function env_threshold_count(envvar::String, default)
     default
 end
 
-
-"""
-    env_threshold(envvar::String, default)
-
-Return an integer (intrerpreted as a number of lines) or a fraction read
-from the specified environment variable.
-"""
-function env_threshold(envvar::String, default)
-    v = get(ENV, envvar, nothing)
-    if v == nothing
-        return default
-    end
-    m = match(r"(?<pct>^[0-9]+.?[0-9]*+)%$", v)
-    if m != nothing
-        return parse(Float32, m["pct"]) / 100
-    end
-    m = match(r"(?<count>^[0-9]+)$", v)
-    if m != nothing
-        return parse(Int64, m["count"])
-    end
-    @warn "Value $v of environment variable $envvar is neither a percentage nor a line count.  Using default of $default"
-    default
-end
-
-meets_threshold(threshold::Integer, linecount::Integer) =
-    linecount >= threshhols
-
-meets_threshold(threshold::Integer, numerator::Integer, ::Integer) =
-    numerator >= threshold
-
-meets_threshold(thresholdr::AbstractFloat, numerator::Integer, denominator::Integer) =
-    numerator / denominator >= threshhols
-
