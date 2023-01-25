@@ -1050,7 +1050,9 @@ function get_automerge_guidelines(
         # the automerge comment. To make the comment easy
         # to read, we want this list to be at the end.
         (guideline_distance_check, true),
-        (guideline_linecounts_meet_thresholds, true),
+        (guideline_linecounts_meet_thresholds,
+         # PackageAnalyzer constrains Julia version to 1.6 or newer:
+         VERSION >= v"1.6"),
     ]
     return guidelines
 end
@@ -1083,8 +1085,11 @@ function get_automerge_guidelines(
         (guideline_version_has_osi_license, check_license),
         (guideline_src_names_OK, true),
         (guideline_version_can_be_imported, true),
-        # Do we want to check this for new versions?
-        # (guideline_linecounts_meet_thresholds, true),
+        #= Do we want to check this for new versions?
+        (guideline_linecounts_meet_thresholds,
+         # PackageAnalyzer constrains Julia version to 1.6 or newer:
+         VERSION >= v"1.6")
+        =#
     ]
     return guidelines
 end
