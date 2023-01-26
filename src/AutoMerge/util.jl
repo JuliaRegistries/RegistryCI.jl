@@ -309,16 +309,19 @@ to satisfy the test.
 function meets_threshold end
 
 function meets_threshold(threshold::Integer, linecount::Integer)
+    @assert threshold >= 0
     # @info("meets_threshold", threshold, linecount, linecount >= threshold)
     linecount >= threshold
 end
 
 function meets_threshold(threshold::Integer, numerator::Integer, ::Integer)
+    @assert threshold >= 0
     # @info("meets_threshold", threshold, numerator, numerator >= threshold)
     numerator >= threshold
 end
 
 function meets_threshold(threshold::AbstractFloat, numerator::Integer, denominator::Integer)
+    @assert threshold >= 0.0 && threshold < 1.0
     # @info("meets_threshold", threshold, numerator, denominator, (numerator / denominator) >= threshold)
     (numerator / denominator) >= threshold
 end
