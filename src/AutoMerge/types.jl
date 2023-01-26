@@ -100,12 +100,6 @@ struct GitHubAutoMergeData
 
     # Environment variables to pass to the subprocess that does `Pkg.add("Foo")` and `import Foo`
     environment_variables_to_pass::Vector{String}
-
-    # Parameters for the linecounts_meet_thresholds guideline:
-    src_min_lines::Integer
-    readme_min_lines::Union{Integer, AbstractFloat}
-    test_min_lines::Union{Integer, AbstractFloat}
-    doc_min_lines::Union{Integer, AbstractFloat}
 end
 
 # Constructor that requires all fields (except `pkg_code_path`) as named arguments.
