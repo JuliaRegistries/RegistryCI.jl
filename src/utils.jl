@@ -28,23 +28,3 @@ function with_temp_depot(f::Function)
     return result
 end
 
-
-"""
-    env_threshold_count(envvar::String, default)
-
-Return an integer (intrerpreted as a number of lines) read
-from the specified environment variable.
-"""
-function env_threshold_count(envvar::String, default)
-        v = get(ENV, envvar, nothing)
-    if v == nothing
-        return default
-    end
-    m = match(r"(?<count>^[0-9]+)$", v)
-    if m != nothing
-        return parse(Int64, m["count"])
-    end
-    @warn "Value $v of environment variable $envvar is not a line count.  Using default of $default"
-    default
-end
-
