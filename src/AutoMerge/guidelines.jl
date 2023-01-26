@@ -1044,7 +1044,9 @@ function get_automerge_guidelines(
         (guideline_version_can_be_imported, true),
         (:update_status, true),
         (guideline_dependency_confusion, true),
-        (guideline_linecounts_meet_thresholds, true),
+        (guideline_linecounts_meet_thresholds,
+         # PackageAnalyzer constrains Julia version to 1.6 or newer:
+         VERSION >= v"1.6"),
         # We always run the `guideline_distance_check`
         # check last, because if the check fails, it
         # prints the list of similar package names in
@@ -1084,7 +1086,9 @@ function get_automerge_guidelines(
         (guideline_src_names_OK, true),
         (guideline_version_can_be_imported, true),
         #= Do we want to check this for new versions?
-        (guideline_linecounts_meet_thresholds, true*)
+        (guideline_linecounts_meet_thresholds,
+         # PackageAnalyzer constrains Julia version to 1.6 or newer:
+         VERSION >= v"1.6")
         =#
     ]
     return guidelines
