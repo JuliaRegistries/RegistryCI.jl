@@ -892,10 +892,10 @@ function linecounts_meet_thresholds(pkg_code_path,
         return false, "PackageAnalyzer didn't find any lines of code."
     end
     # get parameters:
-    src_min_lines    = get(guideline_parameters, :src_min_lines,   10)
-    readme_min_lines = get(guideline_parameters, :readme_min_lines, 5)
-    test_min_lines   = get(guideline_parameters, :test_min_lines,   10)
-    doc_min_lines    = get(guideline_parameters, :doc_min_lines,    10)
+    src_min_lines    = get(guideline_parameters, :src_min_lines,    0)
+    readme_min_lines = get(guideline_parameters, :readme_min_lines, 0)
+    test_min_lines   = get(guideline_parameters, :test_min_lines,   0)
+    doc_min_lines    = get(guideline_parameters, :doc_min_lines,    0)
     issues = []
     src_line_count = PackageAnalyzer.count_julia_loc(analysis, "src")
     if !meets_threshold(readme_min_lines,
