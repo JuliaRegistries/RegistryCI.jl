@@ -894,14 +894,14 @@ function linecounts_meet_thresholds(pkg_code_path,
     # get parameters:
     src_min_lines    = get(guideline_parameters, :src_min_lines,   10)
     readme_min_lines = get(guideline_parameters, :readme_min_lines, 5)
-    test_min_lines   = get(guideline_parameters, :test_min_lines,   0.1f0)
-    doc_min_lines    = get(guideline_parameters, :doc_min_lines,    0.1f0)
+    test_min_lines   = get(guideline_parameters, :test_min_lines,   10)
+    doc_min_lines    = get(guideline_parameters, :doc_min_lines,    10)
     issues = []
     src_line_count = PackageAnalyzer.count_julia_loc(analysis, "src")
     if !meets_threshold(readme_min_lines,
                          PackageAnalyzer.count_readme(analysis),
                          src_line_count)
-        push!(issues, "Package README file is too short")
+        push!(issues, "Package README file is too short. Counted $(src_line_count) lines, but at least $(readme_min_lines) lines are required.")
     end
     if !meets_threshold(src_min_lines, src_line_count)
         push!(issues, "Too few lines of source code.")
