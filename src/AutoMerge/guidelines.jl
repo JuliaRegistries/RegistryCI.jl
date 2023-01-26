@@ -901,7 +901,7 @@ function linecounts_meet_thresholds(pkg_code_path,
     if !meets_threshold(readme_min_lines,
                          PackageAnalyzer.count_readme(analysis),
                          src_line_count)
-        push!(issues, "Package README file is too short")
+        push!(issues, "Package README file is too short. Counted $(src_line_count) lines, but at least $(readme_min_lines) lines are required.")
     end
     if !meets_threshold(src_min_lines, src_line_count)
         push!(issues, "Too few lines of source code.")
