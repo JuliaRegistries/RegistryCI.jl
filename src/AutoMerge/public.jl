@@ -107,16 +107,22 @@ function run(;
     # Four parameters for guideline_linecounts_meet_thresholds
     src_min_lines=0,
     readme_min_lines=0,
+    readme_min_fraction=0.0,
     test_min_lines=0,
+    test_min_fraction=0.0,
     doc_min_lines=0,
+    doc_min_fraction=0.0,
 )::Nothing
     # guideline_parameters is for parameters that are passed directly
     # from run through to the various Guidelines without modification:
     guideline_parameters = Dict{Symbol, Any}(
         :src_min_lines => src_min_lines,
         :readme_min_lines => readme_min_lines,
+        :readme_min_fraction => readme_min_fraction,
         :test_min_lines => test_min_lines,
+        :test_min_fraction => test_min_fraction,
         :doc_min_lines => doc_min_lines,
+        :doc_min_fraction => doc_min_fraction,
     )
     all_statuses = deepcopy(additional_statuses)
     all_check_runs = deepcopy(additional_check_runs)

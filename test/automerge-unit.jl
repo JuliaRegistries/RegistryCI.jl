@@ -7,6 +7,8 @@ using Printf
 using RegistryCI
 using Test
 using TimeZones
+using Base.Iterators: product
+using OrderedCollections: OrderedSet
 
 const AutoMerge = RegistryCI.AutoMerge
 
@@ -634,21 +636,60 @@ end
     @testset "AutoMerge.linecounts_meet_thresholds" begin
         registry = "JuliaRegistries/General"
         tmp_depot = setup_depot()
+        # I don't know of a package we can rely on as static.  Test
+        # this package and update the thresholds and issue messages as
+        # needed.
         package_name = "RegistryCI"
         pkg_code_path = pkgdir_from_depot(tmp_depot, package_name)
+        # The PackageAnalyzer results last measured are
+        # src: 3412, tests: 1336, docs: 309, readme: 23
         guideline_parameters = Dict{Symbol, Any}(
-            :src_min_lines => 10,
-            :readme_min_lines => 5,
-            :test_min_lines => 0.1f0,
-            :doc_min_lines => 0.1f0,
+            # Initial setup for all metrrics to pass:
+            :src_min_lines       => 100,
+            :readme_min_lines    => 5,
+            :test_min_lines      => 100,
+            :doc_min_lines       => 200,
+            :readme_min_fraction => 0.001,
+            :test_min_fraction   => 0.01,
+            :doc_min_fraction    => 0.05,
         )
         @test pkg_code_path isa AbstractString
+        # Test that all pass
+        @test AutoMerge.linecounts_meet_thresholds(
+            pkg_code_path, guideline_parameters) == (true, "")
+        # test that all fail and verify messages
+        guideline_parameters = Dict{Symbol, Any}(
+            :src_min_lines       => 10000,
+            :readme_min_lines    => 100,
+            :test_min_lines      => 5000,
+            :doc_min_lines       => 5000,
+            :readme_min_fraction => 0.8,
+            :test_min_fraction   => 0.8,
+            :doc_min_fraction    => 0.6,
+        )
         result = AutoMerge.linecounts_meet_thresholds(
             pkg_code_path, guideline_parameters)
-        @test result == (false, "Too few lines of documentation.")
-        guideline_parameters[:doc_min_lines] = 0.05f0
-        result = AutoMerge.linecounts_meet_thresholds(
-            pkg_code_path, guideline_parameters)
-        @test result == (true, "")
+        @test result[1] == false
+        let
+            messages = split(result[2], '\n')
+            want = [
+                "Too few lines of source code",
+                "Too few lines of README file",
+                "Too few lines of documentation",
+                "Too few lines of test code",
+                "The ratio of README lines to source code is less than required",
+                "The ratio of documentation lines to documentation plus src lines",
+                "The ratio of test lines to test plus src lines"
+            ]
+            matched = filter(collect(product(messages, want))) do x
+                startswith(x[1], x[2])
+            end
+            extra_messages = setdiff(OrderedSet(messages),
+                                     OrderedSet(map(x -> x[1], matched)))
+            missing_messages = setdiff(OrderedSet(want),
+                                       OrderedSet(map(x -> x[2], matched)))
+            @test isempty(extra_messages)
+            @test isempty(missing_messages)
+        end
     end
 end

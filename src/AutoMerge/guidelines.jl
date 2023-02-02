@@ -871,14 +871,15 @@ const guideline_linecounts_meet_thresholds = Guideline(;
     docs="""Make sure that various line counts meet or exceed specified thresholds.
 Thresholds are controlled by these fields of GitHubAutoMergeData:
  * src_min_lines:       Minimum number of lines of source code
- * readme_min_lines:  % Minimum number of lines in the README file
- * test_min_lines:    % Minimum number of lines of code in the test directory
- * doc_min_lines:     # Minimum number of lines of documentation
+ * readme_min_lines:    Minimum number of lines in the README file
+ * test_min_lines:      Minimum number of lines of code in the test directory
+ * doc_min_lines:       Minimum number of lines of documentation
+ * readme_min_fraction  minimum ratio of readme lines to src lines
+ * test_min_fraction    minimum ratio of test lines to src lines
+ * doc_min_fraction     minimum ratio of doc to src lines
 
-Those marked with a % can be expressed as a count, or as a fraction
-of the number of lines of source code.  For test_min_lines and
-doc_min_lines, the denominator of the fraction also includes the
-number of lines of test code.
+For test_min_fraction and doc_min_fraction, the denominator of the fraction
+also includes the number of lines of test or docs respectively.
 """,
     check=(data, guideline_parameters) ->
         linecounts_meet_thresholds(data.pkg_code_path, guideline_parameters)
@@ -892,32 +893,43 @@ function linecounts_meet_thresholds(pkg_code_path,
         return false, "PackageAnalyzer didn't find any lines of code."
     end
     # get parameters:
-    src_min_lines    = get(guideline_parameters, :src_min_lines,    0)
-    readme_min_lines = get(guideline_parameters, :readme_min_lines, 0)
-    test_min_lines   = get(guideline_parameters, :test_min_lines,   0)
-    doc_min_lines    = get(guideline_parameters, :doc_min_lines,    0)
+    src_min_lines        = get(guideline_parameters, :src_min_lines,    0)
+    readme_min_lines     = get(guideline_parameters, :readme_min_lines, 0)
+    test_min_lines       = get(guideline_parameters, :test_min_lines,   0)
+    doc_min_lines        = get(guideline_parameters, :doc_min_lines,    0)
+    readme_min_fraction  = get(guideline_parameters, :readme_min_fraction, 0.0)
+    test_min_fraction    = get(guideline_parameters, :test_min_fraction,   0.0)
+    doc_min_fraction     = get(guideline_parameters, :doc_min_fraction,    0.0)
     issues = []
     src_line_count = PackageAnalyzer.count_julia_loc(analysis, "src")
-    if !meets_threshold(readme_min_lines,
-                         PackageAnalyzer.count_readme(analysis),
-                         src_line_count)
-        push!(issues, "Package README file is too short. Counted $(src_line_count) lines, but at least $(readme_min_lines) lines are required.")
-    end
-    if !meets_threshold(src_min_lines, src_line_count)
-        push!(issues, "Too few lines of source code.")
-    end
     test_line_count = PackageAnalyzer.count_julia_loc(analysis, "test")
-    if !meets_threshold(test_min_lines,
-                        test_line_count,
-                        test_line_count + src_line_count)
-        push!(issues, "Too few lines of test code.")
-    end
     docs_line_count = PackageAnalyzer.count_docs(analysis)
-    if !meets_threshold(doc_min_lines,
-                        docs_line_count,
-                        docs_line_count + src_line_count)
-        push!(issues, "Too few lines of documentation.")
+    readme_line_count = PackageAnalyzer.count_readme(analysis)
+
+    function check_count(desc, got, want)
+        if got < want
+            push!(issues, "Too few lines of $desc: $got, where $want is required.")
+        end
     end
+    check_count("source code", src_line_count, src_min_lines)
+    check_count("README file", readme_line_count, readme_min_lines)
+    check_count("documentation", docs_line_count, doc_min_lines)
+    check_count("test code", test_line_count, test_min_lines)
+    function check_fraction(desc, got, want)
+        if got < want
+            push!(issues,
+                  @sprintf("The ratio of %s is less than required: %1.2f%% versus %1.2f%%.",
+                           desc, 100 * got, 100 * want))
+        end
+    end
+    check_fraction("README lines to source code",
+                   readme_line_count / src_line_count, readme_min_fraction)
+    check_fraction("documentation lines to documentation plus src lines",
+                   docs_line_count / (docs_line_count + src_line_count),
+                   doc_min_fraction)
+    check_fraction("test lines to test plus src lines",
+                   test_line_count / (test_line_count + src_line_count),
+                   test_min_fraction)
     if isempty(issues)
         return true, ""
     else

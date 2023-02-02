@@ -293,36 +293,3 @@ function get_all_non_jll_package_names(registry_dir::AbstractString)
     return packages
 end
 
-
-"""
-    meets_threshold(threshold, numerator, [denominator])
-
-Test the value of `numerator` or `numerator / denominaror` against
-some threshold to be satisfed.
-
-If the value is an integer then it must be greater than or equal to numerator
-to satisfy the test.
-
-If the value is a float, it must be greater than or equal to ``numerator/denominator`
-to satisfy the test.
-"""
-function meets_threshold end
-
-function meets_threshold(threshold::Integer, linecount::Integer)
-    @assert threshold >= 0
-    # @info("meets_threshold", threshold, linecount, linecount >= threshold)
-    linecount >= threshold
-end
-
-function meets_threshold(threshold::Integer, numerator::Integer, ::Integer)
-    @assert threshold >= 0
-    # @info("meets_threshold", threshold, numerator, numerator >= threshold)
-    numerator >= threshold
-end
-
-function meets_threshold(threshold::AbstractFloat, numerator::Integer, denominator::Integer)
-    @assert threshold >= 0.0 && threshold < 1.0
-    # @info("meets_threshold", threshold, numerator, denominator, (numerator / denominator) >= threshold)
-    (numerator / denominator) >= threshold
-end
-
