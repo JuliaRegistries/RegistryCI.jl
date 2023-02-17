@@ -91,7 +91,7 @@ function julia_compat(pkg::String, version::VersionNumber, registry_path::String
         package_name=pkg, registry_path=registry_path
     )
     all_compat_entries_for_julia = Pkg.Types.VersionRange[]
-    compat = Pkg.TOML.parsefile(joinpath(registry_path, package_relpath, "Compat.toml"))
+    compat = maybe_parse_toml(joinpath(registry_path, package_relpath), "Compat.toml")
     for version_range in keys(compat)
         if version in Pkg.Types.VersionRange(version_range)
             for compat_entry in compat[version_range]
