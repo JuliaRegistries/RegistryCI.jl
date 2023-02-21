@@ -33,7 +33,6 @@ function meets_compat_for_julia(working_directory::AbstractString, pkg, version)
         package_name=pkg, registry_path=working_directory
     )
     compat_file = joinpath(working_directory, package_relpath, "Compat.toml")
-    assert_allowed_to_not_exist(compat_file)
     compat = maybe_parse_toml(compat_file)
     # Go through all the compat entries looking for the julia compat
     # of the new version. When found, test
@@ -84,8 +83,6 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
     )
     compat_file = joinpath(working_directory, package_relpath, "Compat.toml")
     deps_file = joinpath(working_directory, package_relpath, "Deps.toml")
-    assert_allowed_to_not_exist(compat_file)
-    assert_allowed_to_not_exist(deps_toml)
     compat = maybe_parse_toml(compat_file)
     deps = maybe_parse_toml(deps_file)
     # First, we construct a Dict in which the keys are the package's
