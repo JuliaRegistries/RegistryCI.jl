@@ -1,4 +1,5 @@
-function maybe_parse_toml(directory::AbstractString, file::AbstractString)
+function maybe_parse_toml(full_path::AbstractString)
+    file = basename(pathfull_path)
     allowed_filenames = (
         "Compat.toml",
         "WeakCompat.toml",
@@ -9,7 +10,6 @@ function maybe_parse_toml(directory::AbstractString, file::AbstractString)
         msg = "Filename is not in the allowed list: $(file)"
         throw(ErrorException(msg))
     end
-    full_path = joinpath(directory, file)
     if !ispath(full_path)
         @warn "TOML file does not exist; returning an empty dict" directory file full_path
         return Dict()
