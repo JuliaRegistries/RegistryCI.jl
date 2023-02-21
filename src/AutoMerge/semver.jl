@@ -92,7 +92,6 @@ function julia_compat(pkg::String, version::VersionNumber, registry_path::String
     )
     all_compat_entries_for_julia = Pkg.Types.VersionRange[]
     compat_file = joinpath(working_directory, package_relpath, "Compat.toml")
-    assert_allowed_to_not_exist(compat_file)
     compat = maybe_parse_toml(compat_file)
     for version_range in keys(compat)
         if version in Pkg.Types.VersionRange(version_range)
