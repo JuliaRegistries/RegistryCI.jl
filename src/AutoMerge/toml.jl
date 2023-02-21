@@ -1,4 +1,4 @@
-function maybe_parse_toml(full_path::AbstractString)
+function assert_allowed_to_not_exist(full_path::AbstractString)
     file = basename(full_path)
     allowed_filenames = (
         "Compat.toml",
@@ -10,5 +10,9 @@ function maybe_parse_toml(full_path::AbstractString)
         msg = "Filename is not in the allowed list: $(file)"
         throw(ErrorException(msg))
     end
+    return nothing
+end
+
+function maybe_parse_toml(full_path::AbstractString)
     return ispath(full_path) ? Pkg.TOML.parsefile(full_path) : Dict{String, Any}()
 end
