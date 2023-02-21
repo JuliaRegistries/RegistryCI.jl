@@ -13,6 +13,6 @@ function assert_allowed_to_not_exist(full_path::AbstractString)
     return nothing
 end
 
-function maybe_parse_toml(full_path::AbstractString)
-    return ispath(full_path) ? Pkg.TOML.parsefile(full_path) : Dict{String, Any}()
+function maybe_parse_toml(f::AbstractString)
+    return ispath(f) ? Pkg.TOML.parsefile(f) : Dict{String, Any}()
 end
