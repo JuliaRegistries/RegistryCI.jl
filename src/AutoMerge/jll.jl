@@ -8,7 +8,6 @@ function _get_all_dependencies_nonrecursive(working_directory::AbstractString, p
         package_name=pkg, registry_path=working_directory
     )
     deps_file = joinpath(working_directory, package_relpath, "Deps.toml")
-    assert_allowed_to_not_exist(deps_file)
     deps = maybe_parse_toml(deps_file)
     for version_range in keys(deps)
         if version in Pkg.Types.VersionRange(version_range)
