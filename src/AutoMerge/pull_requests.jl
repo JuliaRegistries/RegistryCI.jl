@@ -83,6 +83,7 @@ function pull_request_build(
     master_branch::String,
     master_branch_is_default_branch::Bool,
     suggest_onepointzero::Bool,
+    point_to_slack::Bool,
     registry_deps::Vector{<:AbstractString}=String[],
     check_license::Bool,
     public_registries::Vector{<:AbstractString}=String[],
@@ -157,6 +158,7 @@ function pull_request_build(
         registry_head=registry_head,
         registry_master=registry_master,
         suggest_onepointzero=suggest_onepointzero,
+        point_to_slack=point_to_slack,
         whoami=whoami,
         registry_deps=registry_deps,
         public_registries=public_registries,
@@ -242,7 +244,8 @@ function pull_request_build(data::GitHubAutoMergeData; check_license)::Nothing
             data.registration_type,
             failing_messages,
             data.suggest_onepointzero,
-            data.version,
+            data.version;
+            point_to_slack=data.point_to_slack,
         )
         my_retry(() -> update_automerge_comment!(data, this_pr_comment_fail))
         throw(AutoMergeGuidelinesNotMet("The automerge guidelines were not met."))

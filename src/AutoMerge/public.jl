@@ -27,6 +27,7 @@ Run the `RegistryCI.AutoMerge` service.
 - `master_branch`: name of `master_branch`, e.g you may want to specify this to `"main"` for new GitHub repositories.
 - `master_branch_is_default_branch`: if `master_branch` specified above is the default branch.
 - `suggest_onepointzero`: should the AutoMerge comment include a suggestion to tag a 1.0 release for v0.x.y packages.
+- `point_to_slack`: should the AutoMerge comment recommend sending a message to the `#pgk-registration` Julia-Slack channel when auto-merging is not possible.
 - `registry_deps`: list of registry dependencies, e.g your packages may depend on `General`.
 - `api_url`: the registry host API URL, default is `"https://api.github.com"`.
 - `check_license`: check package has a valid license, default is `false`.
@@ -57,6 +58,7 @@ RegistryCI.AutoMerge.run(
     authorized_authors = String["JuliaRegistrator"],
     authorized_authors_special_jll_exceptions = String["jlbuild"],
     suggest_onepointzero = false,
+    point_to_slack = false,
     additional_statuses = String[],
     additional_check_runs = String[],
     check_license = true,
@@ -88,6 +90,7 @@ function run(;
     master_branch::String="master",
     master_branch_is_default_branch::Bool=true,
     suggest_onepointzero::Bool=true,
+    point_to_slack::Bool=false,
     #
     registry_deps::Vector{<:AbstractString}=String[],
     api_url::String="https://api.github.com",
@@ -151,6 +154,7 @@ function run(;
             master_branch=master_branch,
             master_branch_is_default_branch=master_branch_is_default_branch,
             suggest_onepointzero=suggest_onepointzero,
+            point_to_slack=point_to_slack,
             whoami=whoami,
             registry_deps=registry_deps,
             check_license=check_license,
