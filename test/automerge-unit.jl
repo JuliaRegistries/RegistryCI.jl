@@ -439,10 +439,13 @@ end
         @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("0-*"))
         @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("0.2-0"))
         @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("0.2-*"))
-        
-        @testset "julia_compat" begin
-            registry_path = registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
-            @test AutoMerge.julia_compat("Example", v"0.5.3", registry_path) isa AbstractVector{<:Pkg.Types.VersionRange}
+
+        if Base.VERSION >= v"1.4-"
+            # We skip this test on Julia 1.3, because it requires `Base.only`.
+            @testset "julia_compat" begin
+                registry_path = registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
+                @test AutoMerge.julia_compat("Example", v"0.5.3", registry_path) isa AbstractVector{<:Pkg.Types.VersionRange}
+            end
         end
     end
 end
