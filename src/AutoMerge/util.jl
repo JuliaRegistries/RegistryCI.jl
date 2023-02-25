@@ -84,7 +84,7 @@ function parse_registry_pkg_info(registry_path, pkg, version=nothing)
     return (; uuid=uuid, repo=repo, subdir=subdir, tree_hash=tree_hash)
 end
 
-function _comment_disclaimer(point_to_slack::Bool=false)
+function _comment_disclaimer(; point_to_slack::Bool=false)
     result = string(
         "\n\n",
         "Note that the guidelines are only required for the pull request ",
@@ -181,8 +181,8 @@ function comment_text_fail(
     ::NewPackage,
     reasons::Vector{String},
     suggest_onepointzero::Bool,
-    point_to_slack::Bool,
-    version::VersionNumber,
+    version::VersionNumber;
+    point_to_slack::Bool=false,
 )
     reasons_formatted = join(string.("- ", reasons), "\n")
     result = string(
@@ -191,7 +191,7 @@ function comment_text_fail(
         _please_read_these_documents,
         "The following guidelines were not met:\n\n",
         reasons_formatted,
-        _comment_disclaimer(point_to_slack),
+        _comment_disclaimer(; point_to_slack),
         "\n\n",
         "Since you are registering a new package, ",
         "please make sure that you have also read the ",
@@ -209,7 +209,8 @@ function comment_text_fail(
     ::NewVersion,
     reasons::Vector{String},
     suggest_onepointzero::Bool,
-    version::VersionNumber,
+    version::VersionNumber;
+    point_to_slack::Bool=false,
 )
     reasons_formatted = join(string.("- ", reasons), "\n")
     result = string(
@@ -218,7 +219,7 @@ function comment_text_fail(
         _please_read_these_documents,
         "The following guidelines were not met:\n\n",
         reasons_formatted,
-        _comment_disclaimer(),
+        _comment_disclaimer(; point_to_slack),
         _comment_noblock(),
         _onepointzero_suggestion(suggest_onepointzero, version),
         "\n<!-- [noblock] -->",
