@@ -439,6 +439,11 @@ end
         @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("0-*"))
         @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("0.2-0"))
         @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("0.2-*"))
+        
+        @testset "julia_compat" begin
+            registry_path = registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
+            @test AutoMerge.julia_compat("Example", v"0.5.3", registry_path) isa Pkg.Types.VersionRange
+        end
     end
 end
 
