@@ -27,7 +27,7 @@ Run the `RegistryCI.AutoMerge` service.
 - `master_branch`: name of `master_branch`, e.g you may want to specify this to `"main"` for new GitHub repositories.
 - `master_branch_is_default_branch`: if `master_branch` specified above is the default branch.
 - `suggest_onepointzero`: should the AutoMerge comment include a suggestion to tag a 1.0 release for v0.x.y packages.
-- `point_to_slack`: should the AutoMerge comment recommend sending a message to the `#pgk-registration` Julia-Slack channel when auto-merging is not possible.
+- `point_to_slack`: should the AutoMerge comment recommend sending a message to the `#pkg-registration` Julia-Slack channel when auto-merging is not possible.
 - `registry_deps`: list of registry dependencies, e.g your packages may depend on `General`.
 - `api_url`: the registry host API URL, default is `"https://api.github.com"`.
 - `check_license`: check package has a valid license, default is `false`.
