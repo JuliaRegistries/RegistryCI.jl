@@ -34,15 +34,16 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
 @testset "Integration tests" begin
     for (
         test_number,
-        (master_dir, feature_dir, public_dir, title, check_license, pass, commit),
+        (master_dir, feature_dir, public_dir, title, point_to_slack, check_license, pass, commit),
     ) in enumerate([
         (
             "master_1",
             "feature_1",
             "",
             "New package: Requires v1.0.0",
-            true,
-            true,
+            true,   # point_to_slack
+            true,   # check_license
+            true,   # pass
             requires_commit,
         ), # OK: new package
         (
@@ -50,8 +51,9 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             "feature_1",
             "",
             "New package: Requires v1.0.0",
-            true,
-            false,
+            true,   # point_to_slack
+            true,   # check_license
+            false,  # pass
             "659e09770ba9fda4a503f8bf281d446c9583ff3b",
         ), # FAIL: wrong commit!
         (
@@ -59,8 +61,9 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             "feature_2",
             "",
             "New version: Requires v2.0.0",
-            false,
-            true,
+            false,  # point_to_slack
+            false,  # check_license
+            true,   # pass
             requires_commit,
         ),            # OK: new version
         (
@@ -68,8 +71,9 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             "feature_3",
             "",
             "New package: Req v1.0.0",
-            false,
-            false,
+            false,  # point_to_slack
+            false,  # check_license
+            false,  # pass
             requires_commit,
         ),                # FAIL: name too short
         (
@@ -77,8 +81,9 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             "feature_4",
             "",
             "New version: Requires v2.0.1",
-            false,
-            false,
+            false,  # point_to_slack
+            false,  # check_license
+            false,  # pass
             requires_commit,
         ),           # FAIL: skips v2.0.0
         (
@@ -86,8 +91,9 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             "feature_5",
             "",
             "New version: Requires v2.0.0",
-            false,
-            false,
+            false,  # point_to_slack
+            false,  # check_license
+            false,  # pass
             requires_commit,
         ),           # FAIL: modifies extra file
         (
@@ -95,8 +101,9 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             "feature_6",
             "",
             "New package: HelloWorldC_jll v1.0.6+0",
-            false,
-            true,
+            false,  # point_to_slack
+            false,  # check_license
+            true,   # pass
             hello_world_commit1,
         ),   # OK: new JLL package
         (
@@ -104,8 +111,9 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             "feature_7",
             "",
             "New version: HelloWorldC_jll v1.0.8+0",
-            false,
-            true,
+            false,  # point_to_slack
+            false,  # check_license
+            true,   # pass
             hello_world_commit2,
         ),   # OK: new JLL version
         (
@@ -113,8 +121,9 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             "feature_8",
             "",
             "New package: HelloWorldC_jll v1.0.6+0",
-            false,
-            false,
+            false,  # point_to_slack
+            false,  # check_license
+            false,  # pass
             hello_world_commit1,
         ),  # FAIL: unallowed dependency
         (
@@ -122,8 +131,9 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             "feature_1",
             "public_1",
             "New package: Requires v1.0.0",
-            false,
-            true,
+            false,  # point_to_slack
+            false,  # check_license
+            true,   # pass
             requires_commit,
         ),    # OK: no UUID conflict
         (
@@ -131,8 +141,9 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             "feature_1",
             "public_2",
             "New package: Requires v1.0.0",
-            false,
-            false,
+            false,  # point_to_slack
+            false,  # check_license
+            false,  # pass
             requires_commit,
         ),  # FAIL: UUID conflict, name differs
         (
@@ -140,8 +151,9 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             "feature_1",
             "public_3",
             "New package: Requires v1.0.0",
-            false,
-            false,
+            false,  # point_to_slack
+            false,  # check_license
+            false,  # pass
             requires_commit,
         ),  # FAIL: UUID conflict, repo differs
         (
@@ -149,12 +161,13 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             "feature_1",
             "public_4",
             "New package: Requires v1.0.0",
-            false,
-            true,
+            false,  # point_to_slack
+            false,  # check_license
+            true,   # pass
             requires_commit,
         ),   # OK: UUID conflict but name and repo match
     ])
-        @info "Performing integration tests with settings" test_number master_dir feature_dir title pass
+        @info "Performing integration tests with settings" test_number master_dir feature_dir public_dir title point_to_slack check_license pass commit
         with_master_branch(
             templates(master_dir), "master"; GIT=GIT, repo_url=repo_url_with_auth
         ) do master
@@ -208,10 +221,11 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                                 error_exit_if_automerge_not_applicable=true,
                                 master_branch=master,
                                 master_branch_is_default_branch=false,
+                                point_to_slack=point_to_slack,
                                 check_license=check_license,
                                 public_registries=public_registries,
                             )
-                        @info "Running integration test for " test_number master_dir feature_dir public_dir title pass
+                        @info "Running integration test for " test_number master_dir feature_dir public_dir title point_to_slack check_license pass commit
                         if pass
                             run_thunk()
                         else
