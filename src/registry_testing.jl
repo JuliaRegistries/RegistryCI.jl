@@ -194,6 +194,8 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                         depsfile, RegistryTools.Compress.load(depsfile)
                     )
                     Test.@test compressed == deps
+                else
+                    @debug "Deps.toml file does not exist" depsfile
                 end
 
                 # Compat.toml testing
@@ -228,6 +230,8 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     f_inner = v -> Pkg.Types.VersionRange.(v)
                     f_outer = dict -> mapvalues(f_inner, dict)
                     Test.@test mapvalues(f_outer, compressed) == mapvalues(f_outer, compat)
+                else
+                    @debug "Compat.toml file does not exist" compatfile
                 end
             end
             # Make sure all paths are unique

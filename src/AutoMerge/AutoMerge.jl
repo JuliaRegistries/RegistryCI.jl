@@ -36,6 +36,7 @@ include("package_path_in_registry.jl")
 include("public.jl")
 include("pull_requests.jl")
 include("semver.jl")
+include("toml.jl")
 include("update_status.jl")
 include("util.jl")
 
