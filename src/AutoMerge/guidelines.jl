@@ -872,16 +872,16 @@ end
 const guideline_linecounts_meet_thresholds = Guideline(;
     info="Test that lines of source, tests and documentation meet specified thresholds",
     docs="""Make sure that various line counts meet or exceed specified thresholds.
-Thresholds are controlled by these fields of GitHubAutoMergeData:
- * src_min_lines:       Minimum number of lines of source code
- * readme_min_lines:    Minimum number of lines in the README file
- * test_min_lines:      Minimum number of lines of code in the test directory
- * doc_min_lines:       Minimum number of lines of documentation
- * readme_min_fraction  minimum ratio of readme lines to src lines
- * test_min_fraction    minimum ratio of test lines to src lines
- * doc_min_fraction     minimum ratio of doc to src lines
 
-For test_min_fraction and doc_min_fraction, the denominator of the fraction
+ * `src_min_lines`:       Minimum number of lines of source code
+ * `readme_min_lines`:    Minimum number of lines in the README file
+ * `test_min_lines`:      Minimum number of lines of code in the test directory
+ * `doc_min_lines`:       Minimum number of lines of documentation
+ * `readme_min_fraction`:  minimum ratio of readme lines to src lines
+ * `test_min_fraction`:    minimum ratio of test lines to src lines
+ * `doc_min_fraction`:     minimum ratio of doc to src lines
+
+For `test_min_fraction` and `doc_min_fraction`, the denominator of the fraction
 also includes the number of lines of test or docs respectively.
 """,
     check=(data, guideline_parameters) ->
