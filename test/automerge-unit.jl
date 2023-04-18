@@ -653,7 +653,7 @@ end
             # The PackageAnalyzer results last measured are
             # src: 3412, tests: 1336, docs: 309, readme: 23
             guideline_parameters = Dict{Symbol, Any}(
-                # Initial setup for all metrrics to pass:
+                # Initial setup for all metrics to pass:
                 :src_min_lines       => 100,
                 :readme_min_lines    => 5,
                 :test_min_lines      => 100,
