@@ -1,4 +1,3 @@
-using Logging
 
 function with_temp_dir(f::Function)
     original_working_directory = pwd()
