@@ -107,7 +107,7 @@ function run(;
     public_registries::Vector{<:AbstractString}=String[],
     read_only::Bool=false,
     environment_variables_to_pass::Vector{<:AbstractString}=String[],
-    # Four parameters for guideline_linecounts_meet_thresholds
+    # Seven parameters for guideline_linecounts_meet_thresholds
     src_min_lines=0,
     readme_min_lines=0,
     readme_min_fraction=0.0,
