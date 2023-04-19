@@ -916,8 +916,12 @@ function linecounts_meet_thresholds(pkg_code_path,
     end
     check_count("source code", src_line_count, src_min_lines)
     check_count("README file", readme_line_count, readme_min_lines)
-    check_count("documentation", docs_line_count, doc_min_lines)
     check_count("test code", test_line_count, test_min_lines)
+    # Some projects might put adequate documentation in their README
+    # file and not have any other documentation.
+    check_count("documentation",
+                max(readme_line_count, docs_line_count),
+                doc_min_lines)
     function check_fraction(desc, got, want)
         if got < want
             push!(issues,
@@ -927,12 +931,14 @@ function linecounts_meet_thresholds(pkg_code_path,
     end
     check_fraction("README lines to source code",
                    readme_line_count / src_line_count, readme_min_fraction)
-    check_fraction("documentation lines to documentation plus src lines",
-                   docs_line_count / (docs_line_count + src_line_count),
-                   doc_min_fraction)
     check_fraction("test lines to test plus src lines",
                    test_line_count / (test_line_count + src_line_count),
                    test_min_fraction)
+    # See the comment above regarding README vs. docs.
+    check_fraction("documentation lines to documentation plus src lines",
+                   max(readme_line_count, docs_line_count) /
+                       (docs_line_count + src_line_count),
+                   doc_min_fraction)
     if isempty(issues)
         return true, ""
     else
