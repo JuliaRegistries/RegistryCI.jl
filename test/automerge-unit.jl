@@ -7,8 +7,31 @@ using Printf
 using RegistryCI
 using Test
 using TimeZones
+using Base.Iterators: product
+using OrderedCollections: OrderedSet
 
 const AutoMerge = RegistryCI.AutoMerge
+
+TEMP_DEPOT_FOR_TESTING = nothing
+
+function setup_depot()::String
+    global TEMP_DEPOT_FOR_TESTING
+    if TEMP_DEPOT_FOR_TESTING isa String
+        return TEMP_DEPOT_FOR_TESTING
+    end
+    tmp_depot = mktempdir()
+    env1 = copy(ENV)
+    env1["JULIA_DEPOT_PATH"] = tmp_depot
+    delete!(env1, "JULIA_LOAD_PATH")
+    delete!(env1, "JULIA_PROJECT")
+    env2 = copy(env1)
+    env2["JULIA_PKG_SERVER"] = ""
+    run(setenv(`julia -e 'import Pkg; Pkg.Registry.add("General")'`, env2))
+    run(setenv(`julia -e 'import Pkg; Pkg.add(["RegistryCI"])'`, env1))
+    TEMP_DEPOT_FOR_TESTING = tmp_depot
+    tmp_depot
+end
+
 
 # helper for testing `AutoMerge.meets_version_has_osi_license`
 function pkgdir_from_depot(depot_path::String, pkg::String)
@@ -22,6 +45,7 @@ function pkgdir_from_depot(depot_path::String, pkg::String)
     isdir(only_pkdir) || return nothing
     return only_pkdir
 end
+
 
 @testset "Utilities" begin
     @testset "`AutoMerge.parse_registry_pkg_info`" begin
@@ -581,20 +605,12 @@ end
     @testset "`AutoMerge.meets_version_has_osi_license`" begin
         # Let's install a fresh depot in a temporary directory
         # and add some packages to inspect.
-        tmp_depot = mktempdir()
+        tmp_depot = setup_depot()
         function has_osi_license_in_depot(pkg)
             return AutoMerge.meets_version_has_osi_license(
                 pkg; pkg_code_path=pkgdir_from_depot(tmp_depot, pkg)
             )
         end
-        env1 = copy(ENV)
-        env1["JULIA_DEPOT_PATH"] = tmp_depot
-        delete!(env1, "JULIA_LOAD_PATH")
-        delete!(env1, "JULIA_PROJECT")
-        env2 = copy(env1)
-        env2["JULIA_PKG_SERVER"] = ""
-        run(setenv(`julia -e 'import Pkg; Pkg.Registry.add("General")'`, env2))
-        run(setenv(`julia -e 'import Pkg; Pkg.add(["RegistryCI"])'`, env1))
         # Let's test ourselves and some of our dependencies that just have MIT licenses:
         result = has_osi_license_in_depot("RegistryCI")
         @test result[1]
@@ -623,5 +639,67 @@ end
         rm(joinpath(pkg_path, "LICENSE"))
         result = has_osi_license_in_depot("VisualStringDistances")
         @test !result[1]
+    end
+
+    @testset "AutoMerge.linecounts_meet_thresholds" begin
+        if VERSION >= v"1.6"
+            registry = "JuliaRegistries/General"
+            tmp_depot = setup_depot()
+            # I don't know of a package we can rely on as static.  Test
+            # this package and update the thresholds and issue messages as
+            # needed.
+            package_name = "RegistryCI"
+            pkg_code_path = pkgdir_from_depot(tmp_depot, package_name)
+            # The PackageAnalyzer results last measured are
+            # src: 3412, tests: 1336, docs: 309, readme: 23
+            guideline_parameters = Dict{Symbol, Any}(
+                # Initial setup for all metrics to pass:
+                :src_min_lines       => 100,
+                :readme_min_lines    => 5,
+                :test_min_lines      => 100,
+                :doc_min_lines       => 200,
+                :readme_min_fraction => 0.001,
+                :test_min_fraction   => 0.01,
+                :doc_min_fraction    => 0.05,
+            )
+            @test pkg_code_path isa AbstractString
+            # Test that all pass
+            @test AutoMerge.linecounts_meet_thresholds(
+                pkg_code_path, guideline_parameters) == (true, "")
+            # test that all fail and verify messages
+            guideline_parameters = Dict{Symbol, Any}(
+                :src_min_lines       => 10000,
+                :readme_min_lines    => 100,
+                :test_min_lines      => 5000,
+                :doc_min_lines       => 5000,
+                :readme_min_fraction => 0.8,
+                :test_min_fraction   => 0.8,
+                :doc_min_fraction    => 0.6,
+            )
+            result = AutoMerge.linecounts_meet_thresholds(
+                pkg_code_path, guideline_parameters)
+            @test result[1] == false
+            let
+                messages = split(result[2], '\n')
+                want = [
+                    "Too few lines of source code",
+                    "Too few lines of README file",
+                    "Too few lines of documentation",
+                    "Too few lines of test code",
+                    "The ratio of README lines to source code is less than required",
+                    "The ratio of documentation lines to documentation plus src lines",
+                    "The ratio of test lines to test plus src lines"
+                ]
+                matched = filter(collect(product(messages, want))) do x
+                    startswith(x[1], x[2])
+                end
+                extra_messages = setdiff(OrderedSet(messages),
+                                         OrderedSet(map(x -> x[1], matched)))
+                missing_messages = setdiff(OrderedSet(want),
+                                           OrderedSet(map(x -> x[2], matched)))
+                @test isempty(extra_messages)
+                @test isempty(missing_messages)
+            end
+        end
     end
 end

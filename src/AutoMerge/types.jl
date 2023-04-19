@@ -111,10 +111,16 @@ function GitHubAutoMergeData(; kwargs...)
     pkg_code_path = mktempdir(; cleanup=true)
     kwargs = (; pkg_code_path=pkg_code_path, kwargs...)
     fields = fieldnames(GitHubAutoMergeData)
-    always_assert(Set(keys(kwargs)) == Set(fields))
+    mismatch = setdiff(Set(keys(kwargs)), Set(fields))
+    if !isempty(mismatch)
+        @warn "Keyword/field mismatch while constructing a GitHubAutoMergeData: $(join(mismatchmissing, ", "))"
+    end
+    always_assert(isempty(mismatch))
     always_assert(kwargs[:authorization] ∈ (:normal, :jll))
     return GitHubAutoMergeData(getindex.(Ref(kwargs), fields)...)
 end
+
+ALL_GUIDELINES = []
 
 Base.@kwdef mutable struct Guideline
     # Short description of the guideline. Only used for logging.
@@ -134,10 +140,18 @@ Base.@kwdef mutable struct Guideline
 
     # Saved output message from the `check` function.
     message::String = "Internal error. A check that was supposed to run never did: $(info)"
+
+    function Guideline(info, docs, check, passed, message)
+        g = new(info, docs, check, passed, message)
+        push!(ALL_GUIDELINES, g)
+        g
+    end
 end
 
 passed(guideline::Guideline) = guideline.passed
 message(guideline::Guideline) = guideline.message
-function check!(guideline::Guideline, data::GitHubAutoMergeData)
-    return guideline.passed, guideline.message = guideline.check(data)
+function check!(guideline::Guideline, data::GitHubAutoMergeData,
+                guideline_parameters::Dict{Symbol, Any},)
+    return guideline.passed, guideline.message =
+        guideline.check(data, guideline_parameters)
 end

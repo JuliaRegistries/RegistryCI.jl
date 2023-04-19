@@ -300,3 +300,4 @@ function get_all_non_jll_package_names(registry_dir::AbstractString)
     unique!(packages)
     return packages
 end
+

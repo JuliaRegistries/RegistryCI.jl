@@ -63,6 +63,11 @@ RegistryCI.AutoMerge.run(
     additional_check_runs = String[],
     check_license = true,
     public_registries = String["https://github.com/HolyLab/HolyLabRegistry"],
+    # Parameters for guideline_linecounts_meet_thresholds
+    src_min_lines::Integer,
+    readme_min_linges::Union{Integer, AbstractFloat},
+    test_min_lines::Union{Integer, AbstractFloat},
+    doc_min_lines::Union{Integer, AbstractFloat},
 )
 ```
 """
@@ -102,7 +107,26 @@ function run(;
     public_registries::Vector{<:AbstractString}=String[],
     read_only::Bool=false,
     environment_variables_to_pass::Vector{<:AbstractString}=String[],
+    # Seven parameters for guideline_linecounts_meet_thresholds
+    src_min_lines=0,
+    readme_min_lines=0,
+    readme_min_fraction=0.0,
+    test_min_lines=0,
+    test_min_fraction=0.0,
+    doc_min_lines=0,
+    doc_min_fraction=0.0,
 )::Nothing
+    # guideline_parameters is for parameters that are passed directly
+    # from run through to the various Guidelines without modification:
+    guideline_parameters = Dict{Symbol, Any}(
+        :src_min_lines => src_min_lines,
+        :readme_min_lines => readme_min_lines,
+        :readme_min_fraction => readme_min_fraction,
+        :test_min_lines => test_min_lines,
+        :test_min_fraction => test_min_fraction,
+        :doc_min_lines => doc_min_lines,
+        :doc_min_fraction => doc_min_fraction,
+    )
     all_statuses = deepcopy(additional_statuses)
     all_check_runs = deepcopy(additional_check_runs)
     push!(all_statuses, "automerge/decision")
@@ -143,6 +167,7 @@ function run(;
         pr_head_commit_sha = current_pr_head_commit_sha(cicfg; env=env)
         pull_request_build(
             api,
+            guideline_parameters,
             pr_number,
             pr_head_commit_sha,
             registry_repo,

@@ -1,4 +1,5 @@
 using HTTP: HTTP
+import PackageAnalyzer
 
 const guideline_registry_consistency_tests_pass = Guideline(;
     info="Registy consistency tests",
@@ -25,7 +26,8 @@ const guideline_compat_for_julia = Guideline(;
         "There is an upper-bounded `[compat]` entry for `julia` that ",
         "only includes a finite number of breaking releases of Julia.",
     ),
-    check=data -> meets_compat_for_julia(data.registry_head, data.pkg, data.version),
+    check=(data, guideline_parameters) ->
+        meets_compat_for_julia(data.registry_head, data.pkg, data.version),
 )
 
 function meets_compat_for_julia(working_directory::AbstractString, pkg, version)
@@ -74,7 +76,8 @@ const guideline_compat_for_all_deps = Guideline(;
         "are upper-bounded and only include a finite number of breaking releases. ",
         "For more information, please see the \"Upper-bounded `[compat]` entries\" subsection under \"Additional information\" below.",
     ),
-    check=data -> meets_compat_for_all_deps(data.registry_head, data.pkg, data.version),
+    check=(data, guideline_parameters) ->
+        meets_compat_for_all_deps(data.registry_head, data.pkg, data.version),
 )
 
 function meets_compat_for_all_deps(working_directory::AbstractString, pkg, version)
@@ -153,12 +156,13 @@ end
 
 const guideline_patch_release_does_not_narrow_julia_compat = Guideline(;
     info="If it is a patch release on a post-1.0 package, then it does not narrow the `[compat]` range for `julia`.",
-    check=data -> meets_patch_release_does_not_narrow_julia_compat(
-        data.pkg,
-        data.version;
-        registry_head=data.registry_head,
-        registry_master=data.registry_master,
-    ),
+    check=(data, guideline_parameters) ->
+        meets_patch_release_does_not_narrow_julia_compat(
+            data.pkg,
+            data.version;
+            registry_head=data.registry_head,
+            registry_master=data.registry_master,
+        ),
 )
 
 function meets_patch_release_does_not_narrow_julia_compat(
@@ -203,7 +207,7 @@ const _AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH = 5
 const guideline_name_length = Guideline(;
     info="Name not too short",
     docs="The name is at least $(_AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH) characters long.",
-    check=data -> meets_name_length(data.pkg),
+    check=(data, guideline_parameters) -> meets_name_length(data.pkg),
 )
 
 function meets_name_length(pkg)
@@ -218,7 +222,7 @@ end
 
 const guideline_name_ascii = Guideline(;
     info="Name is composed of ASCII characters only.",
-    check=data -> meets_name_ascii(data.pkg),
+    check=(data, guideline_parameters) -> meets_name_ascii(data.pkg),
 )
 
 function meets_name_ascii(pkg)
@@ -231,7 +235,7 @@ end
 
 const guideline_julia_name_check = Guideline(;
     info="Name does not include \"julia\" or start with \"Ju\".",
-    check=data -> meets_julia_name_check(data.pkg),
+    check=(data, guideline_parameters) -> meets_julia_name_check(data.pkg),
 )
 
 function meets_julia_name_check(pkg)
@@ -266,7 +270,8 @@ To prevent confusion between similarly named packages, the names of new packages
       between the package name and any existing package must exceeds a certain
       a hand-chosen threshold (currently 2.5).
   """,
-    check=data -> meets_distance_check(data.pkg, data.registry_master),
+    check=(data, guideline_parameters) ->
+        meets_distance_check(data.pkg, data.registry_master),
 )
 
 function meets_distance_check(
@@ -380,7 +385,8 @@ const guideline_normal_capitalization = Guideline(;
         "contain only ASCII alphanumeric characters, ",
         "and contain at least one lowercase letter.",
     ),
-    check=data -> meets_normal_capitalization(data.pkg),
+    check=(data, guideline_parameters) ->
+        meets_normal_capitalization(data.pkg),
 )
 
 function meets_normal_capitalization(pkg)
@@ -395,7 +401,8 @@ end
 
 const guideline_repo_url_requirement = Guideline(;
     info="Repo URL ends with `/PackageName.jl.git`.",
-    check=data -> meets_repo_url_requirement(data.pkg; registry_head=data.registry_head),
+    check=(data, guideline_parameters) ->
+        meets_repo_url_requirement(data.pkg; registry_head=data.registry_head),
 )
 
 function meets_repo_url_requirement(pkg::String; registry_head::String)
@@ -449,7 +456,7 @@ const guideline_sequential_version_number = Guideline(;
         "Invalid new versions include `1.0.2` (skips `1.0.1`), ",
         "`1.3.0` (skips `1.2.0`), `3.0.0` (skips `2.0.0`) etc.",
     ),
-    check=data -> meets_sequential_version_number(
+    check=(data, guideline_parameters) -> meets_sequential_version_number(
         data.pkg,
         data.version;
         registry_head=data.registry_head,
@@ -491,7 +498,8 @@ end
 
 const guideline_standard_initial_version_number = Guideline(;
     info="Standard initial version number. Must be one of: `0.0.1`, `0.1.0`, `1.0.0`, or `X.0.0`.",
-    check=data -> meets_standard_initial_version_number(data.version),
+    check=(data, guideline_parameters) ->
+        meets_standard_initial_version_number(data.version),
 )
 
 function meets_standard_initial_version_number(version)
@@ -543,7 +551,7 @@ end
 
 const guideline_code_can_be_downloaded = Guideline(;
     info="Code can be downloaded.",
-    check=data -> meets_code_can_be_downloaded(
+    check=(data, guideline_parameters) -> meets_code_can_be_downloaded(
         data.registry_head,
         data.pkg,
         data.version,
@@ -612,7 +620,7 @@ end
 
 const guideline_src_names_OK = Guideline(;
     info="`src` files and directories names are OK",
-    check=data -> meets_src_names_ok(data.pkg_code_path),
+    check=(data, guideline_parameters) -> meets_src_names_ok(data.pkg_code_path),
 )
 
 function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_path)
@@ -665,7 +673,7 @@ is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HT
 const guideline_version_can_be_pkg_added = Guideline(;
     info="Version can be `Pkg.add`ed",
     docs="Package installation: The package should be installable (`Pkg.add(\"PackageName\")`).",
-    check=data -> meets_version_can_be_pkg_added(
+    check=(data, guideline_parameters) -> meets_version_can_be_pkg_added(
         data.registry_head,
         data.pkg,
         data.version;
@@ -734,7 +742,8 @@ const guideline_version_has_osi_license = Guideline(;
         "This check is required for the General registry. ",
         "For other registries, registry maintainers have the option to disable this check.",
     ),
-    check=data -> meets_version_has_osi_license(data.pkg; pkg_code_path=data.pkg_code_path),
+    check=(data, guideline_parameters) ->
+        meets_version_has_osi_license(data.pkg; pkg_code_path=data.pkg_code_path),
 )
 
 function meets_version_has_osi_license(pkg::String; pkg_code_path)
@@ -796,7 +805,7 @@ end
 const guideline_version_can_be_imported = Guideline(;
     info="Version can be `import`ed",
     docs="Package loading: The package should be loadable (`import PackageName`).",
-    check=data -> meets_version_can_be_imported(
+    check=(data, guideline_parameters) -> meets_version_can_be_imported(
         data.registry_head,
         data.pkg,
         data.version;
@@ -857,6 +866,83 @@ function meets_version_can_be_imported(
             "(i.e. `import $(pkg)` failed). ",
             "See the CI logs for details.",
         )
+    end
+end
+
+const guideline_linecounts_meet_thresholds = Guideline(;
+    info="Test that lines of source, tests and documentation meet specified thresholds",
+    docs="""Make sure that various line counts meet or exceed specified thresholds.
+
+ * `src_min_lines`:       Minimum number of lines of source code
+ * `readme_min_lines`:    Minimum number of lines in the README file
+ * `test_min_lines`:      Minimum number of lines of code in the test directory
+ * `doc_min_lines`:       Minimum number of lines of documentation
+ * `readme_min_fraction`:  minimum ratio of readme lines to src lines
+ * `test_min_fraction`:    minimum ratio of test lines to src lines
+ * `doc_min_fraction`:     minimum ratio of doc to src lines
+
+For `test_min_fraction` and `doc_min_fraction`, the denominator of the fraction
+also includes the number of lines of test or docs respectively.
+""",
+    check=(data, guideline_parameters) ->
+        linecounts_meet_thresholds(data.pkg_code_path, guideline_parameters)
+)
+
+function linecounts_meet_thresholds(pkg_code_path,
+                                    guideline_parameters)
+    analysis = PackageAnalyzer.analyze(pkg_code_path;)
+    # @info analysis
+    if isempty(analysis.lines_of_code)
+        return false, "PackageAnalyzer didn't find any lines of code."
+    end
+    # get parameters:
+    src_min_lines        = get(guideline_parameters, :src_min_lines,    0)
+    readme_min_lines     = get(guideline_parameters, :readme_min_lines, 0)
+    test_min_lines       = get(guideline_parameters, :test_min_lines,   0)
+    doc_min_lines        = get(guideline_parameters, :doc_min_lines,    0)
+    readme_min_fraction  = get(guideline_parameters, :readme_min_fraction, 0.0)
+    test_min_fraction    = get(guideline_parameters, :test_min_fraction,   0.0)
+    doc_min_fraction     = get(guideline_parameters, :doc_min_fraction,    0.0)
+    issues = []
+    src_line_count = PackageAnalyzer.count_julia_loc(analysis, "src")
+    test_line_count = PackageAnalyzer.count_julia_loc(analysis, "test")
+    docs_line_count = PackageAnalyzer.count_docs(analysis)
+    readme_line_count = PackageAnalyzer.count_readme(analysis)
+
+    function check_count(desc, got, want)
+        if got < want
+            push!(issues, "Too few lines of $desc: $got, where $want is required.")
+        end
+    end
+    check_count("source code", src_line_count, src_min_lines)
+    check_count("README file", readme_line_count, readme_min_lines)
+    check_count("test code", test_line_count, test_min_lines)
+    # Some projects might put adequate documentation in their README
+    # file and not have any other documentation.
+    check_count("documentation",
+                max(readme_line_count, docs_line_count),
+                doc_min_lines)
+    function check_fraction(desc, got, want)
+        if got < want
+            push!(issues,
+                  @sprintf("The ratio of %s is less than required: %1.2f%% versus %1.2f%%.",
+                           desc, 100 * got, 100 * want))
+        end
+    end
+    check_fraction("README lines to source code",
+                   readme_line_count / src_line_count, readme_min_fraction)
+    check_fraction("test lines to test plus src lines",
+                   test_line_count / (test_line_count + src_line_count),
+                   test_min_fraction)
+    # See the comment above regarding README vs. docs.
+    check_fraction("documentation lines to documentation plus src lines",
+                   max(readme_line_count, docs_line_count) /
+                       (docs_line_count + src_line_count),
+                   doc_min_fraction)
+    if isempty(issues)
+        return true, ""
+    else
+        return false, join(issues, "\n")
     end
 end
 
@@ -979,6 +1065,9 @@ function get_automerge_guidelines(
         (guideline_version_can_be_imported, true),
         (:update_status, true),
         (guideline_dependency_confusion, true),
+        (guideline_linecounts_meet_thresholds,
+         # PackageAnalyzer constrains Julia version to 1.6 or newer:
+         VERSION >= v"1.6"),
         # We always run the `guideline_distance_check`
         # check last, because if the check fails, it
         # prints the list of similar package names in
@@ -1017,6 +1106,12 @@ function get_automerge_guidelines(
         (guideline_version_has_osi_license, check_license),
         (guideline_src_names_OK, true),
         (guideline_version_can_be_imported, true),
+        #= Do we want to check this for new versions?
+        (guideline_linecounts_meet_thresholds,
+         # PackageAnalyzer constrains Julia version to 1.6 or newer:
+         VERSION >= v"1.6")
+        =#
     ]
     return guidelines
 end
+
