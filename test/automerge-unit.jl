@@ -10,6 +10,28 @@ using TimeZones
 
 const AutoMerge = RegistryCI.AutoMerge
 
+
+TEMP_DEPOT_FOR_TESTING = nothing
+
+function setup_depot()::String
+    global TEMP_DEPOT_FOR_TESTING
+    if TEMP_DEPOT_FOR_TESTING isa String
+        return TEMP_DEPOT_FOR_TESTING
+    end
+    tmp_depot = mktempdir()
+    env1 = copy(ENV)
+    env1["JULIA_DEPOT_PATH"] = tmp_depot
+    delete!(env1, "JULIA_LOAD_PATH")
+    delete!(env1, "JULIA_PROJECT")
+    env2 = copy(env1)
+    env2["JULIA_PKG_SERVER"] = ""
+    run(setenv(`julia -e 'import Pkg; Pkg.Registry.add("General")'`, env2))
+    run(setenv(`julia -e 'import Pkg; Pkg.add(["RegistryCI"])'`, env1))
+    TEMP_DEPOT_FOR_TESTING = tmp_depot
+    tmp_depot
+end
+
+
 # helper for testing `AutoMerge.meets_version_has_osi_license`
 function pkgdir_from_depot(depot_path::String, pkg::String)
     pkgdir_parent = joinpath(depot_path, "packages", pkg)
@@ -573,20 +595,12 @@ end
     @testset "`AutoMerge.meets_version_has_osi_license`" begin
         # Let's install a fresh depot in a temporary directory
         # and add some packages to inspect.
-        tmp_depot = mktempdir()
+        tmp_depot = setup_depot()
         function has_osi_license_in_depot(pkg)
             return AutoMerge.meets_version_has_osi_license(
                 pkg; pkg_code_path=pkgdir_from_depot(tmp_depot, pkg)
             )
         end
-        env1 = copy(ENV)
-        env1["JULIA_DEPOT_PATH"] = tmp_depot
-        delete!(env1, "JULIA_LOAD_PATH")
-        delete!(env1, "JULIA_PROJECT")
-        env2 = copy(env1)
-        env2["JULIA_PKG_SERVER"] = ""
-        run(setenv(`julia -e 'import Pkg; Pkg.Registry.add("General")'`, env2))
-        run(setenv(`julia -e 'import Pkg; Pkg.add(["RegistryCI"])'`, env1))
         # Let's test ourselves and some of our dependencies that just have MIT licenses:
         result = has_osi_license_in_depot("RegistryCI")
         @test result[1]
