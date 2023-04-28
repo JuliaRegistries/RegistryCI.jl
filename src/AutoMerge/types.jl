@@ -134,6 +134,11 @@ end
 
 passed(guideline::Guideline) = guideline.passed
 message(guideline::Guideline) = guideline.message
-function check!(guideline::Guideline, data::GitHubAutoMergeData)
-    return guideline.passed, guideline.message = guideline.check(data)
+
+const GuidelineParameters = Dict{Symbol, Any}
+
+function check!(guideline::Guideline, data::GitHubAutoMergeData,
+                guideline_parameters::GuidelineParameters)
+    return guideline.passed, guideline.message =
+        guideline.check(data, guideline_parameters)
 end

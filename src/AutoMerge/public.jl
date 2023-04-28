@@ -100,6 +100,9 @@ function run(;
     read_only::Bool=false,
     environment_variables_to_pass::Vector{<:AbstractString}=String[],
 )::Nothing
+    # guideline_parameters is for parameters that are passed directly
+    # from run through to the various Guidelines without modification:
+    guideline_parameters = GuidelineParameters()
     all_statuses = deepcopy(additional_statuses)
     all_check_runs = deepcopy(additional_check_runs)
     push!(all_statuses, "automerge/decision")
@@ -140,6 +143,7 @@ function run(;
         pr_head_commit_sha = current_pr_head_commit_sha(cicfg; env=env)
         pull_request_build(
             api,
+            guideline_parameters,
             pr_number,
             pr_head_commit_sha,
             registry_repo,
@@ -162,6 +166,7 @@ function run(;
         always_assert(run_merge_build)
         cron_or_api_build(
             api,
+            guideline_parameters,
             registry_repo;
             auth=auth,
             authorized_authors=authorized_authors,
