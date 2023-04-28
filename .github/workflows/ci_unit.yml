@@ -9,6 +9,8 @@ on:
       - staging
       - trying
     tags: '*'
+env:
+  JULIA_PKG_UNPACK_REGISTRY: 'true'
 jobs:
   unit:
     name: Unit/Julia ${{ matrix.version }}/${{ matrix.os }}/${{ matrix.arch }}
