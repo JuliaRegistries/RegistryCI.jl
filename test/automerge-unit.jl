@@ -603,7 +603,7 @@ end
     @testset "`AutoMerge.meets_version_has_osi_license`" begin
         # Let's install a fresh depot in a temporary directory
         # and add some packages to inspect.
-        tmp_depot = setup_depot()
+        tmp_depot = setup_global_depot()
         function has_osi_license_in_depot(pkg)
             return AutoMerge.meets_version_has_osi_license(
                 pkg; pkg_code_path=pkgdir_from_depot(tmp_depot, pkg)
