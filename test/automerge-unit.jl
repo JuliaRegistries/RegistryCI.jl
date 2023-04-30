@@ -13,7 +13,7 @@ const AutoMerge = RegistryCI.AutoMerge
 
 TEMP_DEPOT_FOR_TESTING = nothing
 
-function setup_depot()::String
+function setup_global_depot()::String
     global TEMP_DEPOT_FOR_TESTING
     if TEMP_DEPOT_FOR_TESTING isa String
         return TEMP_DEPOT_FOR_TESTING
