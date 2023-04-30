@@ -84,7 +84,7 @@ function parse_registry_pkg_info(registry_path, pkg, version=nothing)
     return (; uuid=uuid, repo=repo, subdir=subdir, tree_hash=tree_hash)
 end
 
-function _comment_disclaimer()
+function _comment_disclaimer(; point_to_slack::Bool=false)
     result = string(
         "\n\n",
         "Note that the guidelines are only required for the pull request ",
@@ -97,12 +97,18 @@ function _comment_disclaimer()
         "You do not need to change the version number in your `Project.toml` file ",
         "(unless of course the AutoMerge issue is that you skipped a version number, ",
         "in which case you should change the version number).",
-        "",
         "\n\n",
         "If you do not want to fix the AutoMerge issues, please post a comment ",
         "explaining why you would like this pull request to be manually merged.",
-        "",
     )
+    if point_to_slack
+        result *= string(
+            " ",
+            "Then, send a message to the `#pkg-registration` channel in the ",
+            "[Julia Slack](https://julialang.org/slack/) to ask for help. ",
+            "Include a link to this pull request.",
+        )
+    end
     return result
 end
 
@@ -175,7 +181,8 @@ function comment_text_fail(
     ::NewPackage,
     reasons::Vector{String},
     suggest_onepointzero::Bool,
-    version::VersionNumber,
+    version::VersionNumber;
+    point_to_slack::Bool=false,
 )
     reasons_formatted = join(string.("- ", reasons), "\n")
     result = string(
@@ -184,7 +191,7 @@ function comment_text_fail(
         _please_read_these_documents,
         "The following guidelines were not met:\n\n",
         reasons_formatted,
-        _comment_disclaimer(),
+        _comment_disclaimer(; point_to_slack=point_to_slack),
         "\n\n",
         "Since you are registering a new package, ",
         "please make sure that you have also read the ",
@@ -202,7 +209,8 @@ function comment_text_fail(
     ::NewVersion,
     reasons::Vector{String},
     suggest_onepointzero::Bool,
-    version::VersionNumber,
+    version::VersionNumber;
+    point_to_slack::Bool=false,
 )
     reasons_formatted = join(string.("- ", reasons), "\n")
     result = string(
@@ -211,7 +219,7 @@ function comment_text_fail(
         _please_read_these_documents,
         "The following guidelines were not met:\n\n",
         reasons_formatted,
-        _comment_disclaimer(),
+        _comment_disclaimer(; point_to_slack=point_to_slack),
         _comment_noblock(),
         _onepointzero_suggestion(suggest_onepointzero, version),
         "\n<!-- [noblock] -->",

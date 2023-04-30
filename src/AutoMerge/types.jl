@@ -77,6 +77,10 @@ struct GitHubAutoMergeData
     # 1.0 if appropriate.
     suggest_onepointzero::Bool
 
+    # Whether to add a comment suggesting to ask on the #pkg-registration
+    # Julia-Slack channel when AutoMerge is not possible
+    point_to_slack::Bool
+
     # GitHub identity resulting from the use of an authentication token.
     whoami::String
 

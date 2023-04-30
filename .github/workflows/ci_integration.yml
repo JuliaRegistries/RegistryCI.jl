@@ -20,6 +20,9 @@ concurrency:
   group: integration-tests-global-lock
   cancel-in-progress: false
 
+env:
+  JULIA_PKG_UNPACK_REGISTRY: 'true'
+
 jobs:
   integration:
     if: github.event_name == 'push'
