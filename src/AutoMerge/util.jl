@@ -120,6 +120,8 @@ function _comment_noblock()
         "If you want to post a comment without blocking ",
         "auto-merging, you must include the text ",
         "`[noblock]` in your comment.",
+        "You can edit blocking comments, adding `[noblock]` ",
+        "to them in order to unblock auto-merging.",
     )
     return result
 end
