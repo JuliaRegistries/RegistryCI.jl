@@ -389,7 +389,10 @@ const guideline_normal_capitalization = Guideline(;
 )
 
 function meets_normal_capitalization(pkg)
-    meets_this_guideline = occursin(r"^[A-Z]\w*[a-z]\w*[0-9]?$", pkg)
+    # We intentionally do not use `\w` in this regex.
+    # `\w` includes underscores, but we don't want to include underscores.
+    # So, instead of `\w`, we use `[A-Za-z0-9]`.
+    meets_this_guideline = occursin(r"^[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*[0-9]?$", pkg)
     if meets_this_guideline
         return true, ""
     else
