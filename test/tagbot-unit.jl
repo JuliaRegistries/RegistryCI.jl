@@ -36,6 +36,8 @@ end
     @test TB.repo_and_version_of_pull_request_body(ssh) == ("Foo/Bar", "v1.2.3")
     gitlab = body("https://gitlab.com/Foo/Bar")
     @test TB.repo_and_version_of_pull_request_body(gitlab) == (nothing, "v1.2.3")
+    no_body = nothing
+    @test TB.repo_and_version_of_pull_request_body(no_body) == (nothing, nothing)
 end
 
 @testset "tagbot_file" begin
