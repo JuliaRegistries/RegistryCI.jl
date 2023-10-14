@@ -91,8 +91,10 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
     for version_range in keys(deps)
         if version in Pkg.Types.VersionRange(version_range)
             for name in keys(deps[version_range])
-                @debug("Found a new dependency: $(name)")
-                dep_has_compat_with_upper_bound[name] = false
+                if !is_jll_name(name)
+                    @debug("Found a new dependency: $(name)")
+                    dep_has_compat_with_upper_bound[name] = false
+                end
             end
         end
     end
