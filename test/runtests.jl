@@ -16,6 +16,16 @@ const AutoMerge = RegistryCI.AutoMerge
 # disable the Pkg server.
 ENV["JULIA_PKG_SERVER"] = ""
 
+@static if Base.VERSION < v"1.11"
+    # BrokenRecord fails to precompile on Julia 1.11
+    Pkg.add(;
+        name = "BrokenRecord",
+        uuid = "bdd55f5b-6e67-4da1-a080-6086e55655a0",
+        version = "0.1.3",
+    )
+    import BrokenRecord
+end
+
 @testset "RegistryCI.jl" begin
     @testset "RegistryCI.jl unit tests" begin
         @info("Running the RegistryCI.jl unit tests")
