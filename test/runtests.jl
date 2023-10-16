@@ -21,7 +21,7 @@ ENV["JULIA_PKG_SERVER"] = ""
     Pkg.add(;
         name = "BrokenRecord",
         uuid = "bdd55f5b-6e67-4da1-a080-6086e55655a0",
-        version = "0.1.3",
+        version = "0.1.9",
     )
     import BrokenRecord
 end
