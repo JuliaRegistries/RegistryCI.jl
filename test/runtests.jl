@@ -18,10 +18,12 @@ ENV["JULIA_PKG_SERVER"] = ""
 
 @static if Base.VERSION < v"1.11"
     # BrokenRecord fails to precompile on Julia 1.11
-    Pkg.add(;
-        name = "BrokenRecord",
-        uuid = "bdd55f5b-6e67-4da1-a080-6086e55655a0",
-        version = "0.1.9",
+    Pkg.add(
+        Pkg.PackageSpec(;
+            name = "BrokenRecord",
+            uuid = "bdd55f5b-6e67-4da1-a080-6086e55655a0",
+            version = "0.1.9",
+        )
     )
     import BrokenRecord
 end
