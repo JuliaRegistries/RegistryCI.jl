@@ -16,7 +16,7 @@ const AutoMerge = RegistryCI.AutoMerge
 # disable the Pkg server.
 ENV["JULIA_PKG_SERVER"] = ""
 
-@static if v"1.6-" <= Base.VERSION < v"1.11"
+@static if v"1.6-" <= Base.VERSION < v"1.11-"
     # BrokenRecord fails to precompile on Julia 1.11
     let
         # The use of `VersionNumber`s here (e.g. `version = v"foo.bar.baz"`) tells Pkg to install the exact version.
