@@ -601,41 +601,43 @@ end
     end
 
     @testset "`AutoMerge.meets_version_has_osi_license`" begin
-        # Let's install a fresh depot in a temporary directory
-        # and add some packages to inspect.
-        tmp_depot = setup_global_depot()
-        function has_osi_license_in_depot(pkg)
-            return AutoMerge.meets_version_has_osi_license(
-                pkg; pkg_code_path=pkgdir_from_depot(tmp_depot, pkg)
-            )
+        withenv("JULIA_PKG_PRECOMPILE_AUTO" => "0") do
+            # Let's install a fresh depot in a temporary directory
+            # and add some packages to inspect.
+            tmp_depot = setup_global_depot()
+            function has_osi_license_in_depot(pkg)
+                return AutoMerge.meets_version_has_osi_license(
+                    pkg; pkg_code_path=pkgdir_from_depot(tmp_depot, pkg)
+                )
+            end
+            # Let's test ourselves and some of our dependencies that just have MIT licenses:
+            result = has_osi_license_in_depot("RegistryCI")
+            @test result[1]
+            result = has_osi_license_in_depot("UnbalancedOptimalTransport")
+            @test result[1]
+            result = has_osi_license_in_depot("VisualStringDistances")
+            @test result[1]
+    
+            # Now, what happens if there's also a non-OSI license in another file?
+            pkg_path = pkgdir_from_depot(tmp_depot, "UnbalancedOptimalTransport")
+            open(joinpath(pkg_path, "LICENSE2"); write=true) do io
+                cc0_bytes = read(joinpath(@__DIR__, "license_data", "CC0.txt"))
+                println(io)
+                write(io, cc0_bytes)
+            end
+            result = has_osi_license_in_depot("UnbalancedOptimalTransport")
+            @test result[1]
+    
+            # What if we also remove the original license, leaving only the CC0 license?
+            rm(joinpath(pkg_path, "LICENSE"))
+            result = has_osi_license_in_depot("UnbalancedOptimalTransport")
+            @test !result[1]
+    
+            # What about no license at all?
+            pkg_path = pkgdir_from_depot(tmp_depot, "VisualStringDistances")
+            rm(joinpath(pkg_path, "LICENSE"))
+            result = has_osi_license_in_depot("VisualStringDistances")
+            @test !result[1]
         end
-        # Let's test ourselves and some of our dependencies that just have MIT licenses:
-        result = has_osi_license_in_depot("RegistryCI")
-        @test result[1]
-        result = has_osi_license_in_depot("UnbalancedOptimalTransport")
-        @test result[1]
-        result = has_osi_license_in_depot("VisualStringDistances")
-        @test result[1]
-
-        # Now, what happens if there's also a non-OSI license in another file?
-        pkg_path = pkgdir_from_depot(tmp_depot, "UnbalancedOptimalTransport")
-        open(joinpath(pkg_path, "LICENSE2"); write=true) do io
-            cc0_bytes = read(joinpath(@__DIR__, "license_data", "CC0.txt"))
-            println(io)
-            write(io, cc0_bytes)
-        end
-        result = has_osi_license_in_depot("UnbalancedOptimalTransport")
-        @test result[1]
-
-        # What if we also remove the original license, leaving only the CC0 license?
-        rm(joinpath(pkg_path, "LICENSE"))
-        result = has_osi_license_in_depot("UnbalancedOptimalTransport")
-        @test !result[1]
-
-        # What about no license at all?
-        pkg_path = pkgdir_from_depot(tmp_depot, "VisualStringDistances")
-        rm(joinpath(pkg_path, "LICENSE"))
-        result = has_osi_license_in_depot("VisualStringDistances")
-        @test !result[1]
     end
 end
