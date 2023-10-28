@@ -258,7 +258,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                             # is no need to have `julia` listed in Deps.toml.
                             # However, every other compat entry needs to be listed
                             # in Deps.toml.
-                            if compat_pkgname != julia"
+                            if compat_pkgname != "julia"
                                 Test.@test haskey(deps_for_this_v, compat_pkgname)
                             end
                         end
