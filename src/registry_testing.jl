@@ -253,7 +253,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                         Test.@test compat_for_this_v isa AbstractDict
                         Test.@test deps_for_this_v isa AbstractDict
                         for compat_pkgname in keys(compat_for_this_v)
-                            @test haskey(deps_for_this_v, compat_pkgname)
+                            Test.@test haskey(deps_for_this_v, compat_pkgname)
                         end
                     end
                 end
