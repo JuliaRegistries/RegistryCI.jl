@@ -25,7 +25,7 @@ VisualStringDistances = "089bb0c6-1854-47b9-96f7-327dbbe09dca"
 
 [compat]
 Base64 = "<0.0.1, 1"
-Dates = "<0.0.1, 1"
+Dates = "1"
 GitHub = "5.2"
 HTTP = "0.8, 0.9.1, 1"
 JSON = "0.19, 0.20, 0.21"
