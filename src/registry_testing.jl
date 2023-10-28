@@ -172,6 +172,11 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                 for (v, data) in vers
                     Test.@test VersionNumber(v) isa VersionNumber
                     Test.@test haskey(data, "git-tree-sha1")
+
+                    # https://github.com/JuliaRegistries/RegistryCI.jl/issues/523
+                    # "yanked" is correct.
+                    # "yank" (and all other variants) are incorrect.
+                    Test.@test keys(data) ⊆ ["git-tree-sha1", "yanked"]
                 end
 
                 # Deps.toml testing
