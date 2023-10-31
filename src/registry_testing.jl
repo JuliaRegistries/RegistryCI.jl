@@ -252,7 +252,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                         if weak == "Weak"
                             # It is NOT legal for a package to have WeakCompat.toml but not have
                             # WeakDeps.toml
-                            @test isfile(depsfile)
+                            Test.@test isfile(depsfile)
                         end
                         compat_uncompressed = RegistryTools.Compress.load(compatfile)
                         deps_uncompressed = isfile(depsfile) ? RegistryTools.Compress.load(depsfile) : Dict()
