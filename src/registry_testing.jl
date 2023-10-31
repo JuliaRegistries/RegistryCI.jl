@@ -265,7 +265,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                                 if weak == "Weak"
                                     # It is legal to have `julia` in Compat.toml.
                                     # It is NOT legal to have `julia` in WeakCompat.toml
-                                    @test compat_pkgname != "julia"
+                                    Test.@test compat_pkgname != "julia"
                                 end
                                 # If the package has a compat entry for `julia`, there
                                 # is no need to have `julia` listed in Deps.toml.
