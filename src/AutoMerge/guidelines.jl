@@ -425,7 +425,7 @@ end
 
 function _invalid_sequential_version(reason::AbstractString)
     return false, "Does not meet sequential version number guideline: $reason\n \
-    A double check is recommended to verify this was done on purpose.", :invalid
+    A double check is required to verify this was done on purpose.", :invalid
 end
 
 function _valid_change(old_version::VersionNumber, new_version::VersionNumber)
