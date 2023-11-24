@@ -424,8 +424,7 @@ function meets_repo_url_requirement(pkg::String; registry_head::String)
 end
 
 function _invalid_sequential_version(reason::AbstractString)
-    return false, "Does not meet sequential version number guideline: $reason\n
-    If this was intentional, please leave a comment saying so. Otherwise please correct the version number in your package and re-trigger registration.", :invalid
+    return false, "Does not meet sequential version number guideline: $(reason). If this was intentional, please leave a comment saying so. Otherwise please correct the version number in your package and re-trigger registration.", :invalid
 end
 
 function _valid_change(old_version::VersionNumber, new_version::VersionNumber)
