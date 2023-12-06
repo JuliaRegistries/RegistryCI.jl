@@ -92,7 +92,7 @@ function _comment_disclaimer(; point_to_slack::Bool=false)
         "to follow them, since otherwise the pull request needs to be ",
         "manually reviewed and merged by a human.",
         "\n\n",
-        "After you have fixed the AutoMerge issues, simple retrigger Registrator, ",
+        "After you have fixed the AutoMerge issues, simply retrigger Registrator, ",
         "which will automatically update this pull request. ",
         "You do not need to change the version number in your `Project.toml` file ",
         "(unless of course the AutoMerge issue is that you skipped a version number, ",
