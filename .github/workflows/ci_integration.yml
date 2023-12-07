@@ -6,11 +6,12 @@ name: CI (integration tests)
 # GitHub's abuse rate limits.
 
 on:
+  merge_group: # GitHub Merge Queue
   push:
     branches:
       - master
-      - staging
-      - trying
+      # - staging # Bors
+      # - trying # Bors
 
 # Make sure that the `GITHUB_TOKEN` only has read-only permissions
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#permissions
