@@ -7,6 +7,7 @@ name: CI (integration tests)
 
 on:
   merge_group: # GitHub Merge Queue
+  pull_request: # but we will skip the integration tests on PR builds, to avoid hitting rate limits
   push:
     branches:
       - master
@@ -26,7 +27,10 @@ env:
 
 jobs:
   integration:
-    if: github.event_name == 'push'
+    # We don't actually want to run integration tests on pull requests,
+    # because we want to avoid hitting rate limits.
+    # So, if this is a PR build, mark the integration tests as "skipped".
+    if: github.event_name != 'pull_request'
     name: Integration/Julia ${{ matrix.version }}/${{ matrix.os }}/${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
