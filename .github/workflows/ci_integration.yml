@@ -11,8 +11,6 @@ on:
   push:
     branches:
       - master
-      # - staging # Bors
-      # - trying # Bors
 
 # Make sure that the `GITHUB_TOKEN` only has read-only permissions
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#permissions
