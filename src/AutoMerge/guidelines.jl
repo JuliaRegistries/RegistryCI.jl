@@ -265,6 +265,8 @@ To prevent confusion between similarly named packages, the names of new packages
       [VisualStringDistances.jl](https://github.com/ericphanson/VisualStringDistances.jl)
       between the package name and any existing package must exceeds a certain
       a hand-chosen threshold (currently 2.5).
+
+These checks can be overridden by applying a label `Override AutoMerge: name similarity is okay` to the PR. This will turn off the check as long as the label is applied to the PR.
   """,
     check=data -> meets_distance_check(data.pkg, data.registry_master),
 )

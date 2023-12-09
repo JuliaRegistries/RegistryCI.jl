@@ -4,6 +4,8 @@ on:
   schedule:
     - cron: '05,17,29,41,53 * * * *'
   pull_request:
+    # Here we run when labels are applied, so that the "Override AutoMerge: name similarity is okay label is respected.
+    types: [labeled, synchronize]
   workflow_dispatch:
 
 jobs:
