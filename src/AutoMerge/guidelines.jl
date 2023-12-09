@@ -91,8 +91,8 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
     for version_range in keys(deps)
         if version in Pkg.Types.VersionRange(version_range)
             for name in keys(deps[version_range])
-                if !is_jll_name(name) && !is_julia_stdlib(name)
-                    @debug("Found a new (non-stdlib non-JLL) dependency: $(name)")
+                if !is_jll_name(name)
+                    @debug("Found a new (non-JLL) dependency: $(name)")
                     dep_has_compat_with_upper_bound[name] = false
                 end
             end
@@ -424,7 +424,7 @@ function meets_repo_url_requirement(pkg::String; registry_head::String)
 end
 
 function _invalid_sequential_version(reason::AbstractString)
-    return false, "Does not meet sequential version number guideline: $reason", :invalid
+    return false, "Does not meet sequential version number guideline: $(reason). If this was intentional, please leave a comment saying so. Otherwise please correct the version number in your package and re-trigger registration.", :invalid
 end
 
 function _valid_change(old_version::VersionNumber, new_version::VersionNumber)

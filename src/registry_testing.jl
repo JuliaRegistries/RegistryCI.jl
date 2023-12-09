@@ -172,6 +172,11 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                 for (v, data) in vers
                     Test.@test VersionNumber(v) isa VersionNumber
                     Test.@test haskey(data, "git-tree-sha1")
+
+                    # https://github.com/JuliaRegistries/RegistryCI.jl/issues/523
+                    # "yanked" is correct.
+                    # "yank" (and all other variants) are incorrect.
+                    Test.@test keys(data) ⊆ ["git-tree-sha1", "yanked"]
                 end
 
                 # Deps.toml testing
@@ -262,7 +267,12 @@ end
 # Apply `_spacify_hyphens()` recursively through a dictionary
 function _spacify_hyphens(dict::Dict{K, V}) where {K, V}
     new_dict = Dict{K, V}()
-    for (k, v) in pairs(dict)
+    # Note: `Base.Dict` iterates key-value pairs, so it's sufficient for us to do
+    # `for (k, v) in dict`. However, there are some other dictionary implementations
+    # (such as the Dictionaries.jl package) that do not iterate key-value pairs. So,
+    # if we ever decide to widen the type signature of this method, we'll need to
+    # change `(k, v) in dict` to `(k, v) in pairs(dict)`.
+    for (k, v) in dict
         new_k = _spacify_hyphens(k)
         new_v = _spacify_hyphens(v)
     end

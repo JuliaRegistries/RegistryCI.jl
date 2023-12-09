@@ -92,7 +92,7 @@ function _comment_disclaimer(; point_to_slack::Bool=false)
         "to follow them, since otherwise the pull request needs to be ",
         "manually reviewed and merged by a human.",
         "\n\n",
-        "After you have fixed the AutoMerge issues, simple retrigger Registrator, ",
+        "After you have fixed the AutoMerge issues, simply retrigger Registrator, ",
         "which will automatically update this pull request. ",
         "You do not need to change the version number in your `Project.toml` file ",
         "(unless of course the AutoMerge issue is that you skipped a version number, ",
@@ -237,20 +237,6 @@ function comment_text_merge_now()
         "\n<!-- [noblock] -->",
     )
     return result
-end
-
-is_julia_stdlib(name) = name in julia_stdlib_list()
-
-function julia_stdlib_list()
-    stdlib_list = readdir(Pkg.Types.stdlib_dir())
-    # Before Julia v1.6 Artifacts.jl isn't a standard library, but
-    # we want to include it because JLL packages depend on the empty
-    # placeholder https://github.com/JuliaPackaging/Artifacts.jl
-    # in older versions for compatibility.
-    if VERSION < v"1.6.0"
-        push!(stdlib_list, "Artifacts")
-    end
-    return stdlib_list
 end
 
 function now_utc()
