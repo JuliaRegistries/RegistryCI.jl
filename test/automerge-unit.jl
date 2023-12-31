@@ -54,6 +54,9 @@ end
             repo="https://github.com/JuliaRegistries/RegistryCI.jl.git",
             subdir="",
             tree_hash="1036c9c4d600468785fbd9dae87587e59d2f66a9",
+            commit_hash=nothing,
+            tag_hash=nothing,
+            tag_name=nothing
         )
         result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI")
         @test result == (;
@@ -61,6 +64,9 @@ end
             repo="https://github.com/JuliaRegistries/RegistryCI.jl.git",
             subdir="",
             tree_hash=nothing,
+            commit_hash=nothing,
+            tag_hash=nothing,
+            tag_name=nothing
         )
 
         result = AutoMerge.parse_registry_pkg_info(
@@ -71,6 +77,9 @@ end
             repo="https://github.com/timholy/SnoopCompile.jl.git",
             subdir="SnoopCompileCore",
             tree_hash="bb6d6df44d9aa3494c997aebdee85b713b92c0de",
+            commit_hash=nothing,
+            tag_hash=nothing,
+            tag_name=nothing
         )
     end
 end
