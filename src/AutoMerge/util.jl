@@ -50,7 +50,18 @@ function load_files_from_url_and_tree_hash(
 end
 
 """
-    parse_registry_pkg_info(registry_path, pkg, version=nothing) -> @NamedTuple{uuid::String, repo::String, subdir::String, tree_hash::Union{Nothing, String}}
+    parse_registry_pkg_info(
+        registry_path::AbstractString,
+        pkg::AbstractString,
+        version=nothing
+      ) :: @NamedTuple{
+        uuid::String,
+        repo::String,
+        subdir::String,
+        tree_hash::Union{Nothing, String},
+        commit_hash::Union{Nothing, String},
+        tag_name::Union{Nothing, String}
+      }
 
 Searches the registry located at `registry_path` for a package with name `pkg`. Upon finding it,
 it parses the associated `Package.toml` file and returns the UUID and repository URI, and `subdir`.
