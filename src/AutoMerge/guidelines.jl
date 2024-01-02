@@ -619,7 +619,7 @@ const guideline_src_names_OK = Guideline(;
 )
 
 function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_path)
-    uuid, package_repo, subdir, tree_hash_from_toml, commit_hash_from_toml, tag_hash_from_toml, tag_name_from_toml = parse_registry_pkg_info(
+    uuid, package_repo, subdir, tree_hash_from_toml, commit_hash_from_toml, tag_name_from_toml = parse_registry_pkg_info(
         registry_head, pkg, version
     )
 
@@ -646,15 +646,10 @@ function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_
         end
 
         tag_success = try
-            if !isnothing(tag_hash_from_toml)
-                commit_hash_from_tag = readchomp(Cmd(`git rev-parse $(tag_hash_from_toml)^\{commit\}`; dir=dir))
-                @assert commit_hash_from_tag == commit_hash_from_toml
-            end
             if !isnothing(tag_name_from_toml)
-                hash_from_tag_name = readchomp(Cmd(`git rev-parse $(tag_name_from_toml)`; dir=dir))
-                # if an annotated tag, should point to the tag object
-                # if a lightweight tag, should point to the commit object
-                @assert hash_from_tag_name == something(tag_hash_from_toml, commit_hash_from_toml)
+                # if an annotated tag, need to dereference to commit
+                commit_hash_from_tag = readchomp(Cmd(`git rev-parse $(tag_name_from_toml)^\{commit\}`; dir=dir))
+                @assert commit_hash_from_tag == commit_hash_from_toml
             end
             true
         catch e
