@@ -172,6 +172,7 @@ end
 
 function cron_or_api_build(
     api::GitHub.GitHubAPI,
+    guideline_parameters::GuidelineParameters,
     registry::GitHub.Repo;
     auth::GitHub.Authorization,
     authorized_authors::Vector{String},
@@ -202,6 +203,7 @@ function cron_or_api_build(
                 my_retry() do
                     cron_or_api_build(
                         api,
+                        guideline_parameters,
                         pr,
                         registry;
                         auth=auth,
@@ -239,6 +241,7 @@ end
 
 function cron_or_api_build(
     api::GitHub.GitHubAPI,
+    guideline_parameters::GuidelineParameters,
     pr::GitHub.PullRequest,
     registry::GitHub.Repo;
     auth::GitHub.Authorization,
