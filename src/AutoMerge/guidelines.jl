@@ -4,7 +4,7 @@ const guideline_registry_consistency_tests_pass = Guideline(;
     info="Registy consistency tests",
     docs=nothing,
     check=data ->
-        meets_registry_consistency_tests_pass(data.registry_head, data.registry_deps),
+        meets_registry_consistency_tests_pass(data.registry_head, data.registry_deps)
 )
 
 function meets_registry_consistency_tests_pass(
@@ -25,7 +25,7 @@ const guideline_compat_for_julia = Guideline(;
         "There is an upper-bounded `[compat]` entry for `julia` that ",
         "only includes a finite number of breaking releases of Julia.",
     ),
-    check=data -> meets_compat_for_julia(data.registry_head, data.pkg, data.version),
+    check=data -> meets_compat_for_julia(data.registry_head, data.pkg, data.version)
 )
 
 function meets_compat_for_julia(working_directory::AbstractString, pkg, version)
@@ -74,7 +74,7 @@ const guideline_compat_for_all_deps = Guideline(;
         "are upper-bounded and only include a finite number of breaking releases. ",
         "For more information, please see the \"Upper-bounded `[compat]` entries\" subsection under \"Additional information\" below.",
     ),
-    check=data -> meets_compat_for_all_deps(data.registry_head, data.pkg, data.version),
+    check=data -> meets_compat_for_all_deps(data.registry_head, data.pkg, data.version)
 )
 
 function meets_compat_for_all_deps(working_directory::AbstractString, pkg, version)
@@ -157,8 +157,8 @@ const guideline_patch_release_does_not_narrow_julia_compat = Guideline(;
         data.pkg,
         data.version;
         registry_head=data.registry_head,
-        registry_master=data.registry_master,
-    ),
+        registry_master=data.registry_master
+    )
 )
 
 function meets_patch_release_does_not_narrow_julia_compat(
@@ -203,7 +203,7 @@ const _AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH = 5
 const guideline_name_length = Guideline(;
     info="Name not too short",
     docs="The name is at least $(_AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH) characters long.",
-    check=data -> meets_name_length(data.pkg),
+    check=data -> meets_name_length(data.pkg)
 )
 
 function meets_name_length(pkg)
@@ -218,7 +218,7 @@ end
 
 const guideline_name_ascii = Guideline(;
     info="Name is composed of ASCII characters only.",
-    check=data -> meets_name_ascii(data.pkg),
+    check=data -> meets_name_ascii(data.pkg)
 )
 
 function meets_name_ascii(pkg)
@@ -231,7 +231,7 @@ end
 
 const guideline_julia_name_check = Guideline(;
     info="Name does not include \"julia\" or start with \"Ju\".",
-    check=data -> meets_julia_name_check(data.pkg),
+    check=data -> meets_julia_name_check(data.pkg)
 )
 
 function meets_julia_name_check(pkg)
@@ -266,7 +266,7 @@ To prevent confusion between similarly named packages, the names of new packages
       between the package name and any existing package must exceeds a certain
       a hand-chosen threshold (currently 2.5).
   """,
-    check=data -> meets_distance_check(data.pkg, data.registry_master),
+    check=data -> meets_distance_check(data.pkg, data.registry_master)
 )
 
 function meets_distance_check(
@@ -282,70 +282,11 @@ function meets_distance_check(
     DL_lowercase_cutoff=1,
     DL_cutoff=2,
     sqrt_normalized_vd_cutoff=2.5,
-    comment_collapse_cutoff=10,
+    comment_collapse_cutoff=10
 )
     problem_messages = Tuple{String,Tuple{Float64,Float64,Float64}}[]
     for other_pkg in other_packages
-        if pkg_name == other_pkg
-            # We short-circuit in this case; more information doesn't help.
-            return (false, "Package name already exists in the registry.")
-        elseif lowercase(pkg_name) == lowercase(other_pkg)
-            # We'll sort this first
-            push!(
-                problem_messages,
-                (
-                    "Package name matches existing package name $(other_pkg) up to case.",
-                    (0, 0, 0),
-                ),
-            )
-        else
-            msg = ""
-
-            # Distance check 1: DL distance
-            dl = damerau_levenshtein(pkg_name, other_pkg)
-            if dl <= DL_cutoff
-                msg = string(
-                    msg,
-                    " Damerau-Levenshtein distance $dl is at or below cutoff of $(DL_cutoff).",
-                )
-            end
-
-            # Distance check 2: lowercase DL distance
-            dl_lowercase = damerau_levenshtein(lowercase(pkg_name), lowercase(other_pkg))
-            if dl_lowercase <= DL_lowercase_cutoff
-                msg = string(
-                    msg,
-                    " Damerau-Levenshtein distance $(dl_lowercase) between lowercased names is at or below cutoff of $(DL_lowercase_cutoff).",
-                )
-            end
-
-            # Distance check 3: normalized visual distance,
-            # gated by a `dl` check for speed.
-            if (sqrt_normalized_vd_cutoff > 0 && dl <= 4)
-                nrm_vd = sqrt_normalized_vd(pkg_name, other_pkg)
-                if nrm_vd <= sqrt_normalized_vd_cutoff
-                    msg = string(
-                        msg,
-                        " Normalized visual distance ",
-                        Printf.@sprintf("%.2f", nrm_vd),
-                        " is at or below cutoff of ",
-                        Printf.@sprintf("%.2f", sqrt_normalized_vd_cutoff),
-                        ".",
-                    )
-                end
-            else
-                # need to choose something for sorting purposes
-                nrm_vd = 10.0
-            end
-
-            if msg != ""
-                # We must have found a clash.
-                push!(
-                    problem_messages,
-                    (string("Similar to $(other_pkg).", msg), (dl, dl_lowercase, nrm_vd)),
-                )
-            end
-        end
+        _meets_distance_check!(problem_messages, pkg_name, other_pkg; DL_lowercase_cutoff, DL_cutoff, sqrt_normalized_vd_cutoff)
     end
 
     isempty(problem_messages) && return (true, "")
@@ -373,6 +314,89 @@ function meets_distance_check(
     return (false, message)
 end
 
+function _meets_distance_check!(problem_messages, pkg_name, other_pkg;
+    DL_lowercase_cutoff=1,
+    DL_cutoff=2,
+    sqrt_normalized_vd_cutoff=2.5)
+
+    if pkg_name == other_pkg
+        # We short-circuit in this case; more information doesn't help.
+        push!(
+            problem_messages,
+            (
+                "Package name matches existing package name $(other_pkg) up to case.",
+                (0, 0, 0),
+            ),
+        )
+        return (false, "Package name already exists in the registry.")
+    elseif lowercase(pkg_name) == lowercase(other_pkg)
+        # We'll sort this first
+        push!(
+            problem_messages,
+            (
+                "Package name matches existing package name $(other_pkg) up to case.",
+                (0, 0, 0),
+            ),
+        )
+    else
+        msg = ""
+
+        # Distance check 1: DL distance
+        dl = damerau_levenshtein(pkg_name, other_pkg)
+        if dl <= DL_cutoff
+            msg = string(
+                msg,
+                " Damerau-Levenshtein distance $dl is at or below cutoff of $(DL_cutoff).",
+            )
+        end
+
+        # Distance check 2: lowercase DL distance
+        dl_lowercase = damerau_levenshtein(lowercase(pkg_name), lowercase(other_pkg))
+        if dl_lowercase <= DL_lowercase_cutoff
+            msg = string(
+                msg,
+                " Damerau-Levenshtein distance $(dl_lowercase) between lowercased names is at or below cutoff of $(DL_lowercase_cutoff).",
+            )
+        end
+
+        # Distance check 3: normalized visual distance,
+        # gated by a `dl` check for speed.
+        if (sqrt_normalized_vd_cutoff > 0 && dl <= 4)
+            nrm_vd = sqrt_normalized_vd(pkg_name, other_pkg)
+            if nrm_vd <= sqrt_normalized_vd_cutoff
+                msg = string(
+                    msg,
+                    " Normalized visual distance ",
+                    Printf.@sprintf("%.2f", nrm_vd),
+                    " is at or below cutoff of ",
+                    Printf.@sprintf("%.2f", sqrt_normalized_vd_cutoff),
+                    ".",
+                )
+            end
+        else
+            # need to choose something for sorting purposes
+            nrm_vd = 10.0
+        end
+
+        if msg != ""
+            # We must have found a clash.
+            push!(
+                problem_messages,
+                (string("Similar to $(other_pkg).", msg), (dl, dl_lowercase, nrm_vd)),
+            )
+        end
+    end
+
+end
+
+"check if your package name is too similar to existing package names"
+function is_pkgname_similar(pkg_name, other_pkg; kwargs...)
+    msgs = Tuple{String,Tuple{Float64,Float64,Float64}}[]
+    _meets_distance_check!(msgs, pkg_name, other_pkg; kwargs...)
+    # @info x, msgs
+    isempty(msgs) ? false : true
+end
+
 const guideline_normal_capitalization = Guideline(;
     info="Normal capitalization",
     docs=string(
@@ -380,7 +404,7 @@ const guideline_normal_capitalization = Guideline(;
         "contain only ASCII alphanumeric characters, ",
         "and contain at least one lowercase letter.",
     ),
-    check=data -> meets_normal_capitalization(data.pkg),
+    check=data -> meets_normal_capitalization(data.pkg)
 )
 
 function meets_normal_capitalization(pkg)
@@ -398,7 +422,7 @@ end
 
 const guideline_repo_url_requirement = Guideline(;
     info="Repo URL ends with `/PackageName.jl.git`.",
-    check=data -> meets_repo_url_requirement(data.pkg; registry_head=data.registry_head),
+    check=data -> meets_repo_url_requirement(data.pkg; registry_head=data.registry_head)
 )
 
 function meets_repo_url_requirement(pkg::String; registry_head::String)
@@ -456,8 +480,8 @@ const guideline_sequential_version_number = Guideline(;
         data.pkg,
         data.version;
         registry_head=data.registry_head,
-        registry_master=data.registry_master,
-    ),
+        registry_master=data.registry_master
+    )
 )
 
 function meets_sequential_version_number(
@@ -494,7 +518,7 @@ end
 
 const guideline_standard_initial_version_number = Guideline(;
     info="Standard initial version number. Must be one of: `0.0.1`, `0.1.0`, `1.0.0`, or `X.0.0`.",
-    check=data -> meets_standard_initial_version_number(data.version),
+    check=data -> meets_standard_initial_version_number(data.version)
 )
 
 function meets_standard_initial_version_number(version)
@@ -517,17 +541,17 @@ end
 
 const guideline_version_number_no_prerelease = Guideline(;
     info="No prerelease data in the version number",
-    docs = "Version number is not allowed to contain prerelease data",
-    check = data -> meets_version_number_no_prerelease(
+    docs="Version number is not allowed to contain prerelease data",
+    check=data -> meets_version_number_no_prerelease(
         data.version,
-    ),
+    )
 )
 const guideline_version_number_no_build = Guideline(;
     info="No build data in the version number",
-    docs = "Version number is not allowed to contain build data",
-    check = data -> meets_version_number_no_build(
+    docs="Version number is not allowed to contain build data",
+    check=data -> meets_version_number_no_build(
         data.version,
-    ),
+    )
 )
 function meets_version_number_no_prerelease(version::VersionNumber)
     if isempty(version.prerelease)
@@ -551,8 +575,8 @@ const guideline_code_can_be_downloaded = Guideline(;
         data.pkg,
         data.version,
         data.pr;
-        pkg_code_path=data.pkg_code_path,
-    ),
+        pkg_code_path=data.pkg_code_path
+    )
 )
 
 function _find_lowercase_duplicates(v)
@@ -673,8 +697,8 @@ const guideline_version_can_be_pkg_added = Guideline(;
         data.pkg,
         data.version;
         registry_deps=data.registry_deps,
-        environment_variables_to_pass=data.environment_variables_to_pass,
-    ),
+        environment_variables_to_pass=data.environment_variables_to_pass
+    )
 )
 
 function meets_version_can_be_pkg_added(
@@ -682,7 +706,7 @@ function meets_version_can_be_pkg_added(
     pkg::String,
     version::VersionNumber;
     registry_deps::Vector{<:AbstractString}=String[],
-    environment_variables_to_pass::Vector{String},
+    environment_variables_to_pass::Vector{String}
 )
     pkg_add_command = _generate_pkg_add_command(pkg, version)
     _registry_deps = convert(Vector{String}, registry_deps)
@@ -711,7 +735,7 @@ function meets_version_can_be_pkg_added(
         version;
         code=code,
         before_message="Attempting to `Pkg.add` the package",
-        environment_variables_to_pass=environment_variables_to_pass,
+        environment_variables_to_pass=environment_variables_to_pass
     )
     if cmd_ran_successfully
         @info "Successfully `Pkg.add`ed the package"
@@ -737,7 +761,7 @@ const guideline_version_has_osi_license = Guideline(;
         "This check is required for the General registry. ",
         "For other registries, registry maintainers have the option to disable this check.",
     ),
-    check=data -> meets_version_has_osi_license(data.pkg; pkg_code_path=data.pkg_code_path),
+    check=data -> meets_version_has_osi_license(data.pkg; pkg_code_path=data.pkg_code_path)
 )
 
 function meets_version_has_osi_license(pkg::String; pkg_code_path)
@@ -804,8 +828,8 @@ const guideline_version_can_be_imported = Guideline(;
         data.pkg,
         data.version;
         registry_deps=data.registry_deps,
-        environment_variables_to_pass=data.environment_variables_to_pass,
-    ),
+        environment_variables_to_pass=data.environment_variables_to_pass
+    )
 )
 
 function meets_version_can_be_imported(
@@ -813,7 +837,7 @@ function meets_version_can_be_imported(
     pkg::String,
     version::VersionNumber;
     registry_deps::Vector{<:AbstractString}=String[],
-    environment_variables_to_pass::Vector{String},
+    environment_variables_to_pass::Vector{String}
 )
     pkg_add_command = _generate_pkg_add_command(pkg, version)
     _registry_deps = convert(Vector{String}, registry_deps)
@@ -846,7 +870,7 @@ function meets_version_can_be_imported(
         version;
         code=code,
         before_message="Attempting to `import` the package",
-        environment_variables_to_pass=environment_variables_to_pass,
+        environment_variables_to_pass=environment_variables_to_pass
     )
 
     if cmd_ran_successfully
@@ -869,7 +893,7 @@ function _run_pkg_commands(
     version::VersionNumber;
     code,
     before_message,
-    environment_variables_to_pass::Vector{String},
+    environment_variables_to_pass::Vector{String}
 )
     original_directory = pwd()
     tmp_dir_1 = mktempdir()
@@ -955,7 +979,7 @@ function get_automerge_guidelines(
     ::NewPackage;
     check_license::Bool,
     this_is_jll_package::Bool,
-    this_pr_can_use_special_jll_exceptions::Bool,
+    this_pr_can_use_special_jll_exceptions::Bool
 )
     guidelines = [
         (guideline_registry_consistency_tests_pass, true),
@@ -996,7 +1020,7 @@ function get_automerge_guidelines(
     ::NewVersion;
     check_license::Bool,
     this_is_jll_package::Bool,
-    this_pr_can_use_special_jll_exceptions::Bool,
+    this_pr_can_use_special_jll_exceptions::Bool
 )
     guidelines = [
         (guideline_registry_consistency_tests_pass, true),
