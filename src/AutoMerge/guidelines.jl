@@ -462,7 +462,7 @@ function _valid_change(old_version::VersionNumber, new_version::VersionNumber)
 end
 
 const AUTHOR_APPROVAL_INSTRUCTIONS = string(
-    "**If this was not a mistake and you wish to merge this PR anyway,"
+    "**If this was not a mistake and you wish to merge this PR anyway,",
     "write a comment that says \"merge approved\".**")
 
 const guideline_sequential_version_number = Guideline(;
