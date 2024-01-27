@@ -129,6 +129,12 @@ end
         @test !AutoMerge.perform_distance_check([GitHub.Label(; name="Override AutoMerge: name similarity is okay")])
         @test !AutoMerge.perform_distance_check([GitHub.Label(; name="hi"), GitHub.Label(; name="Override AutoMerge: name similarity is okay")])
     end
+    @testset "has_author_approved_label" begin
+        @test !AutoMerge.has_author_approved_label(nothing)
+        @test !AutoMerge.has_author_approved_label([GitHub.Label(; name="hi")])
+        @test AutoMerge.has_author_approved_label([GitHub.Label(; name="package-author-approved")])
+        @test AutoMerge.has_author_approved_label([GitHub.Label(; name="hi"), GitHub.Label(; name="package-author-approved")])
+    end
     @testset "`get_all_non_jll_package_names`" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
         packages = AutoMerge.get_all_non_jll_package_names(registry_path)

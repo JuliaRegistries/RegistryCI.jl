@@ -461,6 +461,10 @@ function _valid_change(old_version::VersionNumber, new_version::VersionNumber)
     end
 end
 
+const AUTHOR_APPROVAL_INSTRUCTIONS = string(
+    "**If this was not a mistake and you wish to merge this PR anyway,"
+    "write a comment that says \"merge approved\".**")
+
 const guideline_sequential_version_number = Guideline(;
     info="Sequential version number",
     docs=string(
@@ -471,6 +475,7 @@ const guideline_sequential_version_number = Guideline(;
         "valid new versions are `1.0.1`, `1.1.1`, `1.2.0` and `2.0.0`. ",
         "Invalid new versions include `1.0.2` (skips `1.0.1`), ",
         "`1.3.0` (skips `1.2.0`), `3.0.0` (skips `2.0.0`) etc.",
+        AUTHOR_APPROVAL_INSTRUCTIONS
     ),
     check=data -> meets_sequential_version_number(
         data.pkg,
@@ -976,7 +981,8 @@ function get_automerge_guidelines(
     check_license::Bool,
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
-    use_distance_check::Bool
+    use_distance_check::Bool,
+    author_approved::Bool # currently unused for new packages
 )
     guidelines = [
         (guideline_registry_consistency_tests_pass, true),
@@ -1018,12 +1024,13 @@ function get_automerge_guidelines(
     check_license::Bool,
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
-    use_distance_check::Bool # unused for new versions
+    use_distance_check::Bool, # unused for new versions
+    author_approved::Bool
 )
     guidelines = [
         (guideline_registry_consistency_tests_pass, true),
         (guideline_pr_only_changes_allowed_files, true),
-        (guideline_sequential_version_number, !this_pr_can_use_special_jll_exceptions),
+        (guideline_sequential_version_number, !this_pr_can_use_special_jll_exceptions && !author_approved),
         (guideline_version_number_no_prerelease, true),
         (guideline_version_number_no_build, !this_pr_can_use_special_jll_exceptions),
         (guideline_compat_for_julia, true),

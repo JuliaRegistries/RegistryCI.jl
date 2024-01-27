@@ -14,7 +14,7 @@ jobs:
     # label is one that affects the execution of the workflow
     # Note: since the label contains a colon, we need to use a workaround like https://github.com/actions/runner/issues/1019#issuecomment-810482716
     # for the syntax to parse correctly.
-    if: "${{  github.event.action != 'labeled' || (github.event.action == 'labeled' && github.event.label.name == 'Override AutoMerge: name similarity is okay') }}"
+    if: "${{  github.event.action != 'labeled' || (github.event.action == 'labeled' && (github.event.label.name == 'Override AutoMerge: name similarity is okay' || github.event.label.name == 'package-author-approved')) }}"
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
