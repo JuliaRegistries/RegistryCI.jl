@@ -239,6 +239,20 @@ function comment_text_merge_now()
     return result
 end
 
+is_julia_stdlib(name) = name in julia_stdlib_list()
+
+function julia_stdlib_list()
+    stdlib_list = readdir(Pkg.Types.stdlib_dir())
+    # Before Julia v1.6 Artifacts.jl isn't a standard library, but
+    # we want to include it because JLL packages depend on the empty
+    # placeholder https://github.com/JuliaPackaging/Artifacts.jl
+    # in older versions for compatibility.
+    if VERSION < v"1.6.0"
+        push!(stdlib_list, "Artifacts")
+    end
+    return stdlib_list
+end
+
 function now_utc()
     utc = TimeZones.tz"UTC"
     return Dates.now(utc)
