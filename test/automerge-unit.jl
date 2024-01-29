@@ -123,6 +123,12 @@ end
             "ReallyLooooongNameCD", ["ReallyLooooongNameAB"]
         )[1]
     end
+    @testset "perform_distance_check" begin
+        @test AutoMerge.perform_distance_check(nothing)
+        @test AutoMerge.perform_distance_check([GitHub.Label(; name="hi")])
+        @test !AutoMerge.perform_distance_check([GitHub.Label(; name="Override AutoMerge: name similarity is okay")])
+        @test !AutoMerge.perform_distance_check([GitHub.Label(; name="hi"), GitHub.Label(; name="Override AutoMerge: name similarity is okay")])
+    end
     @testset "`get_all_non_jll_package_names`" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
         packages = AutoMerge.get_all_non_jll_package_names(registry_path)
@@ -617,7 +623,7 @@ end
             @test result[1]
             result = has_osi_license_in_depot("VisualStringDistances")
             @test result[1]
-    
+
             # Now, what happens if there's also a non-OSI license in another file?
             pkg_path = pkgdir_from_depot(tmp_depot, "UnbalancedOptimalTransport")
             open(joinpath(pkg_path, "LICENSE2"); write=true) do io
@@ -627,12 +633,12 @@ end
             end
             result = has_osi_license_in_depot("UnbalancedOptimalTransport")
             @test result[1]
-    
+
             # What if we also remove the original license, leaving only the CC0 license?
             rm(joinpath(pkg_path, "LICENSE"))
             result = has_osi_license_in_depot("UnbalancedOptimalTransport")
             @test !result[1]
-    
+
             # What about no license at all?
             pkg_path = pkgdir_from_depot(tmp_depot, "VisualStringDistances")
             rm(joinpath(pkg_path, "LICENSE"))

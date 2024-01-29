@@ -265,6 +265,8 @@ To prevent confusion between similarly named packages, the names of new packages
       [VisualStringDistances.jl](https://github.com/ericphanson/VisualStringDistances.jl)
       between the package name and any existing package must exceeds a certain
       a hand-chosen threshold (currently 2.5).
+
+These checks can be overridden by applying a label `Override AutoMerge: name similarity is okay` to the PR. This will turn off the check as long as the label is applied to the PR.
   """,
     check=data -> meets_distance_check(data.pkg, data.registry_master),
 )
@@ -371,6 +373,24 @@ function meets_distance_check(
         message *= "\n\n  </details>\n"
     end
     return (false, message)
+end
+
+# Used in `pull_request_build` to determine if we should
+# perform the distance check or not.
+# We expect to be passed the `labels` field of a PullRequest:
+# <https://github.com/JuliaWeb/GitHub.jl/blob/d24bd6798609ae356db308d65577e99aad0cf432/src/issues/pull_requests.jl#L33>
+function perform_distance_check(labels)
+    # No labels? Do the check
+    isnothing(labels) && return true
+    for label in labels
+        if label.name === "Override AutoMerge: name similarity is okay"
+            # found the override! Skip the check
+            @debug "Found label; skipping distance check" label.name
+            return false
+        end
+    end
+    # Did not find the override. Perform the check.
+    return true
 end
 
 const guideline_normal_capitalization = Guideline(;
@@ -956,6 +976,7 @@ function get_automerge_guidelines(
     check_license::Bool,
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
+    use_distance_check::Bool
 )
     guidelines = [
         (guideline_registry_consistency_tests_pass, true),
@@ -987,7 +1008,7 @@ function get_automerge_guidelines(
         # prints the list of similar package names in
         # the automerge comment. To make the comment easy
         # to read, we want this list to be at the end.
-        (guideline_distance_check, true),
+        (guideline_distance_check, use_distance_check),
     ]
     return guidelines
 end
@@ -997,6 +1018,7 @@ function get_automerge_guidelines(
     check_license::Bool,
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
+    use_distance_check::Bool # unused for new versions
 )
     guidelines = [
         (guideline_registry_consistency_tests_pass, true),
