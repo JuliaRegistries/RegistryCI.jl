@@ -129,6 +129,19 @@ end
         @test !AutoMerge.perform_distance_check([GitHub.Label(; name="Override AutoMerge: name similarity is okay")])
         @test !AutoMerge.perform_distance_check([GitHub.Label(; name="hi"), GitHub.Label(; name="Override AutoMerge: name similarity is okay")])
     end
+    @testset "has_author_approved_label" begin
+        @test !AutoMerge.has_package_author_approved_label(nothing)
+        @test !AutoMerge.has_package_author_approved_label([GitHub.Label(; name="hi")])
+        @test AutoMerge.has_package_author_approved_label([GitHub.Label(; name="Override AutoMerge: package author approved")])
+        @test AutoMerge.has_package_author_approved_label([GitHub.Label(; name="hi"), GitHub.Label(; name="Override AutoMerge: package author approved")])
+    end
+    @testset "pr_comment_is_blocking" begin
+        @test AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="hi"))
+        @test AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="block"))
+        @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]"))
+        @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]hi"))
+        @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[merge approved] abc"))
+    end
     @testset "`get_all_non_jll_package_names`" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
         packages = AutoMerge.get_all_non_jll_package_names(registry_path)

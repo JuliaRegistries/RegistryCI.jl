@@ -99,3 +99,7 @@ In that case you will also have to add the following
 + - run: chmod +x .ci/instantiate.sh
 ```
 in `ci.yml` and also `TagBotTriggers.yml` and `automerge.yml` (in which the above appears twice) files if those features are used.
+
+## Author approval workflow support
+
+Some guidelines allow the person invoking registration (typically the package author) to "approve" AutoMerge even if the guideline is not passing. This is facilitated by a labelling workflow `author_approval.yml` that must run on the registry in order to translate author-approval comments into labels that AutoMerge can use. The [General registry's workflows](https://github.com/JuliaRegistries/General/tree/master/.github/workflows) should once again be used as an example.
