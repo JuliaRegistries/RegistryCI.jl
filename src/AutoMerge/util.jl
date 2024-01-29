@@ -289,7 +289,7 @@ function get_all_non_jll_package_names(registry_dir::AbstractString)
     return packages
 end
 
-const AUTHOR_APPROVED_LABEL = "package-author-approved"
+const AUTHOR_APPROVED_LABEL = "Override AutoMerge: package author approved"
 
 function has_author_approved_label(labels)
     # No labels? Not approved

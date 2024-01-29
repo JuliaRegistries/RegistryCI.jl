@@ -463,7 +463,7 @@ end
 
 const AUTHOR_APPROVAL_INSTRUCTIONS = string(
     "**If this was not a mistake and you wish to merge this PR anyway,",
-    "write a comment that says \"merge approved\".**")
+    "write a comment that says `[merge approved]`.**")
 
 const guideline_sequential_version_number = Guideline(;
     info="Sequential version number",
@@ -475,7 +475,7 @@ const guideline_sequential_version_number = Guideline(;
         "valid new versions are `1.0.1`, `1.1.1`, `1.2.0` and `2.0.0`. ",
         "Invalid new versions include `1.0.2` (skips `1.0.1`), ",
         "`1.3.0` (skips `1.2.0`), `3.0.0` (skips `2.0.0`) etc.",
-        AUTHOR_APPROVAL_INSTRUCTIONS
+        AUTHOR_APPROVAL_INSTRUCTIONS,
     ),
     check=data -> meets_sequential_version_number(
         data.pkg,
