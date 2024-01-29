@@ -140,7 +140,7 @@ end
         @test AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="block"))
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]"))
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]hi"))
-        @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="merge approved abc"))
+        @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[merge approved] abc"))
     end
     @testset "`get_all_non_jll_package_names`" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
