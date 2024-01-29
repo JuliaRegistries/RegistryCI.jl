@@ -125,3 +125,16 @@ Note that these automerge guidelines are deliberately conservative: it is
 very possible for a perfectly good name to not pass the automatic checks and
 require manual merging. They simply exist to provide a fast path so that
 manual review is not required for every new package.
+
+## List of all GitHub PR labels that can influence AutoMerge
+
+AutoMerge reads certain labels on GitHub registration pull requests to influence its decisions.
+Specifically, these labels are:
+
+* `Override AutoMerge: name similarity is okay`
+    * This label can be manually applied by folks with triage-level access to the registry repository.
+    * AutoMerge skips the "name similarity check" on new package registration PRs with this label.
+* `Override AutoMerge: package author approved`
+    * This label can be manually applied, but typically is applied by a separate Github Actions workflow which monitors the PR for comments by the package author, and applies this label if they write `[merge approved]`.
+    * This label currently only skips the "sequential version number" check in new versions. In the future, the author-approval mechanism may be used for other checks (on both "new version" registrations and also "new package" registrations).
+        * When AutoMerge fails a check that can be skipped by author-approval, it will mention so in the comment, and direct authors to comment `[merge approved]` if they want to skip the check.
