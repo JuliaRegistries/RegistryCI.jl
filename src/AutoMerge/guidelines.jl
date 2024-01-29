@@ -1,7 +1,10 @@
 using HTTP: HTTP
 
-# TODO: change this to `true` once Julia 1.6 is no longer
-# the LTS.
+# TODO: change this value to `true` once we are ready to re-enable the
+# "Require `[compat]` for stdlib dependencies" feature.
+#
+# For example, we might consider changing this value to `true`
+# once Julia 1.6 is no longer the LTS.
 const _AUTOMERGE_REQUIRE_STDLIB_COMPAT = false
 
 const guideline_registry_consistency_tests_pass = Guideline(;
