@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: '05,17,29,41,53 * * * *'
   pull_request:
+    # opened = run when the PR is first opened
     # labeled = run when labels are applied, so that the "Override AutoMerge: name similarity is okay label is respected.
     # synchronize = run when a commit is pushed to the PR
     types: [opened, labeled, synchronize]
