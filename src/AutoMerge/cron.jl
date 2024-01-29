@@ -56,7 +56,7 @@ function all_specified_check_runs_passed(
 end
 
 function pr_comment_is_blocking(c::GitHub.Comment)
-    # Note: `merge_approved` is not case sensitive, to match the semantics of `contains` on GHA
+    # Note: `[merge approved]` is not case sensitive, to match the semantics of `contains` on GitHub Actions
     not_blocking = occursin("[noblock]", body(c)) || occursin("[merge approved]", lowercase(body(c)))
     return !not_blocking
 end

@@ -130,10 +130,10 @@ end
         @test !AutoMerge.perform_distance_check([GitHub.Label(; name="hi"), GitHub.Label(; name="Override AutoMerge: name similarity is okay")])
     end
     @testset "has_author_approved_label" begin
-        @test !AutoMerge.has_author_approved_label(nothing)
-        @test !AutoMerge.has_author_approved_label([GitHub.Label(; name="hi")])
-        @test AutoMerge.has_author_approved_label([GitHub.Label(; name="Override AutoMerge: package author approved")])
-        @test AutoMerge.has_author_approved_label([GitHub.Label(; name="hi"), GitHub.Label(; name="Override AutoMerge: package author approved")])
+        @test !AutoMerge.has_package_author_approved_label(nothing)
+        @test !AutoMerge.has_package_author_approved_label([GitHub.Label(; name="hi")])
+        @test AutoMerge.has_package_author_approved_label([GitHub.Label(; name="Override AutoMerge: package author approved")])
+        @test AutoMerge.has_package_author_approved_label([GitHub.Label(; name="hi"), GitHub.Label(; name="Override AutoMerge: package author approved")])
     end
     @testset "pr_comment_is_blocking" begin
         @test AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="hi"))

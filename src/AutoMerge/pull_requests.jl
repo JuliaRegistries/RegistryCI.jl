@@ -196,7 +196,7 @@ function pull_request_build(data::GitHubAutoMergeData; check_license)::Nothing
         this_is_jll_package=this_is_jll_package,
         this_pr_can_use_special_jll_exceptions=this_pr_can_use_special_jll_exceptions,
         use_distance_check=perform_distance_check(data.pr.labels),
-        author_approved=has_author_approved_label(data.pr.labels)
+        package_author_approved=has_package_author_approved_label(data.pr.labels)
     )
     checked_guidelines = Guideline[]
 

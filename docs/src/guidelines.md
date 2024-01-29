@@ -23,7 +23,7 @@ function guidelines_to_markdown_output(guidelines_function::Function)
         this_is_jll_package = false,
         this_pr_can_use_special_jll_exceptions = false,
         use_distance_check = false,
-        author_approved = false,
+        package_author_approved = false,
     )
     filter!(x -> x[1] != :update_status, guidelines)
     filter!(x -> !(x[1].docs isa Nothing), guidelines)
@@ -53,7 +53,7 @@ function guidelines_to_markdown_output(guidelines_function::Function)
         this_is_jll_package = false,
         this_pr_can_use_special_jll_exceptions = false,
         use_distance_check = false,
-        author_approved = false,
+        package_author_approved = false,
     )
     filter!(x -> x[1] != :update_status, guidelines)
     filter!(x -> !(x[1].docs isa Nothing), guidelines)
