@@ -1,5 +1,12 @@
 using HTTP: HTTP
 
+# TODO: change this value to `true` once we are ready to re-enable the
+# "Require `[compat]` for stdlib dependencies" feature.
+#
+# For example, we might consider changing this value to `true`
+# once Julia 1.6 is no longer the LTS.
+const _AUTOMERGE_REQUIRE_STDLIB_COMPAT = false
+
 const guideline_registry_consistency_tests_pass = Guideline(;
     info="Registy consistency tests",
     docs=nothing,
@@ -91,8 +98,15 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
     for version_range in keys(deps)
         if version in Pkg.Types.VersionRange(version_range)
             for name in keys(deps[version_range])
-                if !is_jll_name(name)
-                    @debug("Found a new (non-JLL) dependency: $(name)")
+                if _AUTOMERGE_REQUIRE_STDLIB_COMPAT
+                    debug_msg = "Found a new (non-JLL) dependency: $(name)"
+                    apply_compat_requirement = !is_jll_name(name)
+                else
+                    debug_msg = "Found a new (non-stdlib non-JLL) dependency: $(name)"
+                    apply_compat_requirement = !is_jll_name(name) && !is_julia_stdlib(name)
+                end
+                if apply_compat_requirement
+                    @debug debug_msg
                     dep_has_compat_with_upper_bound[name] = false
                 end
             end
