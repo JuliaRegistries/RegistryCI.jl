@@ -458,7 +458,7 @@ function meets_repo_url_requirement(pkg::String; registry_head::String)
 end
 
 function _invalid_sequential_version(reason::AbstractString)
-    return false, "Does not meet sequential version number guideline: $(reason). If this was intentional, please leave a comment saying so. Otherwise please correct the version number in your package and re-trigger registration.", :invalid
+    return false, "Does not meet sequential version number guideline: $(reason). $PACKAGE_AUTHOR_APPROVAL_INSTRUCTIONS", :invalid
 end
 
 function _valid_change(old_version::VersionNumber, new_version::VersionNumber)
@@ -489,7 +489,6 @@ const guideline_sequential_version_number = Guideline(;
         "valid new versions are `1.0.1`, `1.1.1`, `1.2.0` and `2.0.0`. ",
         "Invalid new versions include `1.0.2` (skips `1.0.1`), ",
         "`1.3.0` (skips `1.2.0`), `3.0.0` (skips `2.0.0`) etc.",
-        PACKAGE_AUTHOR_APPROVAL_INSTRUCTIONS,
     ),
     check=data -> meets_sequential_version_number(
         data.pkg,
