@@ -108,7 +108,7 @@ end
     end
     @testset "Package name match check" begin
         @test AutoMerge.meets_name_match_check("Flux", ["Abc", "Def"])[1]
-        @test !AutoMerge.meets_distance_check("Websocket", ["websocket"])[1]
+        @test !AutoMerge.meets_name_match_check("Websocket", ["websocket"])[1]
     end
     @testset "Package name distance" begin
         @test AutoMerge.meets_distance_check("Flux", ["Abc", "Def"])[1]
