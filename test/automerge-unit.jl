@@ -73,7 +73,7 @@ function comment_reference_test()
 
                 # `point_to_slack=false` should yield no references to Slack in the text
                 if !point_to_slack
-                    @test !contains(fail_text, "slack")
+                    @test !occursin("slack", fail_text)
                 end
             end
         end
