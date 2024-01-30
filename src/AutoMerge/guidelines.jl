@@ -761,7 +761,7 @@ function meets_version_can_be_pkg_added(
         string(
             "I was not able to install the package ",
             "(i.e. `Pkg.add(\"$(pkg)\")` failed). ",
-            "See the CI logs for details.",
+            "See the AutoMerge logs for details.",
         )
     end
 end
@@ -897,7 +897,7 @@ function meets_version_can_be_imported(
         string(
             "I was not able to load the package ",
             "(i.e. `import $(pkg)` failed). ",
-            "See the CI logs for details.",
+            "See the AutoMerge logs for details.",
         )
     end
 end
