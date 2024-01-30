@@ -52,7 +52,7 @@ function comment_reference_test()
         (type_name,type) in (("new_version", AutoMerge.NewVersion()), ("new_package", AutoMerge.NewPackage())),
         suggest_onepointzero in (true, false),
         # some code depends on above or below v"1"
-        version in (v"0.1.1", v"1.1.1")
+        version in (v"0.1", v"1")
 
         if pass
             for is_jll in (true, false)
@@ -73,7 +73,7 @@ function comment_reference_test()
 
                 # `point_to_slack=false` should yield no references to Slack in the text
                 if !point_to_slack
-                    @test !contains(text, "slack")
+                    @test !contains(fail_text, "slack")
                 end
             end
         end
