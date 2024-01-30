@@ -412,8 +412,16 @@ const guideline_name_identifier = Guideline(;
     docs=string(
         "The package name should be a valid Julia identifier (according to `Base.isidentifier`).",
     ),
-    check=data -> Base.isidentifier(data.pkg),
+    check=data -> meets_name_is_identifier(data.pkg),
 )
+
+function meets_name_is_identifier(pkg)
+    if Base.isidentifier(pkg)
+        return true, ""
+    else
+        return false, "The package's name ($pkg) is not a valid Julia identifier according to `Base.isidentifier`. Typically this means it contains `-` or other characters that can't be used in defining a variable name or module. The package must be renamed to be registered."
+    end
+end
 
 const guideline_normal_capitalization = Guideline(;
     info="Normal capitalization",
