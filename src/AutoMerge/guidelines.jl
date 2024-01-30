@@ -264,6 +264,7 @@ function sqrt_normalized_vd(name1, name2)
     return VisualStringDistances.visual_distance(name1, name2; normalize=x -> 5 + sqrt(x))
 end
 
+# This check cannot be overridden, since it's important for registry integrity
 const guideline_name_match_check = Guideline(;
     info = "Name does not match the name of any existing package names (up-to-case)",
     docs = "Packages must not match the name of existing package up-to-case, since on case-insensitive filesystems, this will break the registry.",
