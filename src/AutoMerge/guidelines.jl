@@ -407,6 +407,14 @@ function perform_distance_check(labels)
     return true
 end
 
+const guideline_name_identifier = Guideline(;
+    info="Name is a Julia identifier",
+    docs=string(
+        "The package name should be a valid Julia identifier (according to `Base.isidentifier`).",
+    ),
+    check=data -> Base.isidentifier(data.pkg),
+)
+
 const guideline_normal_capitalization = Guideline(;
     info="Normal capitalization",
     docs=string(
@@ -998,6 +1006,10 @@ function get_automerge_guidelines(
     package_author_approved::Bool # currently unused for new packages
 )
     guidelines = [
+        # We first verify the name is a valid Julia identifier.
+        # If not, we early exit (`:update_status`), since we don't want to proceed further.
+        (guideline_name_identifier, true),
+        (:update_status, true),
         (guideline_registry_consistency_tests_pass, true),
         (guideline_pr_only_changes_allowed_files, true),
         # (guideline_only_changes_specified_package, true), # not yet implemented

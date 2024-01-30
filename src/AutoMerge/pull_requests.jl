@@ -1,4 +1,4 @@
-const new_package_title_regex = r"^New package: (\w*?) v(\S*?)$"
+const new_package_title_regex = r"^New package: (\S*) v(\S*)$"
 
 const new_version_title_regex = r"^New version: (\w*?) v(\S*?)$"
 

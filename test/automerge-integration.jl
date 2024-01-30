@@ -166,6 +166,16 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             true,   # pass
             requires_commit,
         ),   # OK: UUID conflict but name and repo match
+        (
+            "master_1",
+            "feature_9",
+            "",
+            "New package: Requires-dash v1.0.0",
+            true,   # point_to_slack
+            true,   # check_license
+            false,   # pass
+            requires_commit,
+        ), # FAIL: new package name is not a Julia identifier
     ])
         @info "Performing integration tests with settings" test_number master_dir feature_dir public_dir title point_to_slack check_license pass commit
         with_master_branch(

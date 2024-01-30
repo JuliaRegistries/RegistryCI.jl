@@ -354,6 +354,11 @@ end
                 @test occursin(
                     AutoMerge.new_package_title_regex, "New package: HelloWorld v1.2.3"
                 )
+                # This one is not a valid package name, but nonetheless we want AutoMerge
+                # to run and fail.
+                @test occursin(
+                    AutoMerge.new_package_title_regex, "New package: Mathieu-Functions v1.0.0"
+                )
                 @test occursin(
                     AutoMerge.new_package_title_regex, "New package: HelloWorld v1.2.3+0"
                 )
