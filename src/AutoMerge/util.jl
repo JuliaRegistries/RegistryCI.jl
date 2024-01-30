@@ -84,44 +84,70 @@ function parse_registry_pkg_info(registry_path, pkg, version=nothing)
     return (; uuid=uuid, repo=repo, subdir=subdir, tree_hash=tree_hash)
 end
 
-function _comment_disclaimer(; point_to_slack::Bool=false)
-    result = string(
-        "\n\n",
-        "Note that the guidelines are only required for the pull request ",
-        "to be merged automatically. However, it is **strongly recommended** ",
-        "to follow them, since otherwise the pull request needs to be ",
-        "manually reviewed and merged by a human.",
-        "\n\n",
-        "After you have fixed the AutoMerge issues, simply retrigger Registrator, ",
-        "which will automatically update this pull request. ",
-        "You do not need to change the version number in your `Project.toml` file ",
-        "(unless of course the AutoMerge issue is that you skipped a version number, ",
-        "in which case you should change the version number).",
-        "\n\n",
-        "If you do not want to fix the AutoMerge issues, please post a comment ",
-        "explaining why you would like this pull request to be manually merged.",
-    )
-    if point_to_slack
-        result *= string(
-            " ",
-            "Then, send a message to the `#pkg-registration` channel in the ",
-            "[Julia Slack](https://julialang.org/slack/) to ask for help. ",
-            "Include a link to this pull request.",
-        )
-    end
-    return result
+#####
+##### AutoMerge comment
+#####
+
+# The AutoMerge comment is divided into numbered sections.
+# Besides the "AutoMerge Guidelines which are not met" and "AutoMerge Guidelines have all passed!"
+# sections, we keep these minimally customized, and instead simply include or exclude
+# whole sections depending on the context. This way, users can understand the message
+# without necessarily reading the details of each section each time.
+# We hope they will at least read the section titles, and if they aren't
+# familiar, hopefully they will also read the sections themselves.
+
+function _comment_bot_intro(n)
+    return string("## $n. Introduction\n\n", "Hello, I am an automated registration bot.",
+    " I help manage the registration process by checking your registration against a set of ","[AutoMerge guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/). ",
+    "Meeting these guidelines is only required for the pull request to be **merged automatically**. ",
+    "However, it is **strongly recommended** to follow them, since otherwise ",
+    "the pull request needs to be manually reviewed and merged by a human.\n\n")
 end
 
-function _comment_noblock()
+function _new_package_section(n)
+    return string("## $n. New package registration", "\n\n",
+    "Since you are registering a new package, please make sure that you have read the ",
+    "[package naming guidelines](https://julialang.github.io/Pkg.jl/dev/creating-packages/#Package-naming-guidelines-1).\n\n")
+end
+
+function _what_next_if_fail(n; point_to_slack=false)
+    msg = """
+    ## $n. What to do next
+
+    1. Please try to update your package to conform to these guidelines. The [General registry's README](https://github.com/JuliaRegistries/General/blob/master/README.md) has an FAQ that can help figure out how to do so. You can also leave a comment on this PR (and include `[noblock]`)"""
+    if point_to_slack
+        msg = string(msg, " or send a message to the `#pkg-registration` channel in the [public Julia Slack](https://julialang.org/slack/) to ask for help. Include a link to this pull request if you do so!")
+    end
+    msg = string(msg, "\n",
+        "2. After you have fixed the AutoMerge issues, simply retrigger Registrator, the same way you did in the initial registration. This will automatically update this pull request. You do not need to change the version number in your `Project.toml` file (unless of course the AutoMerge issue is that you skipped a version number, in which case you should change the version number).",
+        "\n\n",
+        "If you do not want to fix the AutoMerge issues, please post a comment explaining why you would like this pull request to be manually merged.")
+
+    if point_to_slack
+        msg = string(msg, " Then, send a message to the `#pkg-registration` channel in the [public Julia Slack](https://julialang.org/slack/) to ask for help.")
+    end
+    msg = string(msg, "\n\n")
+    return msg
+end
+
+function _automerge_guidelines_failed_section_title(n)
+    return "## $n. [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) which are not met\n\n"
+end
+
+function _automerge_guidelines_passed_section_title(n)
+    "## $n. [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) are all met!\n\n"
+end
+
+function _comment_noblock(n)
     result = string(
-        "\n\n---\n",
+        "## $n. To pause or stop registration\n\n",
         "If you want to prevent this pull request from ",
         "being auto-merged, simply leave a comment. ",
         "If you want to post a comment without blocking ",
         "auto-merging, you must include the text ",
         "`[noblock]` in your comment. ",
         "You can edit blocking comments, adding `[noblock]` ",
-        "to them in order to unblock auto-merging.",
+        "to them in order to unblock auto-merging.\n\n",
     )
     return result
 end
@@ -129,13 +155,17 @@ end
 function comment_text_pass(
     ::NewVersion, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool
 )
+    # Need to know this ahead of time to get the section numbers right
+    suggest_onepointzero &= version < v"1.0.0"
     result = string(
-        "Your `new version` pull request met all of the ",
+        _comment_bot_intro(1),
+        _automerge_guidelines_passed_section_title(2),
+        "Your new version registration met all of the ",
         "guidelines for auto-merging and is scheduled to ",
-        "be merged in the next round.",
-        _comment_noblock(),
-        _onepointzero_suggestion(suggest_onepointzero, version),
-        "\n<!-- [noblock] -->",
+        "be merged in the next round.\n\n",
+        _onepointzero_suggestion(3, suggest_onepointzero, version),
+        _comment_noblock(suggest_onepointzero ? 4 : 3),
+        "<!-- [noblock] -->",
     )
     return result
 end
@@ -143,41 +173,33 @@ end
 function comment_text_pass(
     ::NewPackage, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool
 )
+    suggest_onepointzero &= version < v"1.0.0"
     if is_jll
         result = string(
-            "Your `new _jll package` pull request met all of the ",
+            _comment_bot_intro(1),
+            _automerge_guidelines_passed_section_title(2),
+            "Your new `_jll` package registration met all of the ",
             "guidelines for auto-merging and is scheduled to ",
-            "be merged in the next round.",
-            "\n\n",
-            _comment_noblock(),
-            _onepointzero_suggestion(suggest_onepointzero, version),
-            "\n<!-- [noblock] -->",
+            "be merged in the next round.\n\n",
+            _onepointzero_suggestion(3, suggest_onepointzero, version),
+            _comment_noblock(suggest_onepointzero ? 4 : 3),
+            "<!-- [noblock] -->",
         )
     else
         result = string(
-            "Your `new package` pull request met all of the ",
+            _comment_bot_intro(1),
+            _new_package_section(2),
+            _automerge_guidelines_passed_section_title(3),
+            "Your new package registration met all of the ",
             "guidelines for auto-merging and is scheduled to ",
-            "be merged when the mandatory waiting period (3 days) has elapsed.",
-            "\n\n",
-            "Since you are registering a new package, ",
-            "please make sure that you have read the ",
-            "package naming guidelines: ",
-            "https://pkgdocs.julialang.org/v1/creating-packages/#Package-naming-guidelines",
-            "\n\n",
-            _comment_noblock(),
-            _onepointzero_suggestion(suggest_onepointzero, version),
-            "\n<!-- [noblock] -->",
+            "be merged when the mandatory waiting period (3 days) has elapsed.\n\n",
+            _onepointzero_suggestion(4, suggest_onepointzero, version),
+            _comment_noblock(suggest_onepointzero ? 5 : 4),
+            "<!-- [noblock] -->",
         )
     end
     return result
 end
-
-const _please_read_these_documents = string(
-    "Please make sure that you have read the ",
-    "[General registry README](https://github.com/JuliaRegistries/General/blob/master/README.md) ",
-    "and the ",
-    "[AutoMerge guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/). ",
-)
 
 function comment_text_fail(
     ::NewPackage,
@@ -186,23 +208,17 @@ function comment_text_fail(
     version::VersionNumber;
     point_to_slack::Bool=false,
 )
-    reasons_formatted = join(string.("- ", reasons), "\n")
+    suggest_onepointzero &= version < v"1.0.0"
+    reasons_formatted = string(join(string.("- ", reasons), "\n"), "\n\n")
     result = string(
-        "Your `new package` pull request does not meet ",
-        "the guidelines for auto-merging. ",
-        _please_read_these_documents,
-        "The following guidelines were not met:\n\n",
+        _comment_bot_intro(1),
+        _new_package_section(2),
+        _automerge_guidelines_failed_section_title(3),
         reasons_formatted,
-        _comment_disclaimer(; point_to_slack=point_to_slack),
-        "\n\n",
-        "Since you are registering a new package, ",
-        "please make sure that you have also read the ",
-        "package naming guidelines: ",
-        "https://pkgdocs.julialang.org/v1/creating-packages/#Package-naming-guidelines",
-        "\n\n",
-        _comment_noblock(),
-        _onepointzero_suggestion(suggest_onepointzero, version),
-        "\n<!-- [noblock] -->",
+        _what_next_if_fail(4; point_to_slack=point_to_slack),
+        _onepointzero_suggestion(5, suggest_onepointzero, version),
+        _comment_noblock(suggest_onepointzero ? 6 : 5),
+        "<!-- [noblock] -->",
     )
     return result
 end
@@ -214,17 +230,16 @@ function comment_text_fail(
     version::VersionNumber;
     point_to_slack::Bool=false,
 )
-    reasons_formatted = join(string.("- ", reasons), "\n")
+    suggest_onepointzero &= version < v"1.0.0"
+    reasons_formatted = string(join(string.("- ", reasons), "\n"), "\n\n")
     result = string(
-        "Your `new version` pull request does not meet ",
-        "the guidelines for auto-merging. ",
-        _please_read_these_documents,
-        "The following guidelines were not met:\n\n",
+        _comment_bot_intro(1),
+        _automerge_guidelines_failed_section_title(2),
         reasons_formatted,
-        _comment_disclaimer(; point_to_slack=point_to_slack),
-        _comment_noblock(),
-        _onepointzero_suggestion(suggest_onepointzero, version),
-        "\n<!-- [noblock] -->",
+        _what_next_if_fail(3; point_to_slack=point_to_slack),
+        _onepointzero_suggestion(4, suggest_onepointzero, version),
+        _comment_noblock(suggest_onepointzero ? 5 : 4),
+        "<!-- [noblock] -->",
     )
     return result
 end
@@ -258,10 +273,10 @@ function now_utc()
     return Dates.now(utc)
 end
 
-function _onepointzero_suggestion(suggest_onepointzero::Bool, version::VersionNumber)
+function _onepointzero_suggestion(n, suggest_onepointzero::Bool, version::VersionNumber)
     if suggest_onepointzero && version < v"1.0.0"
         result = string(
-            "\n\n---\n",
+            "## $n. Declare v1.0?\n\n",
             "On a separate note, I see that you are registering ",
             "a release with a version number of the form ",
             "`v0.X.Y`.\n\n",
@@ -272,7 +287,7 @@ function _onepointzero_suggestion(suggest_onepointzero::Bool, version::VersionNu
             "It's just a recommendation.)\n\n",
             "If your package does not yet have a stable public ",
             "API, then of course you are not yet ready to ",
-            "release version `v1.0.0`.",
+            "release version `v1.0.0`.\n\n",
         )
         return result
     else
