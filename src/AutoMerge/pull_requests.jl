@@ -89,7 +89,7 @@ function pull_request_build(
     public_registries::Vector{<:AbstractString}=String[],
     read_only::Bool,
     environment_variables_to_pass::Vector{<:AbstractString}=String[],
-    new_package_waiting_period::Dates.TimePeriod=new_package_waiting_period,
+    new_package_waiting_period=new_package_waiting_period,
 )::Nothing
     pr = my_retry(() -> GitHub.pull_request(api, registry, pr_number; auth=auth))
     _github_api_pr_head_commit_sha = pull_request_head_sha(pr)
@@ -171,7 +171,7 @@ function pull_request_build(
     return nothing
 end
 
-function pull_request_build(data::GitHubAutoMergeData; check_license, new_package_waiting_period::Dates.TimePeriod)::Nothing
+function pull_request_build(data::GitHubAutoMergeData; check_license, new_package_waiting_period)::Nothing
     kind = package_or_version(data.registration_type)
     this_is_jll_package = is_jll_name(data.pkg)
     @info(

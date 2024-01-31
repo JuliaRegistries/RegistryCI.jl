@@ -71,7 +71,7 @@ function run(;
     cicfg::CIService=auto_detect_ci_service(; env=env),
     merge_new_packages::Bool,
     merge_new_versions::Bool,
-    new_package_waiting_period::Dates.TimePeriod,
+    new_package_waiting_period,
     new_jll_package_waiting_period,
     new_version_waiting_period,
     new_jll_version_waiting_period,

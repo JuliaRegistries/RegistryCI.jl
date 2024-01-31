@@ -171,7 +171,7 @@ function comment_text_pass(
 end
 
 function comment_text_pass(
-    ::NewPackage, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool; new_package_waiting_period::Dates.TimePeriod
+    ::NewPackage, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool; new_package_waiting_period,
 )
     suggest_onepointzero &= version < v"1.0.0"
     if is_jll
