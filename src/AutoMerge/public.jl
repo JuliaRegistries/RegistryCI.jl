@@ -161,6 +161,7 @@ function run(;
             public_registries=public_registries,
             read_only=read_only,
             environment_variables_to_pass=environment_variables_to_pass,
+            new_package_waiting_period=new_package_waiting_period,
         )
     else
         always_assert(run_merge_build)
