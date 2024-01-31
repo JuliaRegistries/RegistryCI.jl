@@ -264,6 +264,35 @@ function sqrt_normalized_vd(name1, name2)
     return VisualStringDistances.visual_distance(name1, name2; normalize=x -> 5 + sqrt(x))
 end
 
+# This check cannot be overridden, since it's important for registry integrity
+const guideline_name_match_check = Guideline(;
+    info = "Name does not match the name of any existing package names (up-to-case)",
+    docs = "Packages must not match the name of existing package up-to-case, since on case-insensitive filesystems, this will break the registry.",
+    check=data -> meets_name_match_check(data.pkg, data.registry_master))
+
+function meets_name_match_check(pkg_name::AbstractString, registry_master::AbstractString)
+    other_packages = get_all_non_jll_package_names(registry_master)
+    return meets_name_match_check(pkg_name, other_packages)
+end
+
+function meets_name_match_check(
+    pkg_name::AbstractString,
+    other_packages::Vector;
+)
+    for other_pkg in other_packages
+        if pkg_name == other_pkg
+            # We short-circuit in this case; more information doesn't help.
+            return (false, "Package name already exists in the registry.")
+        elseif lowercase(pkg_name) == lowercase(other_pkg)
+            return (false, "Package name matches existing package name $(other_pkg) up-to-case.")
+        end
+    end
+    return (true, "")
+end
+
+
+# This check looks for similar (but not exactly matching) names. It can be
+# overridden by a label.
 const guideline_distance_check = Guideline(;
     info="Name is not too similar to existing package names",
     docs="""
@@ -302,18 +331,9 @@ function meets_distance_check(
 )
     problem_messages = Tuple{String,Tuple{Float64,Float64,Float64}}[]
     for other_pkg in other_packages
-        if pkg_name == other_pkg
-            # We short-circuit in this case; more information doesn't help.
-            return (false, "Package name already exists in the registry.")
-        elseif lowercase(pkg_name) == lowercase(other_pkg)
-            # We'll sort this first
-            push!(
-                problem_messages,
-                (
-                    "Package name matches existing package name $(other_pkg) up to case.",
-                    (0, 0, 0),
-                ),
-            )
+        if lowercase(pkg_name) == lowercase(other_pkg)
+            # We handle this case in `meets_name_match_check`
+            continue
         else
             msg = ""
 
@@ -1022,6 +1042,8 @@ function get_automerge_guidelines(
         (guideline_version_can_be_imported, true),
         (:update_status, true),
         (guideline_dependency_confusion, true),
+        # this is the non-optional part of name checking
+        (guideline_name_match_check, true),
         # We always run the `guideline_distance_check`
         # check last, because if the check fails, it
         # prints the list of similar package names in
