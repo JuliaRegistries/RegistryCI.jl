@@ -76,6 +76,11 @@ end
 end
 
 @testset "Guidelines for new packages" begin
+    @testset "meets_pr_is_authorized" begin
+        @test !AutoMerge.meets_pr_is_authorized(:not_authorized)[1]
+        @test AutoMerge.meets_pr_is_authorized(:jll)[1]
+        @test AutoMerge.meets_pr_is_authorized(:normal)[1]
+    end
     @testset "Normal capitalization" begin
         @test AutoMerge.meets_normal_capitalization("Zygote")[1]  # Regular name
         @test AutoMerge.meets_normal_capitalization("Zygote")[1]
