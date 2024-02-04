@@ -222,6 +222,10 @@ function pull_request_build(data::GitHubAutoMergeData; check_license)::Nothing
         end
     end
 
+    passing_messages = filter(!isempty,  message.(filter(passed, checked_guidelines)))
+    failing_messages = filter(!isempty,  message.(filter(!passed, checked_guidelines)))
+
+
     if all(passed, checked_guidelines) # success
         description = "New $kind. Approved. name=\"$(data.pkg)\". sha=\"$(data.current_pr_head_commit_sha)\""
         update_status(
@@ -229,6 +233,7 @@ function pull_request_build(data::GitHubAutoMergeData; check_license)::Nothing
         )
         this_pr_comment_pass = comment_text_pass(
             data.registration_type,
+            passing_messages,
             data.suggest_onepointzero,
             data.version,
             this_pr_can_use_special_jll_exceptions,
@@ -241,10 +246,9 @@ function pull_request_build(data::GitHubAutoMergeData; check_license)::Nothing
             context="automerge/decision",
             description="New $kind. Failed.",
         )
-        failing_messages = message.(filter(!passed, checked_guidelines))
         this_pr_comment_fail = comment_text_fail(
             data.registration_type,
-            failing_messages,
+            passing_messages, failing_messages,
             data.suggest_onepointzero,
             data.version;
             point_to_slack=data.point_to_slack,

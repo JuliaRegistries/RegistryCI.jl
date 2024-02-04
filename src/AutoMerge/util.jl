@@ -151,15 +151,29 @@ function _comment_noblock(n)
     )
     return result
 end
+function format_messages(messages)
+    return string(join(string.("- ", messages), "\n"), "\n\n")
+end
+
 
 function comment_text_pass(
-    ::NewVersion, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool
+    ::NewVersion, passing_messages::Vector{String},
+    suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool
 )
     # Need to know this ahead of time to get the section numbers right
     suggest_onepointzero &= version < v"1.0.0"
+
+    if !isempty(passing_messages)
+        reasons = string("AutoMerge had some comments on your successful registration:\n",
+                         format_messages(passing_messages))
+    else
+        reasons = ""
+    end
+
     result = string(
         _comment_bot_intro(1),
         _automerge_guidelines_passed_section_title(2),
+        reasons,
         "Your new version registration met all of the ",
         "guidelines for auto-merging and is scheduled to ",
         "be merged in the next round.\n\n",
@@ -171,13 +185,21 @@ function comment_text_pass(
 end
 
 function comment_text_pass(
-    ::NewPackage, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool
+    ::NewPackage, passing_messages::Vector{String},
+    suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool
 )
+    if !isempty(passing_messages)
+        reasons = string("AutoMerge had some comments on your successful registration:\n",
+                        format_messages(passing_messages))
+    else
+        reasons = ""
+    end
     suggest_onepointzero &= version < v"1.0.0"
     if is_jll
         result = string(
             _comment_bot_intro(1),
             _automerge_guidelines_passed_section_title(2),
+            reasons,
             "Your new `_jll` package registration met all of the ",
             "guidelines for auto-merging and is scheduled to ",
             "be merged in the next round.\n\n",
@@ -190,6 +212,7 @@ function comment_text_pass(
             _comment_bot_intro(1),
             _new_package_section(2),
             _automerge_guidelines_passed_section_title(3),
+            reasons,
             "Your new package registration met all of the ",
             "guidelines for auto-merging and is scheduled to ",
             "be merged when the mandatory waiting period (3 days) has elapsed.\n\n",
@@ -203,18 +226,16 @@ end
 
 function comment_text_fail(
     ::NewPackage,
-    reasons::Vector{String},
-    suggest_onepointzero::Bool,
+    passing_messages::Vector{String}, failing_messages::Vector{String},    suggest_onepointzero::Bool,
     version::VersionNumber;
     point_to_slack::Bool=false,
 )
     suggest_onepointzero &= version < v"1.0.0"
-    reasons_formatted = string(join(string.("- ", reasons), "\n"), "\n\n")
     result = string(
         _comment_bot_intro(1),
         _new_package_section(2),
         _automerge_guidelines_failed_section_title(3),
-        reasons_formatted,
+        format_messages(failing_messages),
         _what_next_if_fail(4; point_to_slack=point_to_slack),
         _onepointzero_suggestion(5, suggest_onepointzero, version),
         _comment_noblock(suggest_onepointzero ? 6 : 5),
@@ -225,17 +246,15 @@ end
 
 function comment_text_fail(
     ::NewVersion,
-    reasons::Vector{String},
-    suggest_onepointzero::Bool,
+    passing_messages::Vector{String}, failing_messages::Vector{String},    suggest_onepointzero::Bool,
     version::VersionNumber;
     point_to_slack::Bool=false,
 )
     suggest_onepointzero &= version < v"1.0.0"
-    reasons_formatted = string(join(string.("- ", reasons), "\n"), "\n\n")
     result = string(
         _comment_bot_intro(1),
         _automerge_guidelines_failed_section_title(2),
-        reasons_formatted,
+        format_messages(failing_messages),
         _what_next_if_fail(3; point_to_slack=point_to_slack),
         _onepointzero_suggestion(4, suggest_onepointzero, version),
         _comment_noblock(suggest_onepointzero ? 5 : 4),
