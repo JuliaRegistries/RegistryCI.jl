@@ -63,6 +63,7 @@ struct GitHubAutoMergeData
     auth::GitHub.Authorization
 
     # Type of authorization for automerge. This can be either:
+    # :not_authorized - PR is not authorized for merging
     # :jll - special jll exceptions are allowed,
     # :normal - normal automerge rules.
     authorization::Symbol
@@ -112,7 +113,7 @@ function GitHubAutoMergeData(; kwargs...)
     kwargs = (; pkg_code_path=pkg_code_path, kwargs...)
     fields = fieldnames(GitHubAutoMergeData)
     always_assert(Set(keys(kwargs)) == Set(fields))
-    always_assert(kwargs[:authorization] ∈ (:normal, :jll))
+    always_assert(kwargs[:authorization] ∈ (:not_authorized, :normal, :jll))
     return GitHubAutoMergeData(getindex.(Ref(kwargs), fields)...)
 end
 

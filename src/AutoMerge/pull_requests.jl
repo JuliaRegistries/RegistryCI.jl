@@ -127,6 +127,9 @@ function pull_request_build(
         return nothing
     end
 
+    # Here we check whether or not the PR author is authorized
+    # for merging. If not, we will fail a guideline, but
+    # we will still run all the guidelines.
     pkg, version = parse_pull_request_title(registration_type, pr)
     pr_author_login = author_login(pr)
     authorization = check_authorization(
@@ -136,10 +139,6 @@ function pull_request_build(
         authorized_authors_special_jll_exceptions,
         error_exit_if_automerge_not_applicable,
     )
-
-    if authorization == :not_authorized
-        return nothing
-    end
 
     registry_master = clone_repo(registry)
     if !master_branch_is_default_branch
