@@ -244,7 +244,7 @@ function meets_name_ascii(pkg)
 end
 
 const guideline_julia_name_check = Guideline(;
-    info="Name does not include \"julia\" or start with \"Ju\".",
+    info="Name does not include \"julia\", start with \"Ju\", or end with \"jl\".",
     check=data -> meets_julia_name_check(data.pkg),
 )
 
@@ -254,6 +254,8 @@ function meets_julia_name_check(pkg)
         "Lowercase package name $(lowercase(pkg)) contains the string \"julia\"."
     elseif startswith(pkg, "Ju")
         return false, "Package name starts with \"Ju\"."
+    elseif endswith(lowercase(pkg), "jl")
+        return false, "Lowercase package name $(lowercase(pkg)) ends with \"jl\"."
     else
         return true, ""
     end
