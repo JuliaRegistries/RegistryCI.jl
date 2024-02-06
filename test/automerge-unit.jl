@@ -45,7 +45,45 @@ function pkgdir_from_depot(depot_path::String, pkg::String)
     return only_pkdir
 end
 
+# Here we reference test all the permutations of the AutoMerge comments.
+# This allows us to see the diffs in PRs that change the AutoMerge comment.
+function comment_reference_test()
+    for pass in (true, false),
+        (type_name,type) in (("new_version", AutoMerge.NewVersion()), ("new_package", AutoMerge.NewPackage())),
+        suggest_onepointzero in (true, false),
+        # some code depends on above or below v"1"
+        version in (v"0.1", v"1")
+
+        if pass
+            for is_jll in (true, false)
+                name = string("comment", "_pass_", pass, "_type_", type_name,
+                "_suggest_onepointzero_", suggest_onepointzero,
+                "_version_", version, "_is_jll_", is_jll)
+                @test_reference "reference_comments/$name.md" AutoMerge.comment_text_pass(type, suggest_onepointzero, version, is_jll)
+            end
+        else
+            for point_to_slack in (true, false)
+                name = string("comment", "_pass_", pass, "_type_", type_name,
+                "_suggest_onepointzero_", suggest_onepointzero,
+                "_version_", version, "_point_to_slack_", point_to_slack)
+                reasons = ["Example guideline failed. Please fix it."]
+                fail_text = AutoMerge.comment_text_fail(type, reasons, suggest_onepointzero, version; point_to_slack=point_to_slack)
+
+                @test_reference "reference_comments/$name.md" fail_text
+
+                # `point_to_slack=false` should yield no references to Slack in the text
+                if !point_to_slack
+                    @test !occursin("slack", fail_text)
+                end
+            end
+        end
+    end
+end
+
 @testset "Utilities" begin
+    @testset "comment_reference_test" begin
+        comment_reference_test()
+    end
     @testset "`AutoMerge.parse_registry_pkg_info`" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
         result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI", "1.0.0")
