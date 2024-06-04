@@ -172,6 +172,11 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                 for (v, data) in vers
                     Test.@test VersionNumber(v) isa VersionNumber
                     Test.@test haskey(data, "git-tree-sha1")
+
+                    # https://github.com/JuliaRegistries/RegistryCI.jl/issues/523
+                    # "yanked" is correct.
+                    # "yank" (and all other variants) are incorrect.
+                    Test.@test keys(data) ⊆ ["git-tree-sha1", "yanked"]
                 end
 
                 # Deps.toml testing
@@ -193,7 +198,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     compressed = RegistryTools.Compress.compress(
                         depsfile, RegistryTools.Compress.load(depsfile)
                     )
-                    Test.@test compressed == deps
+                    Test.@test _spacify_hyphens(compressed) == _spacify_hyphens(deps)
                 else
                     @debug "Deps.toml file does not exist" depsfile
                 end
@@ -229,7 +234,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     mapvalues = (f, dict) -> Dict(k => f(v) for (k, v) in dict)
                     f_inner = v -> Pkg.Types.VersionRange.(v)
                     f_outer = dict -> mapvalues(f_inner, dict)
-                    Test.@test mapvalues(f_outer, compressed) == mapvalues(f_outer, compat)
+                    Test.@test _spacify_hyphens(mapvalues(f_outer, compressed)) == _spacify_hyphens(mapvalues(f_outer, compat))
                 else
                     @debug "Compat.toml file does not exist" compatfile
                 end
@@ -251,3 +256,28 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
     end
     return nothing
 end
+
+# Change all occurences of "digit-digit" to "digit - digit"
+function _spacify_hyphens(str::AbstractString)
+    r = r"(\d)-(\d)"
+    s = s"\1 - \2"
+    new_str = replace(str, r => s)
+end
+
+# Apply `_spacify_hyphens()` recursively through a dictionary
+function _spacify_hyphens(dict::Dict{K, V}) where {K, V}
+    new_dict = Dict{K, V}()
+    # Note: `Base.Dict` iterates key-value pairs, so it's sufficient for us to do
+    # `for (k, v) in dict`. However, there are some other dictionary implementations
+    # (such as the Dictionaries.jl package) that do not iterate key-value pairs. So,
+    # if we ever decide to widen the type signature of this method, we'll need to
+    # change `(k, v) in dict` to `(k, v) in pairs(dict)`.
+    for (k, v) in dict
+        new_k = _spacify_hyphens(k)
+        new_v = _spacify_hyphens(v)
+    end
+    return new_dict
+end
+
+_spacify_hyphens(range::Pkg.Types.VersionRange) = range
+_spacify_hyphens(ranges::Vector{Pkg.Types.VersionRange}) = ranges

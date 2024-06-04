@@ -45,6 +45,9 @@ function main()
 end
 
 function repo_and_version_of_pull_request_body(body)
+    # Return immediately if the pull request's description is empty. In this
+    # case no further information can be obtained about a registration
+    isnothing(body) && return (nothing, nothing)
     if occursin("JLL package", body)
         @info "Skipping JLL package registration"
         return nothing, nothing

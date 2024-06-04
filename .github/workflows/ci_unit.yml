@@ -1,13 +1,10 @@
 name: CI (unit tests)
 on:
+  merge_group: # GitHub Merge Queue
   pull_request:
-    branches:
-      - master
   push:
     branches:
       - master
-      - staging
-      - trying
     tags: '*'
 env:
   JULIA_PKG_UNPACK_REGISTRY: 'true'
@@ -28,6 +25,7 @@ jobs:
           - '1.5'
           - '1.6'
           - '1.7'
+          - '1.8'
           - '1'
           - 'nightly'
     steps:

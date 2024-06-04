@@ -22,6 +22,8 @@ function guidelines_to_markdown_output(guidelines_function::Function)
         check_license = true,
         this_is_jll_package = false,
         this_pr_can_use_special_jll_exceptions = false,
+        use_distance_check = false,
+        package_author_approved = false,
     )
     filter!(x -> x[1] != :update_status, guidelines)
     filter!(x -> !(x[1].docs isa Nothing), guidelines)
@@ -50,6 +52,8 @@ function guidelines_to_markdown_output(guidelines_function::Function)
         check_license = true,
         this_is_jll_package = false,
         this_pr_can_use_special_jll_exceptions = false,
+        use_distance_check = false,
+        package_author_approved = false,
     )
     filter!(x -> x[1] != :update_status, guidelines)
     filter!(x -> !(x[1].docs isa Nothing), guidelines)
@@ -92,10 +96,7 @@ PackageG = "0.2 - 1"    # includes infinitely many breaking 0.x releases of Pack
 See [Pkg's documentation](https://julialang.github.io/Pkg.jl/v1/compatibility/) for specification of `[compat]` entries in your
 `Project.toml` file.
 
-(**Note:** Standard libraries are excluded for this criterion since they are bundled
-with Julia, and, hence, implicitly included in the `[compat]` entry for Julia.
-For the time being, JLL dependencies are also excluded for this criterion because they
-often have non-standard version numbering schemes; however, this may change in the future.)
+(**Note:** JLL dependencies are excluded from this criterion because they often have non-standard version numbering schemes; however, this may change in the future.)
 
 You may find [CompatHelper.jl](https://github.com/bcbi/CompatHelper.jl) and [PackageCompatUI.jl](https://github.com/GunnarFarneback/PackageCompatUI.jl) helpful for maintaining up-to-date `[compat]` entries.
 
@@ -126,3 +127,16 @@ Note that these automerge guidelines are deliberately conservative: it is
 very possible for a perfectly good name to not pass the automatic checks and
 require manual merging. They simply exist to provide a fast path so that
 manual review is not required for every new package.
+
+## List of all GitHub PR labels that can influence AutoMerge
+
+AutoMerge reads certain labels on GitHub registration pull requests to influence its decisions.
+Specifically, these labels are:
+
+* `Override AutoMerge: name similarity is okay`
+    * This label can be manually applied by folks with triage-level access to the registry repository.
+    * AutoMerge skips the "name similarity check" on new package registration PRs with this label.
+* `Override AutoMerge: package author approved`
+    * This label can be manually applied, but typically is applied by a separate Github Actions workflow which monitors the PR for comments by the package author, and applies this label if they write `[merge approved]`.
+    * This label currently only skips the "sequential version number" check in new versions. In the future, the author-approval mechanism may be used for other checks (on both "new version" registrations and also "new package" registrations).
+        * When AutoMerge fails a check that can be skipped by author-approval, it will mention so in the comment, and direct authors to comment `[merge approved]` if they want to skip the check.

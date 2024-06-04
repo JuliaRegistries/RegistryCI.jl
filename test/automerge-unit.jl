@@ -10,6 +10,28 @@ using TimeZones
 
 const AutoMerge = RegistryCI.AutoMerge
 
+
+TEMP_DEPOT_FOR_TESTING = nothing
+
+function setup_global_depot()::String
+    global TEMP_DEPOT_FOR_TESTING
+    if TEMP_DEPOT_FOR_TESTING isa String
+        return TEMP_DEPOT_FOR_TESTING
+    end
+    tmp_depot = mktempdir()
+    env1 = copy(ENV)
+    env1["JULIA_DEPOT_PATH"] = tmp_depot
+    delete!(env1, "JULIA_LOAD_PATH")
+    delete!(env1, "JULIA_PROJECT")
+    env2 = copy(env1)
+    env2["JULIA_PKG_SERVER"] = ""
+    run(setenv(`julia -e 'import Pkg; Pkg.Registry.add("General")'`, env2))
+    run(setenv(`julia -e 'import Pkg; Pkg.add(["RegistryCI"])'`, env1))
+    TEMP_DEPOT_FOR_TESTING = tmp_depot
+    tmp_depot
+end
+
+
 # helper for testing `AutoMerge.meets_version_has_osi_license`
 function pkgdir_from_depot(depot_path::String, pkg::String)
     pkgdir_parent = joinpath(depot_path, "packages", pkg)
@@ -72,17 +94,23 @@ end
         @test !AutoMerge.meets_name_length("Flux")[1]
         @test !AutoMerge.meets_name_length("Flux")[1]
     end
-    @testset "Name does not include \"julia\" or start with \"Ju\"" begin
+    @testset "Name does not include \"julia\", start with \"Ju\", or end with \"jl\"" begin
         @test AutoMerge.meets_julia_name_check("Zygote")[1]
         @test AutoMerge.meets_julia_name_check("RegistryCI")[1]
         @test !AutoMerge.meets_julia_name_check("JuRegistryCI")[1]
         @test !AutoMerge.meets_julia_name_check("ZygoteJulia")[1]
         @test !AutoMerge.meets_julia_name_check("Zygotejulia")[1]
+        @test !AutoMerge.meets_julia_name_check("Sortingjl")[1]
+        @test !AutoMerge.meets_julia_name_check("BananasJL")[1]
         @test !AutoMerge.meets_julia_name_check("AbcJuLiA")[1]
     end
     @testset "Package name is ASCII" begin
         @test !AutoMerge.meets_name_ascii("ábc")[1]
         @test AutoMerge.meets_name_ascii("abc")[1]
+    end
+    @testset "Package name match check" begin
+        @test AutoMerge.meets_name_match_check("Flux", ["Abc", "Def"])[1]
+        @test !AutoMerge.meets_name_match_check("Websocket", ["websocket"])[1]
     end
     @testset "Package name distance" begin
         @test AutoMerge.meets_distance_check("Flux", ["Abc", "Def"])[1]
@@ -100,6 +128,25 @@ end
         @test !AutoMerge.meets_distance_check(
             "ReallyLooooongNameCD", ["ReallyLooooongNameAB"]
         )[1]
+    end
+    @testset "perform_distance_check" begin
+        @test AutoMerge.perform_distance_check(nothing)
+        @test AutoMerge.perform_distance_check([GitHub.Label(; name="hi")])
+        @test !AutoMerge.perform_distance_check([GitHub.Label(; name="Override AutoMerge: name similarity is okay")])
+        @test !AutoMerge.perform_distance_check([GitHub.Label(; name="hi"), GitHub.Label(; name="Override AutoMerge: name similarity is okay")])
+    end
+    @testset "has_author_approved_label" begin
+        @test !AutoMerge.has_package_author_approved_label(nothing)
+        @test !AutoMerge.has_package_author_approved_label([GitHub.Label(; name="hi")])
+        @test AutoMerge.has_package_author_approved_label([GitHub.Label(; name="Override AutoMerge: package author approved")])
+        @test AutoMerge.has_package_author_approved_label([GitHub.Label(; name="hi"), GitHub.Label(; name="Override AutoMerge: package author approved")])
+    end
+    @testset "pr_comment_is_blocking" begin
+        @test AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="hi"))
+        @test AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="block"))
+        @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]"))
+        @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]hi"))
+        @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[merge approved] abc"))
     end
     @testset "`get_all_non_jll_package_names`" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
@@ -579,49 +626,43 @@ end
     end
 
     @testset "`AutoMerge.meets_version_has_osi_license`" begin
-        # Let's install a fresh depot in a temporary directory
-        # and add some packages to inspect.
-        tmp_depot = mktempdir()
-        function has_osi_license_in_depot(pkg)
-            return AutoMerge.meets_version_has_osi_license(
-                pkg; pkg_code_path=pkgdir_from_depot(tmp_depot, pkg)
-            )
+        withenv("JULIA_PKG_PRECOMPILE_AUTO" => "0") do
+            # Let's install a fresh depot in a temporary directory
+            # and add some packages to inspect.
+            tmp_depot = setup_global_depot()
+            function has_osi_license_in_depot(pkg)
+                return AutoMerge.meets_version_has_osi_license(
+                    pkg; pkg_code_path=pkgdir_from_depot(tmp_depot, pkg)
+                )
+            end
+            # Let's test ourselves and some of our dependencies that just have MIT licenses:
+            result = has_osi_license_in_depot("RegistryCI")
+            @test result[1]
+            result = has_osi_license_in_depot("UnbalancedOptimalTransport")
+            @test result[1]
+            result = has_osi_license_in_depot("VisualStringDistances")
+            @test result[1]
+
+            # Now, what happens if there's also a non-OSI license in another file?
+            pkg_path = pkgdir_from_depot(tmp_depot, "UnbalancedOptimalTransport")
+            open(joinpath(pkg_path, "LICENSE2"); write=true) do io
+                cc0_bytes = read(joinpath(@__DIR__, "license_data", "CC0.txt"))
+                println(io)
+                write(io, cc0_bytes)
+            end
+            result = has_osi_license_in_depot("UnbalancedOptimalTransport")
+            @test result[1]
+
+            # What if we also remove the original license, leaving only the CC0 license?
+            rm(joinpath(pkg_path, "LICENSE"))
+            result = has_osi_license_in_depot("UnbalancedOptimalTransport")
+            @test !result[1]
+
+            # What about no license at all?
+            pkg_path = pkgdir_from_depot(tmp_depot, "VisualStringDistances")
+            rm(joinpath(pkg_path, "LICENSE"))
+            result = has_osi_license_in_depot("VisualStringDistances")
+            @test !result[1]
         end
-        env1 = copy(ENV)
-        env1["JULIA_DEPOT_PATH"] = tmp_depot
-        delete!(env1, "JULIA_LOAD_PATH")
-        delete!(env1, "JULIA_PROJECT")
-        env2 = copy(env1)
-        env2["JULIA_PKG_SERVER"] = ""
-        run(setenv(`julia -e 'import Pkg; Pkg.Registry.add("General")'`, env2))
-        run(setenv(`julia -e 'import Pkg; Pkg.add(["RegistryCI"])'`, env1))
-        # Let's test ourselves and some of our dependencies that just have MIT licenses:
-        result = has_osi_license_in_depot("RegistryCI")
-        @test result[1]
-        result = has_osi_license_in_depot("UnbalancedOptimalTransport")
-        @test result[1]
-        result = has_osi_license_in_depot("VisualStringDistances")
-        @test result[1]
-
-        # Now, what happens if there's also a non-OSI license in another file?
-        pkg_path = pkgdir_from_depot(tmp_depot, "UnbalancedOptimalTransport")
-        open(joinpath(pkg_path, "LICENSE2"); write=true) do io
-            cc0_bytes = read(joinpath(@__DIR__, "license_data", "CC0.txt"))
-            println(io)
-            write(io, cc0_bytes)
-        end
-        result = has_osi_license_in_depot("UnbalancedOptimalTransport")
-        @test result[1]
-
-        # What if we also remove the original license, leaving only the CC0 license?
-        rm(joinpath(pkg_path, "LICENSE"))
-        result = has_osi_license_in_depot("UnbalancedOptimalTransport")
-        @test !result[1]
-
-        # What about no license at all?
-        pkg_path = pkgdir_from_depot(tmp_depot, "VisualStringDistances")
-        rm(joinpath(pkg_path, "LICENSE"))
-        result = has_osi_license_in_depot("VisualStringDistances")
-        @test !result[1]
     end
 end

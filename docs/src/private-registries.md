@@ -13,9 +13,9 @@ After you have the registry configured, you can setup CI using RegistryCI by fol
 You will first need to copy the `.ci` folder in the root of the General registry to the root of your own registry. This folder contains some resources required for the RegistryCI package to work and update itself. If you do not need AutoMerge support, there is no need to copy the
 `stopwatch.jl` file in the `.ci` folder.
 
-Next, you will need to copy the `ci.yml` and `update_manifest.yml` workflow files.
+Next, you will need to copy the `registry-consistency-ci.yml` and `update_manifest.yml` workflow files.
 
-The `ci.yml` file should be modified as follows if you have packages in your registry that depend on packages in the General registry.
+The `registry-consistency-ci.yml` file should be modified as follows if you have packages in your registry that depend on packages in the General registry.
 If the packages in your registry depend on packages in other registries, they should also be added to `registry_deps`
 ```diff
 - run: julia --project=.ci/ --color=yes -e 'import RegistryCI; RegistryCI.test()'
@@ -98,4 +98,8 @@ In that case you will also have to add the following
   - run: chmod 400 .ci/Manifest.toml
 + - run: chmod +x .ci/instantiate.sh
 ```
-in `ci.yml` and also `TagBotTriggers.yml` and `automerge.yml` (in which the above appears twice) files if those features are used.
+in `registry-consistency-ci.yml` and also `TagBotTriggers.yml` and `automerge.yml` (in which the above appears twice) files if those features are used.
+
+## Author approval workflow support
+
+Some guidelines allow the person invoking registration (typically the package author) to "approve" AutoMerge even if the guideline is not passing. This is facilitated by a labelling workflow `author_approval.yml` that must run on the registry in order to translate author-approval comments into labels that AutoMerge can use. The [General registry's workflows](https://github.com/JuliaRegistries/General/tree/master/.github/workflows) should once again be used as an example.

@@ -92,7 +92,7 @@ function _comment_disclaimer(; point_to_slack::Bool=false)
         "to follow them, since otherwise the pull request needs to be ",
         "manually reviewed and merged by a human.",
         "\n\n",
-        "After you have fixed the AutoMerge issues, simple retrigger Registrator, ",
+        "After you have fixed the AutoMerge issues, simply retrigger Registrator, ",
         "which will automatically update this pull request. ",
         "You do not need to change the version number in your `Project.toml` file ",
         "(unless of course the AutoMerge issue is that you skipped a version number, ",
@@ -119,7 +119,9 @@ function _comment_noblock()
         "being auto-merged, simply leave a comment. ",
         "If you want to post a comment without blocking ",
         "auto-merging, you must include the text ",
-        "`[noblock]` in your comment.",
+        "`[noblock]` in your comment. ",
+        "You can edit blocking comments, adding `[noblock]` ",
+        "to them in order to unblock auto-merging.",
     )
     return result
 end
@@ -160,7 +162,7 @@ function comment_text_pass(
             "Since you are registering a new package, ",
             "please make sure that you have read the ",
             "package naming guidelines: ",
-            "https://julialang.github.io/Pkg.jl/dev/creating-packages/#Package-naming-guidelines-1",
+            "https://pkgdocs.julialang.org/v1/creating-packages/#Package-naming-guidelines",
             "\n\n",
             _comment_noblock(),
             _onepointzero_suggestion(suggest_onepointzero, version),
@@ -196,7 +198,7 @@ function comment_text_fail(
         "Since you are registering a new package, ",
         "please make sure that you have also read the ",
         "package naming guidelines: ",
-        "https://julialang.github.io/Pkg.jl/dev/creating-packages/#Package-naming-guidelines-1",
+        "https://pkgdocs.julialang.org/v1/creating-packages/#Package-naming-guidelines",
         "\n\n",
         _comment_noblock(),
         _onepointzero_suggestion(suggest_onepointzero, version),
@@ -299,4 +301,20 @@ function get_all_non_jll_package_names(registry_dir::AbstractString)
     filter!(x -> !endswith(x, "_jll"), packages)
     unique!(packages)
     return packages
+end
+
+const PACKAGE_AUTHOR_APPROVED_LABEL = "Override AutoMerge: package author approved"
+
+function has_package_author_approved_label(labels)
+    # No labels? Not approved
+    isnothing(labels) && return false
+    for label in labels
+        if label.name === PACKAGE_AUTHOR_APPROVED_LABEL
+            # found the approval
+            @debug "Found `$(PACKAGE_AUTHOR_APPROVED_LABEL)` label"
+            return true
+        end
+    end
+    # Did not find approval
+    return false
 end

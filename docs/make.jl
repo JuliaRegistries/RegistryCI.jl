@@ -6,7 +6,7 @@ DocMeta.setdocmeta!(RegistryCI, :DocTestSetup, :(using RegistryCI); recursive=tr
 makedocs(;
     modules=[RegistryCI],
     authors="Dilum Aluthge <dilum@aluthge.com>, Fredrik Ekre <ekrefredrik@gmail.com>, contributors",
-    repo="https://github.com/JuliaRegistries/RegistryCI.jl/blob/{commit}{path}#{line}",
+    repo=Remotes.GitHub("JuliaRegistries", "RegistryCI.jl"),
     sitename="RegistryCI.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
@@ -21,7 +21,6 @@ makedocs(;
         "Public API" => "public.md",
         "Internals (Private)" => "internals.md",
     ],
-    strict=true,
 )
 
 deploydocs(; repo="github.com/JuliaRegistries/RegistryCI.jl", push_preview=false)
