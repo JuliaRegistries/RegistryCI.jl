@@ -7,6 +7,7 @@ using Printf
 using RegistryCI
 using Test
 using TimeZones
+using ReferenceTests
 
 const AutoMerge = RegistryCI.AutoMerge
 
