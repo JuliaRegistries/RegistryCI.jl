@@ -132,17 +132,23 @@ end
         @test !AutoMerge.meets_name_length("Flux")[1]
         @test !AutoMerge.meets_name_length("Flux")[1]
     end
-    @testset "Name does not include \"julia\" or start with \"Ju\"" begin
+    @testset "Name does not include \"julia\", start with \"Ju\", or end with \"jl\"" begin
         @test AutoMerge.meets_julia_name_check("Zygote")[1]
         @test AutoMerge.meets_julia_name_check("RegistryCI")[1]
         @test !AutoMerge.meets_julia_name_check("JuRegistryCI")[1]
         @test !AutoMerge.meets_julia_name_check("ZygoteJulia")[1]
         @test !AutoMerge.meets_julia_name_check("Zygotejulia")[1]
+        @test !AutoMerge.meets_julia_name_check("Sortingjl")[1]
+        @test !AutoMerge.meets_julia_name_check("BananasJL")[1]
         @test !AutoMerge.meets_julia_name_check("AbcJuLiA")[1]
     end
     @testset "Package name is ASCII" begin
         @test !AutoMerge.meets_name_ascii("ábc")[1]
         @test AutoMerge.meets_name_ascii("abc")[1]
+    end
+    @testset "Package name match check" begin
+        @test AutoMerge.meets_name_match_check("Flux", ["Abc", "Def"])[1]
+        @test !AutoMerge.meets_name_match_check("Websocket", ["websocket"])[1]
     end
     @testset "Package name distance" begin
         @test AutoMerge.meets_distance_check("Flux", ["Abc", "Def"])[1]
