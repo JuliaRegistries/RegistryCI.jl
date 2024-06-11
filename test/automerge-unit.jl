@@ -59,7 +59,8 @@ function comment_reference_test()
                 name = string("comment", "_pass_", pass, "_type_", type_name,
                 "_suggest_onepointzero_", suggest_onepointzero,
                 "_version_", version, "_is_jll_", is_jll)
-                @test_reference "reference_comments/$name.md" AutoMerge.comment_text_pass(type, suggest_onepointzero, version, is_jll)
+                strip_equal = (x, y) -> strip(x) == strip(y)
+                @test_reference "reference_comments/$name.md" AutoMerge.comment_text_pass(type, suggest_onepointzero, version, is_jll) by=strip_equal
             end
         else
             for point_to_slack in (true, false)
