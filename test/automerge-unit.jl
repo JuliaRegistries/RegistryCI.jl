@@ -45,6 +45,8 @@ function pkgdir_from_depot(depot_path::String, pkg::String)
     return only_pkdir
 end
 
+strip_equal(x, y) = strip(x) == strip(y)
+
 # Here we reference test all the permutations of the AutoMerge comments.
 # This allows us to see the diffs in PRs that change the AutoMerge comment.
 function comment_reference_test()
@@ -59,7 +61,7 @@ function comment_reference_test()
                 name = string("comment", "_pass_", pass, "_type_", type_name,
                 "_suggest_onepointzero_", suggest_onepointzero,
                 "_version_", version, "_is_jll_", is_jll)
-                @test_reference "reference_comments/$name.md" AutoMerge.comment_text_pass(type, suggest_onepointzero, version, is_jll)
+                @test_reference "reference_comments/$name.md" AutoMerge.comment_text_pass(type, suggest_onepointzero, version, is_jll) by=strip_equal
             end
         else
             for point_to_slack in (true, false)
@@ -69,7 +71,7 @@ function comment_reference_test()
                 reasons = ["Example guideline failed. Please fix it."]
                 fail_text = AutoMerge.comment_text_fail(type, reasons, suggest_onepointzero, version; point_to_slack=point_to_slack)
 
-                @test_reference "reference_comments/$name.md" fail_text
+                @test_reference "reference_comments/$name.md" fail_text by=strip_equal
 
                 # `point_to_slack=false` should yield no references to Slack in the text
                 if !point_to_slack
