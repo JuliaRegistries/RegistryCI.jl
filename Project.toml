@@ -1,7 +1,7 @@
 name = "RegistryCI"
 uuid = "0c95cc5f-2f7e-43fe-82dd-79dbcba86b32"
 authors = ["Dilum Aluthge <dilum@aluthge.com>", "Fredrik Ekre <ekrefredrik@gmail.com>", "contributors"]
-version = "10.0.1"
+version = "10.1.0"
 
 [deps]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
@@ -34,6 +34,7 @@ LicenseCheck = "0.2"
 Pkg = "1"
 Printf = "<0.0.1, 1"
 Random = "<0.0.1, 1"
+ReferenceTests = "0.9, 0.10"
 RegistryTools = "2.2"
 SHA = "<0.0.1, 0.7, 1"
 SimpleMock = "1"
@@ -52,8 +53,9 @@ JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 SimpleMock = "a896ed2c-15a5-4479-b61d-a0e88e2a1d25"
+ReferenceTests = "324d217c-45ce-50fc-942e-d289b448e8cf"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TimeZones = "f269a46b-ccf7-5d73-abea-4c690281aa53"
 
 [targets]
-test = ["Dates", "GitHub", "JSON", "Pkg", "Printf", "SimpleMock", "Test", "TimeZones"]
+test = ["Dates", "GitHub", "JSON", "Pkg", "Printf", "SimpleMock", "ReferenceTests", "Test", "TimeZones"]
