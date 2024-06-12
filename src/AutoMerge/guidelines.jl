@@ -7,6 +7,19 @@ using HTTP: HTTP
 # once Julia 1.6 is no longer the LTS.
 const _AUTOMERGE_REQUIRE_STDLIB_COMPAT = false
 
+const guideline_pr_is_authorized = Guideline(;
+    info="PR creator is authorized for automerging",
+    check=data -> meets_pr_is_authorized(data.authorized),
+)
+
+function meets_pr_is_authorized(authorization)
+    if authorization == :not_authorized
+        return false, "PR creator is not authorized for merging. [Registrator.jl](https://github.com/JuliaRegistries/Registrator.jl) can be used for creating authorized registration PRs. Alternatively, this PR can be manually merged (especially if all the other guidelines are satisfied)."
+    else
+        return true, ""
+    end
+end
+
 const guideline_registry_consistency_tests_pass = Guideline(;
     info="Registy consistency tests",
     docs=nothing,
@@ -1049,6 +1062,7 @@ function get_automerge_guidelines(
         (guideline_version_can_be_imported, true),
         (:update_status, true),
         (guideline_dependency_confusion, true),
+        (guideline_pr_is_authorized, true),
         # this is the non-optional part of name checking
         (guideline_name_match_check, true),
         # We always run the `guideline_distance_check`
@@ -1091,6 +1105,7 @@ function get_automerge_guidelines(
         (guideline_version_has_osi_license, check_license),
         (guideline_src_names_OK, true),
         (guideline_version_can_be_imported, true),
+        (guideline_pr_is_authorized, true)
     ]
     return guidelines
 end
