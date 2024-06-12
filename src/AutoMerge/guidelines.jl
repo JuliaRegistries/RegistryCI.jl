@@ -1012,7 +1012,7 @@ function _run_pkg_commands(
     @info(string(
         "IMPORTANT: If you see any messages of the form \"Error: Some registries failed to update\"",
         "or \"registry dirty\", ",
-        "please disregard those messages. Those messages are normal and do not indicate an error.", 
+        "please disregard those messages. Those messages are normal and do not indicate an error.",
     ))
     cmd_ran_successfully = success(pipeline(cmd; stdout=stdout, stderr=stderr))
     cd(original_directory)
@@ -1042,9 +1042,9 @@ function get_automerge_guidelines(
 )
     guidelines = [
         # We first verify the name is a valid Julia identifier.
-        # If not, we early exit (`:update_status`), since we don't want to proceed further.
+        # If not, we early exit (`:early_exit_if_failed`), since we don't want to proceed further.
         (guideline_name_identifier, true),
-        (:update_status, true),
+        (:early_exit_if_failed, true),
         (guideline_registry_consistency_tests_pass, true),
         (guideline_pr_only_changes_allowed_files, true),
         # (guideline_only_changes_specified_package, true), # not yet implemented

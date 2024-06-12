@@ -202,7 +202,9 @@ function pull_request_build(data::GitHubAutoMergeData; check_license)::Nothing
 
     for (guideline, applicable) in guidelines
         applicable || continue
-        if guideline == :update_status
+        if guideline == :early_exit_if_failed
+            all(passed, checked_guidelines) || break
+        elseif guideline == :update_status
             if !all(passed, checked_guidelines)
                 update_status(
                     data;
