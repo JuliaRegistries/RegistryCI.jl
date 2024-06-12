@@ -120,6 +120,10 @@ end
 end
 
 @testset "Guidelines for new packages" begin
+    @testset "Package name is a valid identifier" begin
+        @test AutoMerge.meets_name_is_identifier("Hello")[1]
+        @test !AutoMerge.meets_name_is_identifier("Hello-GoodBye")[1]
+    end
     @testset "Normal capitalization" begin
         @test AutoMerge.meets_normal_capitalization("Zygote")[1]  # Regular name
         @test AutoMerge.meets_normal_capitalization("Zygote")[1]
@@ -403,6 +407,11 @@ end
             @testset "new_package_title_regex" begin
                 @test occursin(
                     AutoMerge.new_package_title_regex, "New package: HelloWorld v1.2.3"
+                )
+                # This one is not a valid package name, but nonetheless we want AutoMerge
+                # to run and fail.
+                @test occursin(
+                    AutoMerge.new_package_title_regex, "New package: Mathieu-Functions v1.0.0"
                 )
                 @test occursin(
                     AutoMerge.new_package_title_regex, "New package: HelloWorld v1.2.3+0"

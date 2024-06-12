@@ -429,6 +429,22 @@ function perform_distance_check(labels)
     return true
 end
 
+const guideline_name_identifier = Guideline(;
+    info="Name is a Julia identifier",
+    docs=string(
+        "The package name should be a valid Julia identifier (according to `Base.isidentifier`).",
+    ),
+    check=data -> meets_name_is_identifier(data.pkg),
+)
+
+function meets_name_is_identifier(pkg)
+    if Base.isidentifier(pkg)
+        return true, ""
+    else
+        return false, "The package's name ($pkg) is not a valid Julia identifier according to `Base.isidentifier`. Typically this means it contains `-` or other characters that can't be used in defining a variable name or module. The package must be renamed to be registered."
+    end
+end
+
 const guideline_normal_capitalization = Guideline(;
     info="Normal capitalization",
     docs=string(
@@ -996,7 +1012,7 @@ function _run_pkg_commands(
     @info(string(
         "IMPORTANT: If you see any messages of the form \"Error: Some registries failed to update\"",
         "or \"registry dirty\", ",
-        "please disregard those messages. Those messages are normal and do not indicate an error.", 
+        "please disregard those messages. Those messages are normal and do not indicate an error.",
     ))
     cmd_ran_successfully = success(pipeline(cmd; stdout=stdout, stderr=stderr))
     cd(original_directory)
@@ -1025,6 +1041,10 @@ function get_automerge_guidelines(
     package_author_approved::Bool # currently unused for new packages
 )
     guidelines = [
+        # We first verify the name is a valid Julia identifier.
+        # If not, we early exit (`:early_exit_if_failed`), since we don't want to proceed further.
+        (guideline_name_identifier, true),
+        (:early_exit_if_failed, true),
         (guideline_registry_consistency_tests_pass, true),
         (guideline_pr_only_changes_allowed_files, true),
         # (guideline_only_changes_specified_package, true), # not yet implemented

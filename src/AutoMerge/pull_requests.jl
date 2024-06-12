@@ -1,4 +1,4 @@
-const new_package_title_regex = r"^New package: (\w*?) v(\S*?)$"
+const new_package_title_regex = r"^New package: (\S*) v(\S*)$"
 
 const new_version_title_regex = r"^New version: (\w*?) v(\S*?)$"
 
@@ -203,7 +203,9 @@ function pull_request_build(data::GitHubAutoMergeData; check_license, new_packag
 
     for (guideline, applicable) in guidelines
         applicable || continue
-        if guideline == :update_status
+        if guideline == :early_exit_if_failed
+            all(passed, checked_guidelines) || break
+        elseif guideline == :update_status
             if !all(passed, checked_guidelines)
                 update_status(
                     data;
