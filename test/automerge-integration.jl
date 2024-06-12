@@ -34,7 +34,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
 @testset "Integration tests" begin
     for (
         test_number,
-        (master_dir, feature_dir, public_dir, title, point_to_slack, check_license, pass, commit),
+        (master_dir, feature_dir, public_dir, title, point_to_slack, check_license, pass, pass_consistency, commit),
     ) in enumerate([
         (
             "master_1",
@@ -44,6 +44,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             true,   # point_to_slack
             true,   # check_license
             true,   # pass
+            true, # pass_consistency
             requires_commit,
         ), # OK: new package
         (
@@ -54,6 +55,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             true,   # point_to_slack
             true,   # check_license
             false,  # pass
+            true, # pass_consistency
             "659e09770ba9fda4a503f8bf281d446c9583ff3b",
         ), # FAIL: wrong commit!
         (
@@ -64,6 +66,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # point_to_slack
             false,  # check_license
             true,   # pass
+            true, # pass_consistency
             requires_commit,
         ),            # OK: new version
         (
@@ -74,6 +77,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # point_to_slack
             false,  # check_license
             false,  # pass
+            true, # pass_consistency
             requires_commit,
         ),                # FAIL: name too short
         (
@@ -84,6 +88,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # point_to_slack
             false,  # check_license
             false,  # pass
+            true, # pass_consistency
             requires_commit,
         ),           # FAIL: skips v2.0.0
         (
@@ -94,6 +99,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # point_to_slack
             false,  # check_license
             false,  # pass
+            true, # pass_consistency
             requires_commit,
         ),           # FAIL: modifies extra file
         (
@@ -104,6 +110,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # point_to_slack
             false,  # check_license
             true,   # pass
+            true, # pass_consistency
             hello_world_commit1,
         ),   # OK: new JLL package
         (
@@ -114,6 +121,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # point_to_slack
             false,  # check_license
             true,   # pass
+            true, # pass_consistency
             hello_world_commit2,
         ),   # OK: new JLL version
         (
@@ -124,6 +132,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # point_to_slack
             false,  # check_license
             false,  # pass
+            true, # pass_consistency
             hello_world_commit1,
         ),  # FAIL: unallowed dependency
         (
@@ -134,6 +143,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # point_to_slack
             false,  # check_license
             true,   # pass
+            true, # pass_consistency
             requires_commit,
         ),    # OK: no UUID conflict
         (
@@ -144,6 +154,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # point_to_slack
             false,  # check_license
             false,  # pass
+            true, # pass_consistency
             requires_commit,
         ),  # FAIL: UUID conflict, name differs
         (
@@ -154,6 +165,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # point_to_slack
             false,  # check_license
             false,  # pass
+            true, # pass_consistency
             requires_commit,
         ),  # FAIL: UUID conflict, repo differs
         (
@@ -164,6 +176,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # point_to_slack
             false,  # check_license
             true,   # pass
+            true, # pass_consistency
             requires_commit,
         ),   # OK: UUID conflict but name and repo match
         (
@@ -174,6 +187,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             true,   # point_to_slack
             true,   # check_license
             false,   # pass
+            false, # pass_consistency
             requires_commit,
         ), # FAIL: new package name is not a Julia identifier
     ])
@@ -254,7 +268,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                         "TRAVIS_REPO_SLUG" => AUTOMERGE_INTEGRATION_TEST_REPO,
                     ) do
                         sleep(1)
-                        AutoMerge.run(;
+                        run_thunk = () -> AutoMerge.run(;
                             merge_new_packages=true,
                             merge_new_versions=true,
                             new_package_waiting_period=Minute(typemax(Int32)),
@@ -268,8 +282,16 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                             master_branch=master,
                             master_branch_is_default_branch=false,
                         )
+                        # in some cases, the PR doesn't pass consistency tests either
+                        if pass_consistency
+                            run_thunk()
+                        else
+                            # Here we use MetaTesting.jl to help us test that
+                            # we correctly fail the consistency test suite
+                            @test fails(run_thunk)
+                        end
                         sleep(1)
-                        AutoMerge.run(;
+                        run_thunk = () -> AutoMerge.run(;
                             merge_new_packages=true,
                             merge_new_versions=true,
                             new_package_waiting_period=Minute(0),
@@ -283,6 +305,11 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                             master_branch=master,
                             master_branch_is_default_branch=false,
                         )
+                        if pass_consistency
+                            run_thunk()
+                        else
+                            @test fails(run_thunk)
+                        end
                     end
                 end
             end
