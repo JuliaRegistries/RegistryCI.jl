@@ -153,7 +153,7 @@ function _comment_noblock(n)
 end
 
 function comment_text_pass(
-    ::NewVersion, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool
+    ::NewVersion, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool; new_package_waiting_period
 )
     # Need to know this ahead of time to get the section numbers right
     suggest_onepointzero &= version < v"1.0.0"
@@ -171,7 +171,7 @@ function comment_text_pass(
 end
 
 function comment_text_pass(
-    ::NewPackage, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool
+    ::NewPackage, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool; new_package_waiting_period
 )
     suggest_onepointzero &= version < v"1.0.0"
     if is_jll
@@ -192,7 +192,7 @@ function comment_text_pass(
             _automerge_guidelines_passed_section_title(3),
             "Your new package registration met all of the ",
             "guidelines for auto-merging and is scheduled to ",
-            "be merged when the mandatory waiting period (3 days) has elapsed.\n\n",
+            "be merged when the mandatory waiting period ($new_package_waiting_period) has elapsed.\n\n",
             _onepointzero_suggestion(4, suggest_onepointzero, version),
             _comment_noblock(suggest_onepointzero ? 5 : 4),
             "<!-- [noblock] -->",
