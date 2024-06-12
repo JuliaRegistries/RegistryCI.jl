@@ -25,7 +25,7 @@ function guidelines_to_markdown_output(guidelines_function::Function)
         use_distance_check = false,
         package_author_approved = false,
     )
-    filter!(x -> x[1] != :update_status, guidelines)
+    filter!(x -> !(x[1] isa Symbol), guidelines)
     filter!(x -> !(x[1].docs isa Nothing), guidelines)
     docs = [rstrip(x[1].docs) for x in guidelines]
     output_string = join(string.(collect(1:length(docs)), Ref(". "), docs), "\n")
@@ -55,7 +55,7 @@ function guidelines_to_markdown_output(guidelines_function::Function)
         use_distance_check = false,
         package_author_approved = false,
     )
-    filter!(x -> x[1] != :update_status, guidelines)
+    filter!(x -> !(x[1] isa Symbol), guidelines)
     filter!(x -> !(x[1].docs isa Nothing), guidelines)
     docs = [rstrip(x[1].docs) for x in guidelines]
     output_string = join(string.(collect(1:length(docs)), Ref(". "), docs), "\n")
