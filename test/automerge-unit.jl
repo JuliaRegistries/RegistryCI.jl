@@ -45,6 +45,8 @@ function pkgdir_from_depot(depot_path::String, pkg::String)
     return only_pkdir
 end
 
+strip_equal(x, y) = strip(x) == strip(y)
+
 # Here we reference test all the permutations of the AutoMerge comments.
 # This allows us to see the diffs in PRs that change the AutoMerge comment.
 function comment_reference_test()
@@ -59,7 +61,7 @@ function comment_reference_test()
                 name = string("comment", "_pass_", pass, "_type_", type_name,
                 "_suggest_onepointzero_", suggest_onepointzero,
                 "_version_", version, "_is_jll_", is_jll)
-                @test_reference "reference_comments/$name.md" AutoMerge.comment_text_pass(type, suggest_onepointzero, version, is_jll; new_package_waiting_period=Day(3))
+                @test_reference "reference_comments/$name.md" AutoMerge.comment_text_pass(type, suggest_onepointzero, version, is_jll) by=strip_equal
             end
         else
             for point_to_slack in (true, false)
@@ -69,7 +71,7 @@ function comment_reference_test()
                 reasons = ["Example guideline failed. Please fix it."]
                 fail_text = AutoMerge.comment_text_fail(type, reasons, suggest_onepointzero, version; point_to_slack=point_to_slack)
 
-                @test_reference "reference_comments/$name.md" fail_text
+                @test_reference "reference_comments/$name.md" fail_text by=strip_equal
 
                 # `point_to_slack=false` should yield no references to Slack in the text
                 if !point_to_slack
@@ -136,17 +138,23 @@ end
         @test !AutoMerge.meets_name_length("Flux")[1]
         @test !AutoMerge.meets_name_length("Flux")[1]
     end
-    @testset "Name does not include \"julia\" or start with \"Ju\"" begin
+    @testset "Name does not include \"julia\", start with \"Ju\", or end with \"jl\"" begin
         @test AutoMerge.meets_julia_name_check("Zygote")[1]
         @test AutoMerge.meets_julia_name_check("RegistryCI")[1]
         @test !AutoMerge.meets_julia_name_check("JuRegistryCI")[1]
         @test !AutoMerge.meets_julia_name_check("ZygoteJulia")[1]
         @test !AutoMerge.meets_julia_name_check("Zygotejulia")[1]
+        @test !AutoMerge.meets_julia_name_check("Sortingjl")[1]
+        @test !AutoMerge.meets_julia_name_check("BananasJL")[1]
         @test !AutoMerge.meets_julia_name_check("AbcJuLiA")[1]
     end
     @testset "Package name is ASCII" begin
         @test !AutoMerge.meets_name_ascii("ábc")[1]
         @test AutoMerge.meets_name_ascii("abc")[1]
+    end
+    @testset "Package name match check" begin
+        @test AutoMerge.meets_name_match_check("Flux", ["Abc", "Def"])[1]
+        @test !AutoMerge.meets_name_match_check("Websocket", ["websocket"])[1]
     end
     @testset "Package name distance" begin
         @test AutoMerge.meets_distance_check("Flux", ["Abc", "Def"])[1]
