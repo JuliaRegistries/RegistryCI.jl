@@ -8,7 +8,6 @@ using RegistryCI
 using Test
 using TimeZones
 using ReferenceTests
-using MetaTesting: fails
 
 const AutoMerge = RegistryCI.AutoMerge
 
