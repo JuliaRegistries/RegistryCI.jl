@@ -35,6 +35,9 @@ struct AutoMergeWrongBuildType <: AutoMergeException
     msg::String
 end
 
+struct ErrorCannotComputeVersionDifference
+end
+
 struct GitHubAutoMergeData
     # Handle to the GitHub API. Used to query the PR and update
     # comments and status.
