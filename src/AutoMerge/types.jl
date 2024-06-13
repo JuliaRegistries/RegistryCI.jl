@@ -36,6 +36,7 @@ struct AutoMergeWrongBuildType <: AutoMergeException
 end
 
 struct ErrorCannotComputeVersionDifference
+    msg::String
 end
 
 struct GitHubAutoMergeData
