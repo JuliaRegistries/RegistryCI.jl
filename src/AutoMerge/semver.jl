@@ -14,9 +14,9 @@ function difference(x::VersionNumber, y::VersionNumber)
     elseif y.patch > x.patch
         return VersionNumber(y.major - x.major, y.minor - x.minor, y.patch - x.patch)
     else
-        throw(
-            ArgumentError("first argument must be strictly less than the second argument")
-        )
+        msg = "first argument $(x) must be strictly less than the second argument $(y)"
+        @warn msg x y
+        return ErrorCannotComputeVersionDifference(msg)
     end
 end
 

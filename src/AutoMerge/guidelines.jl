@@ -501,6 +501,16 @@ end
 
 function _valid_change(old_version::VersionNumber, new_version::VersionNumber)
     diff = difference(old_version, new_version)
+    if !(diff isa VersionNumber)
+        if diff isa ErrorCannotComputeVersionDifference
+            old_msg = diff.msg
+        else
+            T = typeof(diff)
+            old_msg = "Unknown diff type: $(T)"
+        end
+        new_msg = "Error occured while trying to compute version bump. Message: $(old_msg)"
+        return _invalid_sequential_version(new_msg)
+    end
     @debug("Difference between versions: ", old_version, new_version, diff)
     if diff == v"0.0.1"
         return true, "", :patch
