@@ -527,8 +527,8 @@ end
         @test AutoMerge.nextmajor(v"1.2") == v"2"
         @test AutoMerge.nextmajor(v"1.2.3") == v"2"
         @test AutoMerge.difference(v"1", v"2") == v"1"
-        @test_throws ArgumentError AutoMerge.difference(v"1", v"1")
-        @test_throws ArgumentError AutoMerge.difference(v"2", v"1")
+        @test AutoMerge.difference(v"1", v"1") isa AutoMerge.ErrorCannotComputeVersionDifference
+        @test AutoMerge.difference(v"2", v"1") isa AutoMerge.ErrorCannotComputeVersionDifference
         @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("0"))
         @test AutoMerge._has_upper_bound(Pkg.Types.VersionRange("1"))
         @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("*"))
