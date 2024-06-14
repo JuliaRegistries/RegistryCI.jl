@@ -705,17 +705,22 @@ const guideline_src_names_OK = Guideline(;
 )
 
 function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_path)
-    uuid, package_repo, subdir, tree_hash_from_toml = parse_registry_pkg_info(
+    uuid, package_repo, subdir, tree_hash_from_toml, commit_hash_from_toml, tag_name_from_toml = parse_registry_pkg_info(
         registry_head, pkg, version
     )
 
     # We get the `tree_hash` two ways and check they agree, which helps ensures the `subdir` parameter is correct. Two ways:
-    # 1. By the commit hash in the PR body and the subdir parameter
+    # 1. By the commit hash and the subdir parameter
     # 2. By the tree hash in the Versions.toml
 
-    commit_hash = commit_from_pull_request_body(pr)
+    if isnothing(commit_hash_from_toml)
+        # git-commit-sha1 is an optional registry key: if it isn't in the .toml, then we query the PR
+        commit_hash = commit_from_pull_request_body(pr)
+    else
+        commit_hash = commit_hash_from_toml
+    end
 
-    local tree_hash_from_commit, tree_hash_from_commit_success
+    local tree_hash_from_commit, tree_hash_from_commit_success, tag_success
     clone_success = load_files_from_url_and_tree_hash(
         pkg_code_path, package_repo, tree_hash_from_toml
     ) do dir
@@ -724,6 +729,18 @@ function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_
         catch e
             @error e
             "", false
+        end
+
+        tag_success = try
+            if !isnothing(tag_name_from_toml)
+                # if an annotated tag, need to dereference to commit
+                commit_hash_from_tag = readchomp(Cmd(`git rev-parse $(tag_name_from_toml)^\{commit\}`; dir=dir))
+                @assert commit_hash_from_tag == commit_hash_from_toml
+            end
+            true
+        catch e
+            @error e
+            false
         end
     end
 
@@ -740,9 +757,13 @@ function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_
         @error "`tree_hash_from_commit != tree_hash_from_toml`" tree_hash_from_commit tree_hash_from_toml
         return false,
         "Tree hash obtained from the commit message and subdirectory does not match the tree hash in the Versions.toml file. Possibly this indicates that an incorrect `subdir` parameter was passed during registration."
-    else
-        return true, ""
     end
+
+    if !tag_success
+        return false, "Tag information in .toml does not match information in repository"
+    end
+
+    return true
 end
 
 function _generate_pkg_add_command(pkg::String, version::VersionNumber)::String

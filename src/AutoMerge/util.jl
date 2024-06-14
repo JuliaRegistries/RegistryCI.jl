@@ -50,7 +50,18 @@ function load_files_from_url_and_tree_hash(
 end
 
 """
-    parse_registry_pkg_info(registry_path, pkg, version=nothing) -> @NamedTuple{uuid::String, repo::String, subdir::String, tree_hash::Union{Nothing, String}}
+    parse_registry_pkg_info(
+        registry_path::AbstractString,
+        pkg::AbstractString,
+        version=nothing
+      ) :: @NamedTuple{
+        uuid::String,
+        repo::String,
+        subdir::String,
+        tree_hash::Union{Nothing, String},
+        commit_hash::Union{Nothing, String},
+        tag_name::Union{Nothing, String}
+      }
 
 Searches the registry located at `registry_path` for a package with name `pkg`. Upon finding it,
 it parses the associated `Package.toml` file and returns the UUID and repository URI, and `subdir`.
@@ -75,13 +86,22 @@ function parse_registry_pkg_info(registry_path, pkg, version=nothing)
     subdir = convert(String, get(package, "subdir", ""))
     if version === nothing
         tree_hash = nothing
+        commit_hash = nothing
+        tag_name = nothing
     else
         versions = TOML.parsefile(
             joinpath(registry_path, packages[uuid]["path"], "Versions.toml")
         )
-        tree_hash = convert(String, versions[string(version)]["git-tree-sha1"])
+        version_info = versions[string(version)]
+        tree_hash = convert(String, version_info["git-tree-sha1"])
+        commit_hash = get(version_info, "git-commit-sha1", nothing)
+        tag_name = get(version_info, "git-tag-name", nothing)
+        if !isnothing(commit_hash)
+            # use version-specific subdir if commit_hash is defined.
+            subdir = get(version_info, "subdir", "")
+        end
     end
-    return (; uuid=uuid, repo=repo, subdir=subdir, tree_hash=tree_hash)
+    return (; uuid=uuid, repo=repo, subdir=subdir, tree_hash=tree_hash, commit_hash=commit_hash, tag_name=tag_name)
 end
 
 #####

@@ -176,7 +176,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     # https://github.com/JuliaRegistries/RegistryCI.jl/issues/523
                     # "yanked" is correct.
                     # "yank" (and all other variants) are incorrect.
-                    Test.@test keys(data) ⊆ ["git-tree-sha1", "yanked"]
+                    Test.@test keys(data) ⊆ ["git-tree-sha1", "git-commit-sha1", "git-tag-name", "subdir", "yanked"]
                 end
 
                 # Deps.toml testing
