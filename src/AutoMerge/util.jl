@@ -244,16 +244,6 @@ function comment_text_fail(
     return result
 end
 
-function comment_text_merge_now()
-    result = string(
-        "The mandatory waiting period has elapsed.\n\n",
-        "Your pull request is ready to merge.\n\n",
-        "I will now merge this pull request.",
-        "\n<!-- [noblock] -->",
-    )
-    return result
-end
-
 is_julia_stdlib(name) = name in julia_stdlib_list()
 
 function julia_stdlib_list()
