@@ -98,7 +98,7 @@ end
 
 function _comment_bot_intro()
     return string("Hello, I am an automated registration bot.",
-    " I help manage the registration process by checking your registration against a set of ","[AutoMerge guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/).\n\n",
+    " I help manage the registration process by checking your registration against a set of ","[AutoMerge guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/). ",
     "If all these guidelines are met, this pull request will be merged automatically, completing your registration. It is **strongly recommended** to follow the guidelines, since otherwise ",
     "the pull request needs to be manually reviewed and merged by a human.\n\n")
 end
