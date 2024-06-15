@@ -96,8 +96,8 @@ end
 # We hope they will at least read the section titles, and if they aren't
 # familiar, hopefully they will also read the sections themselves.
 
-function _comment_bot_intro(n)
-    return string("## $n. Introduction\n\n", "Hello, I am an automated registration bot.",
+function _comment_bot_intro()
+    return string("Hello, I am an automated registration bot.",
     " I help manage the registration process by checking your registration against a set of ","[AutoMerge guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/). ",
     "Meeting these guidelines is only required for the pull request to be **merged automatically**. ",
     "However, it is **strongly recommended** to follow them, since otherwise ",
@@ -158,13 +158,13 @@ function comment_text_pass(
     # Need to know this ahead of time to get the section numbers right
     suggest_onepointzero &= version < v"1.0.0"
     result = string(
-        _comment_bot_intro(1),
-        _automerge_guidelines_passed_section_title(2),
+        _comment_bot_intro(),
+        _automerge_guidelines_passed_section_title(1),
         "Your new version registration met all of the ",
         "guidelines for auto-merging and is scheduled to ",
         "be merged in the next round.\n\n",
-        _onepointzero_suggestion(3, suggest_onepointzero, version),
-        _comment_noblock(suggest_onepointzero ? 4 : 3),
+        _onepointzero_suggestion(2, suggest_onepointzero, version),
+        _comment_noblock(suggest_onepointzero ? 3 : 2),
         "<!-- [noblock] -->",
     )
     return result
@@ -176,25 +176,25 @@ function comment_text_pass(
     suggest_onepointzero &= version < v"1.0.0"
     if is_jll
         result = string(
-            _comment_bot_intro(1),
-            _automerge_guidelines_passed_section_title(2),
+            _comment_bot_intro(),
+            _automerge_guidelines_passed_section_title(1),
             "Your new `_jll` package registration met all of the ",
             "guidelines for auto-merging and is scheduled to ",
             "be merged in the next round.\n\n",
-            _onepointzero_suggestion(3, suggest_onepointzero, version),
-            _comment_noblock(suggest_onepointzero ? 4 : 3),
+            _onepointzero_suggestion(2, suggest_onepointzero, version),
+            _comment_noblock(suggest_onepointzero ? 3 : 2),
             "<!-- [noblock] -->",
         )
     else
         result = string(
-            _comment_bot_intro(1),
-            _new_package_section(2),
-            _automerge_guidelines_passed_section_title(3),
+            _comment_bot_intro(),
+            _new_package_section(1),
+            _automerge_guidelines_passed_section_title(2),
             "Your new package registration met all of the ",
             "guidelines for auto-merging and is scheduled to ",
             "be merged when the mandatory waiting period ($new_package_waiting_period) has elapsed.\n\n",
-            _onepointzero_suggestion(4, suggest_onepointzero, version),
-            _comment_noblock(suggest_onepointzero ? 5 : 4),
+            _onepointzero_suggestion(3, suggest_onepointzero, version),
+            _comment_noblock(suggest_onepointzero ? 4 : 3),
             "<!-- [noblock] -->",
         )
     end
@@ -211,13 +211,13 @@ function comment_text_fail(
     suggest_onepointzero &= version < v"1.0.0"
     reasons_formatted = string(join(string.("- ", reasons), "\n"), "\n\n")
     result = string(
-        _comment_bot_intro(1),
-        _new_package_section(2),
-        _automerge_guidelines_failed_section_title(3),
+        _comment_bot_intro(),
+        _new_package_section(1),
+        _automerge_guidelines_failed_section_title(2),
         reasons_formatted,
-        _what_next_if_fail(4; point_to_slack=point_to_slack),
-        _onepointzero_suggestion(5, suggest_onepointzero, version),
-        _comment_noblock(suggest_onepointzero ? 6 : 5),
+        _what_next_if_fail(3; point_to_slack=point_to_slack),
+        _onepointzero_suggestion(4, suggest_onepointzero, version),
+        _comment_noblock(suggest_onepointzero ? 5 : 4),
         "<!-- [noblock] -->",
     )
     return result
@@ -233,12 +233,12 @@ function comment_text_fail(
     suggest_onepointzero &= version < v"1.0.0"
     reasons_formatted = string(join(string.("- ", reasons), "\n"), "\n\n")
     result = string(
-        _comment_bot_intro(1),
-        _automerge_guidelines_failed_section_title(2),
+        _comment_bot_intro(),
+        _automerge_guidelines_failed_section_title(1),
         reasons_formatted,
-        _what_next_if_fail(3; point_to_slack=point_to_slack),
-        _onepointzero_suggestion(4, suggest_onepointzero, version),
-        _comment_noblock(suggest_onepointzero ? 5 : 4),
+        _what_next_if_fail(2; point_to_slack=point_to_slack),
+        _onepointzero_suggestion(3, suggest_onepointzero, version),
+        _comment_noblock(suggest_onepointzero ? 4 : 3),
         "<!-- [noblock] -->",
     )
     return result
