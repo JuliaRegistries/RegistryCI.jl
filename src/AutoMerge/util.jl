@@ -105,14 +105,14 @@ function _comment_bot_intro()
 end
 
 function _new_package_section(n)
-    return string("## $n. New package registration", "\n\n",
+    return string("### $n. New package registration", "\n\n",
     "Since you are registering a new package, please make sure that you have read the ",
     "[package naming guidelines](https://julialang.github.io/Pkg.jl/dev/creating-packages/#Package-naming-guidelines-1).\n\n")
 end
 
 function _what_next_if_fail(n; point_to_slack=false)
     msg = """
-    ## $n. *Needs action*: here's what to do next
+    ### $n. *Needs action*: here's what to do next
 
     1. Please try to update your package to conform to these guidelines. The [General registry's README](https://github.com/JuliaRegistries/General/blob/master/README.md) has an FAQ that can help figure out how to do so. You can also leave a comment on this PR (and include `[noblock]`)"""
     if point_to_slack
@@ -131,16 +131,16 @@ function _what_next_if_fail(n; point_to_slack=false)
 end
 
 function _automerge_guidelines_failed_section_title(n)
-    return "## $n. [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) which are not met ❌\n\n"
+    return "### $n. [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) which are not met ❌\n\n"
 end
 
 function _automerge_guidelines_passed_section_title(n)
-    "## $n. [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) are all met! ✅\n\n"
+    "### $n. [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) are all met! ✅\n\n"
 end
 
 function _comment_noblock(n)
     result = string(
-        "## $n. To pause or stop registration\n\n",
+        "### $n. To pause or stop registration\n\n",
         "If you want to prevent this pull request from ",
         "being auto-merged, simply leave a comment. ",
         "If you want to post a comment without blocking ",
@@ -276,7 +276,7 @@ end
 function _onepointzero_suggestion(n, suggest_onepointzero::Bool, version::VersionNumber)
     if suggest_onepointzero && version < v"1.0.0"
         result = string(
-            "## $n. Declare v1.0?\n\n",
+            "### $n. Declare v1.0?\n\n",
             "On a separate note, I see that you are registering ",
             "a release with a version number of the form ",
             "`v0.X.Y`.\n\n",
