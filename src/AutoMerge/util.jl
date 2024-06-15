@@ -103,15 +103,15 @@ function _comment_bot_intro()
     "the pull request needs to be manually reviewed and merged by a human.\n\n")
 end
 
-function _new_package_section(n)
-    return string("## $n. New package registration", "\n\n",
+function _new_package_section()
+    return string("## New package registration", "\n\n",
     "Please make sure that you have read the ",
     "[package naming guidelines](https://julialang.github.io/Pkg.jl/dev/creating-packages/#Package-naming-guidelines-1).\n\n")
 end
 
-function _what_next_if_fail(n; point_to_slack=false)
+function _what_next_if_fail(; point_to_slack=false)
     msg = """
-    ## $n. *Needs action*: here's what to do next
+    ## *Needs action*: here's what to do next
 
     1. Please try to update your package to conform to these guidelines. The [General registry's README](https://github.com/JuliaRegistries/General/blob/master/README.md) has an FAQ that can help figure out how to do so."""
     msg = string(msg, "\n",
@@ -126,17 +126,17 @@ function _what_next_if_fail(n; point_to_slack=false)
     return msg
 end
 
-function _automerge_guidelines_failed_section_title(n)
-    return "## $n. [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) which are not met ❌\n\n"
+function _automerge_guidelines_failed_section_title()
+    return "## [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) which are not met ❌\n\n"
 end
 
-function _automerge_guidelines_passed_section_title(n)
-    "## $n. [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) are all met! ✅\n\n"
+function _automerge_guidelines_passed_section_title()
+    "## [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) are all met! ✅\n\n"
 end
 
-function _comment_noblock(n)
+function _comment_noblock()
     result = string(
-        "## $n. To pause or stop registration\n\n",
+        "## To pause or stop registration\n\n",
         "If you want to prevent this pull request from ",
         "being auto-merged, simply leave a comment. ",
         "If you want to post a comment without blocking ",
@@ -155,12 +155,12 @@ function comment_text_pass(
     suggest_onepointzero &= version < v"1.0.0"
     result = string(
         _comment_bot_intro(),
-        _automerge_guidelines_passed_section_title(1),
+        _automerge_guidelines_passed_section_title(),
         "Your new version registration met all of the ",
         "guidelines for auto-merging and is scheduled to ",
         "be merged in the next round.\n\n",
-        _onepointzero_suggestion(2, suggest_onepointzero, version),
-        _comment_noblock(suggest_onepointzero ? 3 : 2),
+        _onepointzero_suggestion(suggest_onepointzero, version),
+        _comment_noblock(),
         "<!-- [noblock] -->",
     )
     return result
@@ -173,24 +173,24 @@ function comment_text_pass(
     if is_jll
         result = string(
             _comment_bot_intro(),
-            _automerge_guidelines_passed_section_title(1),
+            _automerge_guidelines_passed_section_title(),
             "Your new `_jll` package registration met all of the ",
             "guidelines for auto-merging and is scheduled to ",
             "be merged in the next round.\n\n",
-            _onepointzero_suggestion(2, suggest_onepointzero, version),
-            _comment_noblock(suggest_onepointzero ? 3 : 2),
+            _onepointzero_suggestion(suggest_onepointzero, version),
+            _comment_noblock(),
             "<!-- [noblock] -->",
         )
     else
         result = string(
             _comment_bot_intro(),
-            _new_package_section(1),
-            _automerge_guidelines_passed_section_title(2),
+            _new_package_section(),
+            _automerge_guidelines_passed_section_title(),
             "Your new package registration met all of the ",
             "guidelines for auto-merging and is scheduled to ",
             "be merged when the mandatory waiting period ($new_package_waiting_period) has elapsed.\n\n",
-            _onepointzero_suggestion(3, suggest_onepointzero, version),
-            _comment_noblock(suggest_onepointzero ? 4 : 3),
+            _onepointzero_suggestion(suggest_onepointzero, version),
+            _comment_noblock(),
             "<!-- [noblock] -->",
         )
     end
@@ -208,12 +208,12 @@ function comment_text_fail(
     reasons_formatted = string(join(string.("- ", reasons), "\n"), "\n\n")
     result = string(
         _comment_bot_intro(),
-        _new_package_section(1),
-        _automerge_guidelines_failed_section_title(2),
+        _new_package_section(),
+        _automerge_guidelines_failed_section_title(),
         reasons_formatted,
-        _what_next_if_fail(3; point_to_slack=point_to_slack),
-        _onepointzero_suggestion(4, suggest_onepointzero, version),
-        _comment_noblock(suggest_onepointzero ? 5 : 4),
+        _what_next_if_fail(; point_to_slack=point_to_slack),
+        _onepointzero_suggestion(suggest_onepointzero, version),
+        _comment_noblock(),
         "<!-- [noblock] -->",
     )
     return result
@@ -230,11 +230,11 @@ function comment_text_fail(
     reasons_formatted = string(join(string.("- ", reasons), "\n"), "\n\n")
     result = string(
         _comment_bot_intro(),
-        _automerge_guidelines_failed_section_title(1),
+        _automerge_guidelines_failed_section_title(),
         reasons_formatted,
-        _what_next_if_fail(2; point_to_slack=point_to_slack),
-        _onepointzero_suggestion(3, suggest_onepointzero, version),
-        _comment_noblock(suggest_onepointzero ? 4 : 3),
+        _what_next_if_fail(; point_to_slack=point_to_slack),
+        _onepointzero_suggestion(suggest_onepointzero, version),
+        _comment_noblock(),
         "<!-- [noblock] -->",
     )
     return result
@@ -259,10 +259,10 @@ function now_utc()
     return Dates.now(utc)
 end
 
-function _onepointzero_suggestion(n, suggest_onepointzero::Bool, version::VersionNumber)
+function _onepointzero_suggestion(suggest_onepointzero::Bool, version::VersionNumber)
     if suggest_onepointzero && version < v"1.0.0"
         result = string(
-            "## $n. Declare v1.0?\n\n",
+            "## Declare v1.0?\n\n",
             "On a separate note, I see that you are registering ",
             "a release with a version number of the form ",
             "`v0.X.Y`.\n\n",
