@@ -399,7 +399,6 @@ function cron_or_api_build(
     if pr_type == :NewPackage # it is a new package
         always_assert(status_pr_type == :NewPackage)
         if merge_new_packages
-            my_comment = comment_text_merge_now()
             @info(
                 string(
                     "Pull request: $(pr_number). ",
@@ -434,7 +433,6 @@ function cron_or_api_build(
         always_assert(pr_type == :NewVersion)
         always_assert(status_pr_type == :NewVersion)
         if merge_new_versions
-            my_comment = comment_text_merge_now()
             @info(
                 string(
                     "Pull request: $(pr_number). ",

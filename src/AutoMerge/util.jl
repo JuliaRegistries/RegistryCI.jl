@@ -96,17 +96,16 @@ end
 # We hope they will at least read the section titles, and if they aren't
 # familiar, hopefully they will also read the sections themselves.
 
-function _comment_bot_intro(n)
-    return string("## $n. Introduction\n\n", "Hello, I am an automated registration bot.",
+function _comment_bot_intro()
+    return string("Hello, I am an automated registration bot.",
     " I help manage the registration process by checking your registration against a set of ","[AutoMerge guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/). ",
-    "Meeting these guidelines is only required for the pull request to be **merged automatically**. ",
-    "However, it is **strongly recommended** to follow them, since otherwise ",
+    "If all these guidelines are met, this pull request will be merged automatically, completing your registration. It is **strongly recommended** to follow the guidelines, since otherwise ",
     "the pull request needs to be manually reviewed and merged by a human.\n\n")
 end
 
 function _new_package_section(n)
     return string("## $n. New package registration", "\n\n",
-    "Since you are registering a new package, please make sure that you have read the ",
+    "Please make sure that you have read the ",
     "[package naming guidelines](https://julialang.github.io/Pkg.jl/dev/creating-packages/#Package-naming-guidelines-1).\n\n")
 end
 
@@ -114,17 +113,14 @@ function _what_next_if_fail(n; point_to_slack=false)
     msg = """
     ## $n. *Needs action*: here's what to do next
 
-    1. Please try to update your package to conform to these guidelines. The [General registry's README](https://github.com/JuliaRegistries/General/blob/master/README.md) has an FAQ that can help figure out how to do so. You can also leave a comment on this PR (and include `[noblock]`)"""
-    if point_to_slack
-        msg = string(msg, " or send a message to the `#pkg-registration` channel in the [public Julia Slack](https://julialang.org/slack/) to ask for help. Include a link to this pull request if you do so!")
-    end
+    1. Please try to update your package to conform to these guidelines. The [General registry's README](https://github.com/JuliaRegistries/General/blob/master/README.md) has an FAQ that can help figure out how to do so."""
     msg = string(msg, "\n",
-        "2. After you have fixed the AutoMerge issues, simply retrigger Registrator, the same way you did in the initial registration. This will automatically update this pull request. You do not need to change the version number in your `Project.toml` file (unless of course the AutoMerge issue is that you skipped a version number, in which case you should change the version number).",
+        "2. After you have fixed the AutoMerge issues, simply retrigger Registrator, the same way you did in the initial registration. This will automatically update this pull request. You do not need to change the version number in your `Project.toml` file (unless the AutoMerge issue is that you skipped a version number).",
         "\n\n",
-        "If you do not want to fix the AutoMerge issues, please post a comment explaining why you would like this pull request to be manually merged.")
+        "If you need help fixing the AutoMerge issues, or want your pull request to be manually merged instead, please post a comment explaining what you need help with or why you would like this pull request to be manually merged.")
 
     if point_to_slack
-        msg = string(msg, " Then, send a message to the `#pkg-registration` channel in the [public Julia Slack](https://julialang.org/slack/) to ask for help.")
+        msg = string(msg, " Then, send a message to the `#pkg-registration` channel in the [public Julia Slack](https://julialang.org/slack/) for better visibility.")
     end
     msg = string(msg, "\n\n")
     return msg
@@ -146,8 +142,8 @@ function _comment_noblock(n)
         "If you want to post a comment without blocking ",
         "auto-merging, you must include the text ",
         "`[noblock]` in your comment. ",
-        "You can edit blocking comments, adding `[noblock]` ",
-        "to them in order to unblock auto-merging.\n\n",
+        "\n\n_Tip: You can edit blocking comments to add `[noblock]` ",
+        "in order to unblock auto-merging._\n\n",
     )
     return result
 end
@@ -158,13 +154,13 @@ function comment_text_pass(
     # Need to know this ahead of time to get the section numbers right
     suggest_onepointzero &= version < v"1.0.0"
     result = string(
-        _comment_bot_intro(1),
-        _automerge_guidelines_passed_section_title(2),
+        _comment_bot_intro(),
+        _automerge_guidelines_passed_section_title(1),
         "Your new version registration met all of the ",
         "guidelines for auto-merging and is scheduled to ",
         "be merged in the next round.\n\n",
-        _onepointzero_suggestion(3, suggest_onepointzero, version),
-        _comment_noblock(suggest_onepointzero ? 4 : 3),
+        _onepointzero_suggestion(2, suggest_onepointzero, version),
+        _comment_noblock(suggest_onepointzero ? 3 : 2),
         "<!-- [noblock] -->",
     )
     return result
@@ -176,25 +172,25 @@ function comment_text_pass(
     suggest_onepointzero &= version < v"1.0.0"
     if is_jll
         result = string(
-            _comment_bot_intro(1),
-            _automerge_guidelines_passed_section_title(2),
+            _comment_bot_intro(),
+            _automerge_guidelines_passed_section_title(1),
             "Your new `_jll` package registration met all of the ",
             "guidelines for auto-merging and is scheduled to ",
             "be merged in the next round.\n\n",
-            _onepointzero_suggestion(3, suggest_onepointzero, version),
-            _comment_noblock(suggest_onepointzero ? 4 : 3),
+            _onepointzero_suggestion(2, suggest_onepointzero, version),
+            _comment_noblock(suggest_onepointzero ? 3 : 2),
             "<!-- [noblock] -->",
         )
     else
         result = string(
-            _comment_bot_intro(1),
-            _new_package_section(2),
-            _automerge_guidelines_passed_section_title(3),
+            _comment_bot_intro(),
+            _new_package_section(1),
+            _automerge_guidelines_passed_section_title(2),
             "Your new package registration met all of the ",
             "guidelines for auto-merging and is scheduled to ",
             "be merged when the mandatory waiting period ($new_package_waiting_period) has elapsed.\n\n",
-            _onepointzero_suggestion(4, suggest_onepointzero, version),
-            _comment_noblock(suggest_onepointzero ? 5 : 4),
+            _onepointzero_suggestion(3, suggest_onepointzero, version),
+            _comment_noblock(suggest_onepointzero ? 4 : 3),
             "<!-- [noblock] -->",
         )
     end
@@ -211,13 +207,13 @@ function comment_text_fail(
     suggest_onepointzero &= version < v"1.0.0"
     reasons_formatted = string(join(string.("- ", reasons), "\n"), "\n\n")
     result = string(
-        _comment_bot_intro(1),
-        _new_package_section(2),
-        _automerge_guidelines_failed_section_title(3),
+        _comment_bot_intro(),
+        _new_package_section(1),
+        _automerge_guidelines_failed_section_title(2),
         reasons_formatted,
-        _what_next_if_fail(4; point_to_slack=point_to_slack),
-        _onepointzero_suggestion(5, suggest_onepointzero, version),
-        _comment_noblock(suggest_onepointzero ? 6 : 5),
+        _what_next_if_fail(3; point_to_slack=point_to_slack),
+        _onepointzero_suggestion(4, suggest_onepointzero, version),
+        _comment_noblock(suggest_onepointzero ? 5 : 4),
         "<!-- [noblock] -->",
     )
     return result
@@ -233,23 +229,13 @@ function comment_text_fail(
     suggest_onepointzero &= version < v"1.0.0"
     reasons_formatted = string(join(string.("- ", reasons), "\n"), "\n\n")
     result = string(
-        _comment_bot_intro(1),
-        _automerge_guidelines_failed_section_title(2),
+        _comment_bot_intro(),
+        _automerge_guidelines_failed_section_title(1),
         reasons_formatted,
-        _what_next_if_fail(3; point_to_slack=point_to_slack),
-        _onepointzero_suggestion(4, suggest_onepointzero, version),
-        _comment_noblock(suggest_onepointzero ? 5 : 4),
+        _what_next_if_fail(2; point_to_slack=point_to_slack),
+        _onepointzero_suggestion(3, suggest_onepointzero, version),
+        _comment_noblock(suggest_onepointzero ? 4 : 3),
         "<!-- [noblock] -->",
-    )
-    return result
-end
-
-function comment_text_merge_now()
-    result = string(
-        "The mandatory waiting period has elapsed.\n\n",
-        "Your pull request is ready to merge.\n\n",
-        "I will now merge this pull request.",
-        "\n<!-- [noblock] -->",
     )
     return result
 end
