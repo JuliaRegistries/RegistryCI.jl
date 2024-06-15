@@ -104,9 +104,18 @@ function _comment_bot_intro()
 end
 
 function _new_package_section()
-    return string("## New package registration", "\n\n",
-    "Please make sure that you have read the ",
+    return string("## Package naming guidelines", "\n\n",
+    "Since you are registering a new package, ",
+    "please make sure that you have read the ",
     "[package naming guidelines](https://julialang.github.io/Pkg.jl/dev/creating-packages/#Package-naming-guidelines-1).\n\n")
+end
+
+function _automerge_guidelines_failed_section_title()
+    return "## Some [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) are not met ❌\n\n"
+end
+
+function _automerge_guidelines_passed_section_title()
+    "## All [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) are met! ✅\n\n"
 end
 
 function _what_next_if_fail(; point_to_slack=false)
@@ -126,17 +135,9 @@ function _what_next_if_fail(; point_to_slack=false)
     return msg
 end
 
-function _automerge_guidelines_failed_section_title()
-    return "## [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) which are not met ❌\n\n"
-end
-
-function _automerge_guidelines_passed_section_title()
-    "## [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) are all met! ✅\n\n"
-end
-
 function _comment_noblock()
     result = string(
-        "## To pause or stop registration\n\n",
+        "## Pausing or stopping registration\n\n",
         "If you want to prevent this pull request from ",
         "being auto-merged, simply leave a comment. ",
         "If you want to post a comment without blocking ",
