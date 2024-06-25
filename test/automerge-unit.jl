@@ -68,7 +68,9 @@ function comment_reference_test()
                 name = string("comment", "_pass_", pass, "_type_", type_name,
                 "_suggest_onepointzero_", suggest_onepointzero,
                 "_version_", version, "_point_to_slack_", point_to_slack)
-                reasons = ["Example guideline failed. Please fix it."]
+                reasons = [
+                            AutoMerge.compat_violation_message(["julia"]),
+                            "Example guideline failed. Please fix it."]
                 fail_text = AutoMerge.comment_text_fail(type, reasons, suggest_onepointzero, version; point_to_slack=point_to_slack)
 
                 @test_reference "reference_comments/$name.md" fail_text by=strip_equal

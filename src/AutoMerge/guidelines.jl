@@ -84,6 +84,41 @@ const guideline_compat_for_all_deps = Guideline(;
     check=data -> meets_compat_for_all_deps(data.registry_head, data.pkg, data.version),
 )
 
+function compat_violation_message(bad_dependencies)
+    return string(
+        "The following dependencies do not have a `[compat]` entry ",
+        "that is upper-bounded and only includes a finite number ",
+        "of breaking releases: ",
+        join(bad_dependencies, ", "),
+        # Note the indentation here is important for the proper formatting within a bulleted list later
+        """
+
+            <details><summary>Extended explanation</summary>
+
+            Your package has a Project.toml file which might look something like the following:
+
+            ```toml
+            name = "YourPackage"
+            uuid = "random id"
+            authors = ["Author Names"]
+            version = "major.minor"
+
+            [deps]
+            # Package dependencies
+            ...
+
+            [compat]
+            ...
+            ```
+
+            Every package listed in `[deps]` must also be listed under `[compat]` (if you don't have a `[compat]` section, make one!). See the [Pkg docs](https://pkgdocs.julialang.org/v1/compatibility/) for the syntax for compatibility bounds.
+
+            </details>
+        """
+    )
+
+end
+
 function meets_compat_for_all_deps(working_directory::AbstractString, pkg, version)
     package_relpath = get_package_relpath_in_registry(;
         package_name=pkg, registry_path=working_directory
@@ -155,12 +190,7 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
             end
         end
         sort!(bad_dependencies)
-        message = string(
-            "The following dependencies do not have a `[compat]` entry ",
-            "that is upper-bounded and only includes a finite number ",
-            "of breaking releases: ",
-            join(bad_dependencies, ", "),
-        )
+        message = compat_violation_message(bad_dependencies)
         return false, message
     end
 end

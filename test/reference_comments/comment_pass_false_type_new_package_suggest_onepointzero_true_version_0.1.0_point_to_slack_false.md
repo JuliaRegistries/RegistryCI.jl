@@ -6,6 +6,29 @@ Please make sure that you have read the [package naming guidelines](https://juli
 
 ## 2. [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) which are not met ❌
 
+- The following dependencies do not have a `[compat]` entry that is upper-bounded and only includes a finite number of breaking releases: julia
+    <details><summary>Extended explanation</summary>
+
+    Your package has a Project.toml file which might look something like the following:
+
+    ```toml
+    name = "YourPackage"
+    uuid = "random id"
+    authors = ["Author Names"]
+    version = "major.minor"
+
+    [deps]
+    # Package dependencies
+    ...
+
+    [compat]
+    ...
+    ```
+
+    Every package listed in `[deps]` must also be listed under `[compat]` (if you don't have a `[compat]` section, make one!). See the [Pkg docs](https://pkgdocs.julialang.org/v1/compatibility/) for the syntax for compatibility bounds.
+
+    </details>
+
 - Example guideline failed. Please fix it.
 
 ## 3. *Needs action*: here's what to do next
