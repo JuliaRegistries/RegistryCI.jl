@@ -21,7 +21,7 @@ Hello, I am an automated registration bot. I help manage the registration proces
     ...
     ```
 
-    Every package listed in `[deps]` must also be listed under `[compat]` (if you don't have a `[compat]` section, make one!). See the [Pkg docs](https://pkgdocs.julialang.org/v1/compatibility/) for the syntax for compatibility bounds.
+    Every package listed in `[deps]`, along with `julia` itself, must also be listed under `[compat]` (if you don't have a `[compat]` section, make one!). See the [Pkg docs](https://pkgdocs.julialang.org/v1/compatibility/) for the syntax for compatibility bounds.
 
     </details>
 
