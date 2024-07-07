@@ -288,9 +288,18 @@ end
 
 """
     get_all_non_jll_package_names(registry_dir::AbstractString) -> Vector{String}
+    get_all_non_jll_package_names(registry::RegistryInstance) -> Vector{String}
 
-Given a path to the TOML file or directory holding a registry, returns the names of all the non-JLL packages
-defined in that registry, along with the names of Julia's standard libraries.
+Given either:
+
+- a path to a directory holding an uncompressed registry
+
+or
+
+- a `RegistryInstance` object (from [RegistryInstances.jl](https://github.com/GunnarFarneback/RegistryInstances.jl)) associated to a registry,
+
+returns a sorted list of the names of Julia's standard libraries
+and all the non-JLL packages defined in that registry.
 """
 function get_all_non_jll_package_names(registry_dir::AbstractString)
     registry = (; pkgs=TOML.parsefile(joinpath(registry_dir, "Registry.toml"))["packages"])
