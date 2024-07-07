@@ -16,6 +16,7 @@ using Printf: Printf
 using RegistryTools: RegistryTools
 using ..RegistryCI: RegistryCI
 using Tar: Tar
+using RegistryInstances: RegistryInstance
 
 include("types.jl")
 include("ciservice.jl")

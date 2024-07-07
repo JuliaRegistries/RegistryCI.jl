@@ -293,12 +293,13 @@ Given a path to the directory holding a registry, returns the names of all the n
 defined in that registry, along with the names of Julia's standard libraries.
 """
 function get_all_non_jll_package_names(registry_dir::AbstractString)
-    packages = [
-        x["name"] for
-        x in values(TOML.parsefile(joinpath(registry_dir, "Registry.toml"))["packages"])
-    ]
-    sort!(packages)
+    return get_all_non_jll_package_names(RegistryInstance(registry_dir))
+end
+
+function get_all_non_jll_package_names(registry::RegistryInstance)
+    packages = [entry.name for entry in values(registry.pkgs)]
     append!(packages, (RegistryTools.get_stdlib_name(x) for x in values(RegistryTools.stdlibs())))
+    sort!(packages)
     filter!(x -> !endswith(x, "_jll"), packages)
     unique!(packages)
     return packages
