@@ -66,8 +66,6 @@ jobs:
             Pkg.Registry.add("General")
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()'
-        env:
-          JULIA_PKG_SERVER: ''
       - run: julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
