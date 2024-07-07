@@ -198,13 +198,12 @@ end
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]hi"))
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[merge approved] abc"))
     end
-    @testset "`get_all_non_jll_package_names` with registry_path=$registry_path" for registry_path in (joinpath(DEPOT_PATH[1], "registries", "General"),
-                      joinpath(DEPOT_PATH[1], "registries", "General.toml"))
-            packages = AutoMerge.get_all_non_jll_package_names(registry_path)
-            @test "RegistryCI" ∈ packages
-            @test "Logging" ∈ packages
-            @test "Poppler_jll" ∉ packages
-        end
+    @testset "`get_all_non_jll_package_names`" begin
+        registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
+        packages = AutoMerge.get_all_non_jll_package_names(registry_path)
+        @test "RegistryCI" ∈ packages
+        @test "Logging" ∈ packages
+        @test "Poppler_jll" ∉ packages
     end
     @testset "Standard initial version number" begin
         @test AutoMerge.meets_standard_initial_version_number(v"0.0.1")[1]

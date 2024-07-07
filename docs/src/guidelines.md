@@ -109,11 +109,12 @@ To test yourself that a tentative package name, say `MyPackage` meets these
 checks, you can use the following code (after adding the RegistryCI package
 to your Julia environment):
 
-```julia
-using RegistryCI
+```@example
+using RegistryCI, RegistryInstances
 using RegistryCI.AutoMerge
-all_pkg_names = AutoMerge.get_all_non_jll_package_names(path_to_registry)
-AutoMerge.meets_distance_check("MyPackage", all_pkg_names)
+path_to_registry = joinpath(DEPOT_PATH[1], "registries", "General.toml")
+all_pkg_names = AutoMerge.get_all_non_jll_package_names(RegistryInstance(path_to_registry))
+AutoMerge.meets_distance_check("MyPackage123", all_pkg_names)
 ```
 
 where `path_to_registry` is a path to the registry of
