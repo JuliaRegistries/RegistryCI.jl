@@ -61,6 +61,9 @@ jobs:
       - run: |
           julia --project=docs -e '
             using Pkg
+            # install compressed registry
+            Pkg.Registry.rm("General")
+            Pkg.Registry.add("General")
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()'
         env:
