@@ -289,7 +289,7 @@ end
 """
     get_all_non_jll_package_names(registry_dir::AbstractString) -> Vector{String}
 
-Given a path to the directory holding a registry, returns the names of all the non-JLL packages
+Given a path to the TOML file or directory holding a registry, returns the names of all the non-JLL packages
 defined in that registry, along with the names of Julia's standard libraries.
 """
 function get_all_non_jll_package_names(registry_dir::AbstractString)
