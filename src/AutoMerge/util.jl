@@ -302,7 +302,9 @@ returns a sorted list of the names of Julia's standard libraries
 and all the non-JLL packages defined in that registry.
 """
 function get_all_non_jll_package_names(registry_dir::AbstractString)
-    registry = (; pkgs=TOML.parsefile(joinpath(registry_dir, "Registry.toml"))["packages"])
+    # Mimic the structure of a RegistryInstance
+    list = TOML.parsefile(joinpath(registry_dir, "Registry.toml"))["packages"]
+    registry = (; pkgs=Dict(k => (; name=v["name"]) for (k,v) in pairs(list)))
     return get_all_non_jll_package_names(registry)
 end
 
