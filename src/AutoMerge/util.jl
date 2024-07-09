@@ -288,17 +288,32 @@ end
 
 """
     get_all_non_jll_package_names(registry_dir::AbstractString) -> Vector{String}
+    get_all_non_jll_package_names(registry::RegistryInstance) -> Vector{String}
 
-Given a path to the directory holding a registry, returns the names of all the non-JLL packages
-defined in that registry, along with the names of Julia's standard libraries.
+Given either:
+
+- a path to a directory holding an uncompressed registry
+
+or
+
+- a `RegistryInstance` object (from [RegistryInstances.jl](https://github.com/GunnarFarneback/RegistryInstances.jl)) associated to a registry,
+
+returns a sorted list of the names of Julia's standard libraries
+and all the non-JLL packages defined in that registry.
 """
 function get_all_non_jll_package_names(registry_dir::AbstractString)
-    packages = [
-        x["name"] for
-        x in values(TOML.parsefile(joinpath(registry_dir, "Registry.toml"))["packages"])
-    ]
-    sort!(packages)
+    # Mimic the structure of a RegistryInstance
+    list = TOML.parsefile(joinpath(registry_dir, "Registry.toml"))["packages"]
+    registry = (; pkgs=Dict(k => (; name=v["name"]) for (k,v) in pairs(list)))
+    return get_all_non_jll_package_names(registry)
+end
+
+# Generic method intended for RegistryInstance (without taking on the dependency,
+# which is only valid on Julia 1.7+)
+function get_all_non_jll_package_names(registry)
+    packages = [entry.name for entry in values(registry.pkgs)]
     append!(packages, (RegistryTools.get_stdlib_name(x) for x in values(RegistryTools.stdlibs())))
+    sort!(packages)
     filter!(x -> !endswith(x, "_jll"), packages)
     unique!(packages)
     return packages
