@@ -25,3 +25,4 @@ RegistryCI.jl
 provides continuous integration (CI) tools for Julia package registries, including registry consistency testing, automatic merging (automerge) of pull requests, and automatic TagBot triggers.
 
 Please see the [documentation](https://JuliaRegistries.github.io/RegistryCI.jl/stable).
+
