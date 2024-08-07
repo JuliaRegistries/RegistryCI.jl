@@ -319,18 +319,64 @@ function get_all_non_jll_package_names(registry)
     return packages
 end
 
-const PACKAGE_AUTHOR_APPROVED_LABEL = "Override AutoMerge: package author approved"
 
-function has_package_author_approved_label(labels)
-    # No labels? Not approved
+function has_label(labels, target)
+    # No labels? Then no
     isnothing(labels) && return false
     for label in labels
-        if label.name === PACKAGE_AUTHOR_APPROVED_LABEL
-            # found the approval
-            @debug "Found `$(PACKAGE_AUTHOR_APPROVED_LABEL)` label"
+        if label.name === target
+            # found it
+            @debug "Found `$(target)` label"
             return true
         end
     end
-    # Did not find approval
+    # Did not find it
     return false
+end
+
+const PACKAGE_AUTHOR_APPROVED_LABEL = "Override AutoMerge: package author approved"
+
+has_package_author_approved_label(labels) = has_label(labels, PACKAGE_AUTHOR_APPROVED_LABEL)
+
+"""
+    try_remove_label(api, repo, issue, label)
+
+Uses `GitHub.remove_label` to remove the label, if it exists.
+Differs from the upstream functionality by not erroring if we receive a 404
+response indicating the label did not exist.
+
+Returns whether or not the label was removed.
+"""
+function try_remove_label(api, repo, issue, label)
+    r = GitHub.remove_label(api, repo, issue, label; handle_error = false)
+    r.status == 404 && return false
+    GitHub.handle_response_error(r)  # throw errors in other cases if necessary
+    return true
+end
+
+function repo_has_label(api, repo, name; options...)
+    path = "/repos/$(GitHub.name(repo))/labels/$name"
+    result = GitHub.gh_get_json(api, path; options..., handle_error = false)
+    result.status == 404 && return false
+    GitHub.handle_response_error(r)  # throw errors in other cases if necessary
+    return true
+end
+
+function create_label(api, repo, name::String, color::String, description::String; options...)
+    path = "/repos/$(GitHub.name(repo))/labels"
+    result = GitHub.gh_post_json(api, path; params=(; name=name, color=color, description=description), options...)
+    return Label(result)
+end
+
+"""
+    maybe_create_blocked_label(api, repo)
+
+Add the label `$BLOCKED_LABEL` to the repo if it doesn't already exist.
+
+Returns whether or not it created the label.
+"""
+function maybe_create_blocked_label(api, repo)
+    repo_has_label(api, repo, BLOCKED_LABEL) && return false
+    create_label(api, repo, BLOCKED_LABEL, "ff0000", "PR blocked by one or more comments lacking the string [noblock].")
+    return true
 end
