@@ -8,6 +8,7 @@ name: CI (integration tests)
 on:
   merge_group: # GitHub Merge Queue
   pull_request: # but we will skip the integration tests on PR builds, to avoid hitting rate limits
+  workflow_dispatch: # can manually trigger integration tests for PRs
   push:
     branches:
       - master
