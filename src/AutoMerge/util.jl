@@ -141,7 +141,7 @@ function _comment_noblock(n)
         "being auto-merged, simply leave a comment. ",
         "If you want to post a comment without blocking ",
         "auto-merging, you must include the text ",
-        "`[noblock]` in your comment. ",
+        "`[noblock]` in your comment.",
         "\n\n_Tip: You can edit blocking comments to add `[noblock]` ",
         "in order to unblock auto-merging._\n\n",
     )
