@@ -356,7 +356,7 @@ end
 
 function maybe_create_label(api, repo, name::String, color::String, description::String; options...)
     path = "/repos/$(GitHub.name(repo))/labels"
-    result = GitHub.gh_post_json(api, path; params=(; name=name, color=color, description=description), handle_error=false, options...)
+    result = GitHub.gh_post(api, path; params=(; name=name, color=color, description=description), handle_error=false, options...)
     print(result)
     return result.status == 201
 end
