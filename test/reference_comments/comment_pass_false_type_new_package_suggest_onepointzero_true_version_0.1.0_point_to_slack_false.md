@@ -48,7 +48,7 @@ If your package does not yet have a stable public API, then of course you are no
 
 ## 5. To pause or stop registration
 
-If you want to prevent this pull request from being auto-merged, simply leave a comment. If you want to post a comment without blocking auto-merging, you must include the text `[noblock]` in your comment. 
+If you want to prevent this pull request from being auto-merged, simply leave a comment. If you want to post a comment without blocking auto-merging, you must include the text `[noblock]` in your comment.
 
 _Tip: You can edit blocking comments to add `[noblock]` in order to unblock auto-merging._
 
