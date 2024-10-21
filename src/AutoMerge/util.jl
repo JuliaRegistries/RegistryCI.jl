@@ -354,18 +354,11 @@ function try_remove_label(api, repo, issue, label)
     return true
 end
 
-function repo_has_label(api, repo, name; options...)
-    path = "/repos/$(GitHub.name(repo))/labels/$name"
-    result = GitHub.gh_get_json(api, path; options..., handle_error = false)
-    result.status == 404 && return false
-    GitHub.handle_response_error(r)  # throw errors in other cases if necessary
-    return true
-end
-
-function create_label(api, repo, name::String, color::String, description::String; options...)
+function maybe_create_label(api, repo, name::String, color::String, description::String; options...)
     path = "/repos/$(GitHub.name(repo))/labels"
-    result = GitHub.gh_post_json(api, path; params=(; name=name, color=color, description=description), options...)
-    return Label(result)
+    result = GitHub.gh_post_json(api, path; params=(; name=name, color=color, description=description), handle_error=false, options...)
+    print(result)
+    return result.status == 201
 end
 
 """
@@ -375,8 +368,4 @@ Add the label `$BLOCKED_LABEL` to the repo if it doesn't already exist.
 
 Returns whether or not it created the label.
 """
-function maybe_create_blocked_label(api, repo)
-    repo_has_label(api, repo, BLOCKED_LABEL) && return false
-    create_label(api, repo, BLOCKED_LABEL, "ff0000", "PR blocked by one or more comments lacking the string [noblock].")
-    return true
-end
+maybe_create_blocked_label(api, repo) = maybe_create_label(api, repo, BLOCKED_LABEL, "ff0000", "PR blocked by one or more comments lacking the string [noblock].")
