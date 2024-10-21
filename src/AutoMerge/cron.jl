@@ -197,7 +197,7 @@ function cron_or_api_build(
 
     # first, create `BLOCKED_LABEL` as a label in the repo if it doesn't
     # already exist. This way we can add it to PRs as needed.
-    maybe_create_blocked_label(api, repo)
+    maybe_create_blocked_label(api, registry)
 
     # next, get a list of ALL open pull requests on this repository
     # then, loop through each of them.
