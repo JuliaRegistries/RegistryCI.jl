@@ -281,6 +281,10 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                         sleep(1)
                         if create_blocking_comment
                             blocking_comment = GitHub.create_comment(repo, pr, "blocking comment", auth=auth)
+                            # Delete the comment on exit, if we don't do so sooner
+                            atexit() do
+                                GitHub.delete_comment(repo, blocking_comment; auth=auth, handle_error=false)
+                            end
                         end
                         AutoMerge.run(;
                             merge_new_packages=true,
@@ -317,7 +321,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                             labels = GitHub.labels(repo, pr)
                             @test AutoMerge.has_label(labels, AutoMerge.BLOCKED_LABEL)
                             # Delete the comment & rerun
-                            GitHub.delete_comment(repo, blocking_comment)
+                            GitHub.delete_comment(repo, blocking_comment; auth=auth)
                             merge()
                             # Check we no longer have the blocked label
                             labels = GitHub.labels(repo, pr)
