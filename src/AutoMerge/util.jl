@@ -348,6 +348,8 @@ response indicating the label did not exist.
 Returns whether or not the label was removed.
 """
 function try_remove_label(api, repo, issue, label; options...)
+    path = "/repos/$(GitHub.name(repo))/issues/$(GitHub.name(issue))/labels/$(GitHub.name(label))"
+    @info "Removing label" path
     r = GitHub.remove_label(api, repo, issue, label; handle_error = false, options...)
     r.status == 404 && return false
     GitHub.handle_response_error(r)  # throw errors in other cases if necessary
