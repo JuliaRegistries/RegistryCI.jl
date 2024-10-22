@@ -2,7 +2,7 @@ Hello, I am an automated registration bot. I help manage the registration proces
 
 ## 1. [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) are all met! ✅
 
-Your new version registration met all of the guidelines for auto-merging and is scheduled to be merged in the next round.
+Your new version registration met all of the guidelines for auto-merging and is scheduled to be merged in the next round (~20 minutes).
 
 ## 2. Declare v1.0?
 
@@ -14,7 +14,7 @@ If your package does not yet have a stable public API, then of course you are no
 
 ## 3. To pause or stop registration
 
-If you want to prevent this pull request from being auto-merged, simply leave a comment. If you want to post a comment without blocking auto-merging, you must include the text `[noblock]` in your comment. 
+If you want to prevent this pull request from being auto-merged, simply leave a comment. If you want to post a comment without blocking auto-merging, you must include the text `[noblock]` in your comment.
 
 _Tip: You can edit blocking comments to add `[noblock]` in order to unblock auto-merging._
 
