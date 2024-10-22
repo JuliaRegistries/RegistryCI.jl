@@ -322,7 +322,9 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                             @test AutoMerge.has_label(labels, AutoMerge.BLOCKED_LABEL)
                             # Delete the comment & rerun
                             GitHub.delete_comment(repo, blocking_comment; auth=auth)
+                            sleep(1)
                             merge()
+                            sleep(1)
                             # Check we no longer have the blocked label
                             labels = GitHub.labels(repo, pr)
                             @test !AutoMerge.has_label(labels, AutoMerge.BLOCKED_LABEL)
