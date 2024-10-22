@@ -195,9 +195,11 @@ function cron_or_api_build(
     read_only::Bool,
 )
 
-    # first, create `BLOCKED_LABEL` as a label in the repo if it doesn't
-    # already exist. This way we can add it to PRs as needed.
-    maybe_create_blocked_label(api, registry; auth=auth)
+    if !read_only
+        # first, create `BLOCKED_LABEL` as a label in the repo if it doesn't
+        # already exist. This way we can add it to PRs as needed.
+        maybe_create_blocked_label(api, registry; auth=auth)
+    end
 
     # next, get a list of ALL open pull requests on this repository
     # then, loop through each of them.
@@ -394,9 +396,11 @@ function cron_or_api_build(
 
     blocked = pr_has_blocking_comments(api, registry, pr; auth=auth) && !has_label(pr.labels, OVERRIDE_BLOCKS_LABEL)
     if blocked
-        # add `BLOCKED_LABEL` to communicate to users
-        # that the PR is blocked from automerging
-        GitHub.add_labels(api, registry.full_name, pr_number, [BLOCKED_LABEL]; auth=auth)
+        if !read_only
+            # add `BLOCKED_LABEL` to communicate to users
+            # that the PR is blocked from automerging
+            GitHub.add_labels(api, registry.full_name, pr_number, [BLOCKED_LABEL]; auth=auth)
+        end
         @info(
             string(
                 "Pull request: $(pr_number). ",
@@ -406,7 +410,7 @@ function cron_or_api_build(
             )
         )
         return nothing
-    elseif has_label(pr.labels, BLOCKED_LABEL)
+    elseif has_label(pr.labels, BLOCKED_LABEL) && !read_only
         # remove block label BLOCKED_LABEL if it exists
         # note we use `try_remove_label` to avoid crashing the job
         # if there is some race condition or manual intervention
