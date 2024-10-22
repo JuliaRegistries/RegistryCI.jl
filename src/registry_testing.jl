@@ -207,6 +207,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                 compatfile = abspath(data["path"], "Compat.toml")
                 if isfile(compatfile)
                     compat = Pkg.TOML.parsefile(compatfile)
+
                     # Test that all names with compat is a dependency
                     compatnames = Set{String}(x for (_, d) in compat for (x, _) in d)
                     if !(
@@ -223,6 +224,18 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                             )
                         end
                     end
+
+                    # Make sure that each compat spec is a valid registry compat spec.
+                    # https://github.com/JuliaRegistries/General/issues/104849
+                    for (versionrange, compatinfo) in pairs(compat)
+                        Test.@test Pkg.Types.VersionRange(versionrange) isa Pkg.Types.VersionRange
+                        for (name, spec_unparsed) in pairs(compatinfo)
+                            spec = Pkg.Types.VersionSpec(spec_unparsed)
+                            # Make sure that the compat spec is a valid registry compat spec:
+                            Test.@test spec isa Pkg.Types.VersionSpec
+                        end
+                    end
+
                     # Test that the way Pkg loads this data works
                     Test.@test load_compat(compatfile, vnums)
                     # Make sure the content roundtrips through decompression/compression.
