@@ -350,7 +350,7 @@ Returns whether or not the label was removed.
 function try_remove_label(api, repo, issue, label; options...)
     label = HTTP.escapeuri(label)
     path = "/repos/$(GitHub.name(repo))/issues/$(GitHub.name(issue))/labels/$(GitHub.name(label))"
-    @info "Removing label" path
+    @debug "Removing label" path
     r = GitHub.remove_label(api, repo, issue, label; handle_error = false, options...)
     r.status == 404 && return false
     GitHub.handle_response_error(r)  # throw errors in other cases if necessary
@@ -360,7 +360,7 @@ end
 function maybe_create_label(api, repo, name::String, color::String, description::String; options...)
     path = "/repos/$(GitHub.name(repo))/labels"
     result = GitHub.gh_post(api, path; params=(; name=name, color=color, description=description), handle_error=false, options...)
-    print(result)
+    @debug "Response from `maybe_create_label`" result
     return result.status == 201
 end
 
