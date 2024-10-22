@@ -280,7 +280,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                     ) do
                         sleep(1)
                         if create_blocking_comment
-                            blocking_comment = GitHub.create_comment(repo, pr, "blocking comment")
+                            blocking_comment = GitHub.create_comment(repo, pr, "blocking comment", auth=auth)
                         end
                         AutoMerge.run(;
                             merge_new_packages=true,
