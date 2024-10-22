@@ -347,8 +347,8 @@ response indicating the label did not exist.
 
 Returns whether or not the label was removed.
 """
-function try_remove_label(api, repo, issue, label)
-    r = GitHub.remove_label(api, repo, issue, label; handle_error = false)
+function try_remove_label(api, repo, issue, label; options...)
+    r = GitHub.remove_label(api, repo, issue, label; handle_error = false, options...)
     r.status == 404 && return false
     GitHub.handle_response_error(r)  # throw errors in other cases if necessary
     return true
@@ -368,4 +368,4 @@ Add the label `$BLOCKED_LABEL` to the repo if it doesn't already exist.
 
 Returns whether or not it created the label.
 """
-maybe_create_blocked_label(api, repo) = maybe_create_label(api, repo, BLOCKED_LABEL, "ff0000", "PR blocked by one or more comments lacking the string [noblock].")
+maybe_create_blocked_label(api, repo; options...) = maybe_create_label(api, repo, BLOCKED_LABEL, "ff0000", "PR blocked by one or more comments lacking the string [noblock]."; options...)

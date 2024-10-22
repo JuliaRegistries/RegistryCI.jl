@@ -197,7 +197,7 @@ function cron_or_api_build(
 
     # first, create `BLOCKED_LABEL` as a label in the repo if it doesn't
     # already exist. This way we can add it to PRs as needed.
-    maybe_create_blocked_label(api, registry)
+    maybe_create_blocked_label(api, registry; auth=auth)
 
     # next, get a list of ALL open pull requests on this repository
     # then, loop through each of them.
@@ -396,7 +396,7 @@ function cron_or_api_build(
     if blocked
         # add `BLOCKED_LABEL` to communicate to users
         # that the PR is blocked from automerging
-        GitHub.add_labels(api, registry.full_name, pr_number, [BLOCKED_LABEL])
+        GitHub.add_labels(api, registry.full_name, pr_number, [BLOCKED_LABEL]; auth=auth)
         @info(
             string(
                 "Pull request: $(pr_number). ",
@@ -412,7 +412,7 @@ function cron_or_api_build(
         # if there is some race condition or manual intervention
         # and the blocked label was removed at some point between
         # when the `pr` object was created and now.
-        try_remove_label(api, registry.full_name, pr_number, BLOCKED_LABEL)
+        try_remove_label(api, registry.full_name, pr_number, BLOCKED_LABEL; auth=auth)
     end
 
     if pr_type == :NewPackage # it is a new package
