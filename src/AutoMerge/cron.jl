@@ -307,6 +307,35 @@ function cron_or_api_build(
         return nothing
     end
 
+    # We will check for blocked here, once we think it's a registration PR
+    # (as opposed to some other kind of PR).
+    # This way we can update the labels now, regardless of the current status
+    # of the other steps (e.g. automerge passing, waiting period, etc).
+    blocked = pr_has_blocking_comments(api, registry, pr; auth=auth) && !has_label(pr.labels, OVERRIDE_BLOCKS_LABEL)
+    if blocked
+        if !read_only
+            # add `BLOCKED_LABEL` to communicate to users
+            # that the PR is blocked from automerging
+            GitHub.add_labels(api, registry.full_name, pr_number, [BLOCKED_LABEL]; auth=auth)
+        end
+        @info(
+            string(
+                "Pull request: $(pr_number). ",
+                "Type: $(pr_type). ",
+                "Decision: do not merge. ",
+                "Reason: pull request has one or more blocking comments.",
+            )
+        )
+        return nothing
+    elseif has_label(pr.labels, BLOCKED_LABEL) && !read_only
+        # remove block label BLOCKED_LABEL if it exists
+        # note we use `try_remove_label` to avoid crashing the job
+        # if there is some race condition or manual intervention
+        # and the blocked label was removed at some point between
+        # when the `pr` object was created and now.
+        try_remove_label(api, registry.full_name, pr_number, BLOCKED_LABEL; auth=auth)
+    end
+
     if is_new_package(pr) # it is a new package
         pr_type = :NewPackage
         pkg, version = parse_pull_request_title(NewPackage(), pr)
@@ -392,31 +421,6 @@ function cron_or_api_build(
             )
         )
         return nothing
-    end
-
-    blocked = pr_has_blocking_comments(api, registry, pr; auth=auth) && !has_label(pr.labels, OVERRIDE_BLOCKS_LABEL)
-    if blocked
-        if !read_only
-            # add `BLOCKED_LABEL` to communicate to users
-            # that the PR is blocked from automerging
-            GitHub.add_labels(api, registry.full_name, pr_number, [BLOCKED_LABEL]; auth=auth)
-        end
-        @info(
-            string(
-                "Pull request: $(pr_number). ",
-                "Type: $(pr_type). ",
-                "Decision: do not merge. ",
-                "Reason: pull request has one or more blocking comments.",
-            )
-        )
-        return nothing
-    elseif has_label(pr.labels, BLOCKED_LABEL) && !read_only
-        # remove block label BLOCKED_LABEL if it exists
-        # note we use `try_remove_label` to avoid crashing the job
-        # if there is some race condition or manual intervention
-        # and the blocked label was removed at some point between
-        # when the `pr` object was created and now.
-        try_remove_label(api, registry.full_name, pr_number, BLOCKED_LABEL; auth=auth)
     end
 
     if pr_type == :NewPackage # it is a new package
