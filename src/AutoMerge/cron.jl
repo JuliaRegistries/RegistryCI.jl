@@ -321,7 +321,6 @@ function cron_or_api_build(
         @info(
             string(
                 "Pull request: $(pr_number). ",
-                "Type: $(pr_type). ",
                 "Decision: do not merge. ",
                 "Reason: pull request has one or more blocking comments.",
             )
