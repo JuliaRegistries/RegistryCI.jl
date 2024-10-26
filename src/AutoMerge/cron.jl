@@ -1,5 +1,8 @@
 using GitHub: GitHub
 
+const OVERRIDE_BLOCKS_LABEL = "Override AutoMerge: ignore blocking comments"
+const BLOCKED_LABEL = "AutoMerge: last run blocked by comment"
+
 function all_specified_statuses_passed(
     api::GitHub.GitHubAPI,
     registry::GitHub.Repo,
@@ -61,14 +64,14 @@ function pr_comment_is_blocking(c::GitHub.Comment)
     return !not_blocking
 end
 
-function pr_has_no_blocking_comments(
+function pr_has_blocking_comments(
     api::GitHub.GitHubAPI,
     registry::GitHub.Repo,
     pr::GitHub.PullRequest;
     auth::GitHub.Authorization,
 )
     all_pr_comments = get_all_pull_request_comments(api, registry, pr; auth=auth)
-    return !any(pr_comment_is_blocking.(all_pr_comments))
+    return any(pr_comment_is_blocking, all_pr_comments)
 end
 
 function pr_is_old_enough(
@@ -191,7 +194,14 @@ function cron_or_api_build(
     all_check_runs::AbstractVector{<:AbstractString},
     read_only::Bool,
 )
-    # first, get a list of ALL open pull requests on this repository
+
+    if !read_only
+        # first, create `BLOCKED_LABEL` as a label in the repo if it doesn't
+        # already exist. This way we can add it to PRs as needed.
+        maybe_create_blocked_label(api, registry; auth=auth)
+    end
+
+    # next, get a list of ALL open pull requests on this repository
     # then, loop through each of them.
     all_currently_open_pull_requests = my_retry(
         () -> get_all_pull_requests(api, registry, "open"; auth=auth)
@@ -297,6 +307,34 @@ function cron_or_api_build(
         return nothing
     end
 
+    # We will check for blocked here, once we think it's a registration PR
+    # (as opposed to some other kind of PR).
+    # This way we can update the labels now, regardless of the current status
+    # of the other steps (e.g. automerge passing, waiting period, etc).
+    blocked = pr_has_blocking_comments(api, registry, pr; auth=auth) && !has_label(pr.labels, OVERRIDE_BLOCKS_LABEL)
+    if blocked
+        if !read_only
+            # add `BLOCKED_LABEL` to communicate to users
+            # that the PR is blocked from automerging
+            GitHub.add_labels(api, registry.full_name, pr_number, [BLOCKED_LABEL]; auth=auth)
+        end
+        @info(
+            string(
+                "Pull request: $(pr_number). ",
+                "Decision: do not merge. ",
+                "Reason: pull request has one or more blocking comments.",
+            )
+        )
+        return nothing
+    elseif has_label(pr.labels, BLOCKED_LABEL) && !read_only
+        # remove block label BLOCKED_LABEL if it exists
+        # note we use `try_remove_label` to avoid crashing the job
+        # if there is some race condition or manual intervention
+        # and the blocked label was removed at some point between
+        # when the `pr` object was created and now.
+        try_remove_label(api, registry.full_name, pr_number, BLOCKED_LABEL; auth=auth)
+    end
+
     if is_new_package(pr) # it is a new package
         pr_type = :NewPackage
         pkg, version = parse_pull_request_title(NewPackage(), pr)
@@ -379,18 +417,6 @@ function cron_or_api_build(
                 "It is not the case that ",
                 "all of the specified statuses and ",
                 "check runs passed. ",
-            )
-        )
-        return nothing
-    end
-
-    if !pr_has_no_blocking_comments(api, registry, pr; auth=auth)
-        @info(
-            string(
-                "Pull request: $(pr_number). ",
-                "Type: $(pr_type). ",
-                "Decision: do not merge. ",
-                "Reason: pull request has one or more blocking comments.",
             )
         )
         return nothing
