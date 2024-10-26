@@ -2,7 +2,7 @@ using Pkg: Pkg
 # import GitCommand
 using HTTP: HTTP
 using RegistryTools: RegistryTools
-using Test: Test
+using Test: Test, @testset, @test
 
 function gather_stdlib_uuids()
     return Set{Base.UUID}(x for x in keys(RegistryTools.stdlibs()))
@@ -148,7 +148,7 @@ registries elsewhere, then you may provide the github urls for those registries
 using the `registry_deps` parameter.
 """
 function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
-    Test.@testset "(Registry|Package|Versions|Deps|Compat).toml" begin
+    @testset "(Registry|Package|Versions|Deps|Compat).toml" begin
         cd(path) do
             reg = Pkg.TOML.parsefile("Registry.toml")
             reguuids = Set{Base.UUID}(Base.UUID(x) for x in keys(reg["packages"]))
@@ -158,25 +158,25 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
 
             # Test that each entry in Registry.toml has a corresponding Package.toml
             # at the expected path with the correct uuid and name
-            Test.@testset "$(get(data, "name", uuid))" for (uuid, data) in reg["packages"]
+            @testset "$(get(data, "name", uuid))" for (uuid, data) in reg["packages"]
                 # Package.toml testing
                 pkg = Pkg.TOML.parsefile(abspath(data["path"], "Package.toml"))
-                Test.@test Base.UUID(uuid) == Base.UUID(pkg["uuid"])
-                Test.@test data["name"] == pkg["name"]
-                Test.@test Base.isidentifier(data["name"])
-                Test.@test haskey(pkg, "repo")
+                @test Base.UUID(uuid) == Base.UUID(pkg["uuid"])
+                @test data["name"] == pkg["name"]
+                @test Base.isidentifier(data["name"])
+                @test haskey(pkg, "repo")
 
                 # Versions.toml testing
                 vers = Pkg.TOML.parsefile(abspath(data["path"], "Versions.toml"))
                 vnums = VersionNumber.(keys(vers))
                 for (v, data) in vers
-                    Test.@test VersionNumber(v) isa VersionNumber
-                    Test.@test haskey(data, "git-tree-sha1")
+                    @test VersionNumber(v) isa VersionNumber
+                    @test haskey(data, "git-tree-sha1")
 
                     # https://github.com/JuliaRegistries/RegistryCI.jl/issues/523
                     # "yanked" is correct.
                     # "yank" (and all other variants) are incorrect.
-                    Test.@test keys(data) ⊆ ["git-tree-sha1", "yanked"]
+                    @test keys(data) ⊆ ["git-tree-sha1", "yanked"]
                 end
 
                 # Deps.toml testing
@@ -191,14 +191,14 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                         msg = "It is not the case that all dependencies exist in the General registry"
                         @error msg setdiff(depuuids, alluuids)
                     end
-                    Test.@test depuuids ⊆ alluuids
+                    @test depuuids ⊆ alluuids
                     # Test that the way Pkg loads this data works
-                    Test.@test load_deps(depsfile, vnums)
+                    @test load_deps(depsfile, vnums)
                     # Make sure the content roundtrips through decompression/compression
                     compressed = RegistryTools.Compress.compress(
                         depsfile, RegistryTools.Compress.load(depsfile)
                     )
-                    Test.@test _spacify_hyphens(compressed) == _spacify_hyphens(deps)
+                    @test _spacify_hyphens(compressed) == _spacify_hyphens(deps)
                 else
                     @debug "Deps.toml file does not exist" depsfile
                 end
@@ -207,6 +207,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                 compatfile = abspath(data["path"], "Compat.toml")
                 if isfile(compatfile)
                     compat = Pkg.TOML.parsefile(compatfile)
+
                     # Test that all names with compat is a dependency
                     compatnames = Set{String}(x for (_, d) in compat for (x, _) in d)
                     if !(
@@ -223,8 +224,20 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                             )
                         end
                     end
+
+                    # Make sure that each compat spec is a valid registry compat spec.
+                    # https://github.com/JuliaRegistries/General/issues/104849
+                    for (versionrange, compatinfo) in pairs(compat)
+                        @test Pkg.Types.VersionRange(versionrange) isa Pkg.Types.VersionRange
+                        for (name, spec_unparsed) in pairs(compatinfo)
+                            spec = Pkg.Types.VersionSpec(spec_unparsed)
+                            # Make sure that the compat spec is a valid registry compat spec:
+                            @test spec isa Pkg.Types.VersionSpec
+                        end
+                    end
+
                     # Test that the way Pkg loads this data works
-                    Test.@test load_compat(compatfile, vnums)
+                    @test load_compat(compatfile, vnums)
                     # Make sure the content roundtrips through decompression/compression.
                     # However, before we check for equality, we change the compat ranges
                     # from `String`s to `VersionRanges`.
@@ -234,7 +247,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     mapvalues = (f, dict) -> Dict(k => f(v) for (k, v) in dict)
                     f_inner = v -> Pkg.Types.VersionRange.(v)
                     f_outer = dict -> mapvalues(f_inner, dict)
-                    Test.@test _spacify_hyphens(mapvalues(f_outer, compressed)) == _spacify_hyphens(mapvalues(f_outer, compat))
+                    @test _spacify_hyphens(mapvalues(f_outer, compressed)) == _spacify_hyphens(mapvalues(f_outer, compat))
                 else
                     @debug "Compat.toml file does not exist" compatfile
                 end
@@ -250,7 +263,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     joinpath(lowercase.(x[1:i])...) for
                     x in path_parts if get(x, i, nothing) !== nothing
                 )
-                Test.@test length(i_parts) == length(i_parts′)
+                @test length(i_parts) == length(i_parts′)
             end
         end
     end
