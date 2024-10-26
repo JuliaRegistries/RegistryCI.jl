@@ -1052,7 +1052,7 @@ function _run_pkg_commands(
     @info("""
         IMPORTANT: If you see any messages of the form "Error: Some registries failed to update"
         or "registry dirty"
-        please disregard those messages. Those messages are normal and do not indicate an error
+        please disregard those messages. Those messages are normal and do not indicate an error.
     """)
     cmd_ran_successfully = success(pipeline(cmd; stdout=stdout, stderr=stderr))
     cd(original_directory)
