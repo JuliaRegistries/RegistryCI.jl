@@ -1,4 +1,4 @@
-const new_package_title_regex = r"^New package: (\w*?) v(\S*?)$"
+const new_package_title_regex = r"^New package: (\S*) v(\S*)$"
 
 const new_version_title_regex = r"^New version: (\w*?) v(\S*?)$"
 
@@ -89,6 +89,7 @@ function pull_request_build(
     public_registries::Vector{<:AbstractString}=String[],
     read_only::Bool,
     environment_variables_to_pass::Vector{<:AbstractString}=String[],
+    new_package_waiting_period=new_package_waiting_period,
 )::Nothing
     pr = my_retry(() -> GitHub.pull_request(api, registry, pr_number; auth=auth))
     _github_api_pr_head_commit_sha = pull_request_head_sha(pr)
@@ -165,12 +166,12 @@ function pull_request_build(
         read_only=read_only,
         environment_variables_to_pass=environment_variables_to_pass,
     )
-    pull_request_build(data; check_license=check_license)
+    pull_request_build(data; check_license=check_license, new_package_waiting_period=new_package_waiting_period)
     rm(registry_master; force=true, recursive=true)
     return nothing
 end
 
-function pull_request_build(data::GitHubAutoMergeData; check_license)::Nothing
+function pull_request_build(data::GitHubAutoMergeData; check_license, new_package_waiting_period)::Nothing
     kind = package_or_version(data.registration_type)
     this_is_jll_package = is_jll_name(data.pkg)
     @info(
@@ -195,12 +196,16 @@ function pull_request_build(data::GitHubAutoMergeData; check_license)::Nothing
         check_license=check_license,
         this_is_jll_package=this_is_jll_package,
         this_pr_can_use_special_jll_exceptions=this_pr_can_use_special_jll_exceptions,
+        use_distance_check=perform_distance_check(data.pr.labels),
+        package_author_approved=has_package_author_approved_label(data.pr.labels)
     )
     checked_guidelines = Guideline[]
 
     for (guideline, applicable) in guidelines
         applicable || continue
-        if guideline == :update_status
+        if guideline == :early_exit_if_failed
+            all(passed, checked_guidelines) || break
+        elseif guideline == :update_status
             if !all(passed, checked_guidelines)
                 update_status(
                     data;
@@ -229,7 +234,8 @@ function pull_request_build(data::GitHubAutoMergeData; check_license)::Nothing
             data.registration_type,
             data.suggest_onepointzero,
             data.version,
-            this_pr_can_use_special_jll_exceptions,
+            this_pr_can_use_special_jll_exceptions;
+            new_package_waiting_period=new_package_waiting_period
         )
         my_retry(() -> update_automerge_comment!(data, this_pr_comment_pass))
     else # failure

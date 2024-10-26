@@ -1,13 +1,10 @@
 name: CI (unit tests)
 on:
+  merge_group: # GitHub Merge Queue
   pull_request:
-    branches:
-      - master
   push:
     branches:
       - master
-      - staging
-      - trying
     tags: '*'
 env:
   JULIA_PKG_UNPACK_REGISTRY: 'true'
@@ -52,6 +49,8 @@ jobs:
         env:
           AUTOMERGE_RUN_INTEGRATION_TESTS: "false"
   documentation:
+    env:
+      JULIA_PKG_UNPACK_REGISTRY: 'false'
     name: Documentation
     runs-on: ubuntu-latest
     steps:
@@ -62,10 +61,11 @@ jobs:
       - run: |
           julia --project=docs -e '
             using Pkg
+            # install compressed registry
+            Pkg.Registry.rm("General")
+            Pkg.Registry.add("General")
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()'
-        env:
-          JULIA_PKG_SERVER: ''
       - run: julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

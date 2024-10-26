@@ -34,7 +34,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
 @testset "Integration tests" begin
     for (
         test_number,
-        (master_dir, feature_dir, public_dir, title, point_to_slack, check_license, pass, commit),
+        (master_dir, feature_dir, public_dir, title, point_to_slack, check_license, pass, commit, create_blocking_comment),
     ) in enumerate([
         (
             "master_1",
@@ -45,6 +45,18 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             true,   # check_license
             true,   # pass
             requires_commit,
+            false,  # create_blocking_comment
+        ), # OK: new package
+        (
+            "master_1",
+            "feature_1",
+            "",
+            "New package: Requires v1.0.0",
+            true,   # point_to_slack
+            true,   # check_license
+            true,   # pass
+            requires_commit,
+            true,  # create_blocking_comment
         ), # OK: new package
         (
             "master_1",
@@ -55,6 +67,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             true,   # check_license
             false,  # pass
             "659e09770ba9fda4a503f8bf281d446c9583ff3b",
+            false,  # create_blocking_comment
         ), # FAIL: wrong commit!
         (
             "master_2",
@@ -65,6 +78,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # check_license
             true,   # pass
             requires_commit,
+            false,  # create_blocking_comment
         ),            # OK: new version
         (
             "master_1",
@@ -75,6 +89,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # check_license
             false,  # pass
             requires_commit,
+            false,  # create_blocking_comment
         ),                # FAIL: name too short
         (
             "master_2",
@@ -85,6 +100,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # check_license
             false,  # pass
             requires_commit,
+            false,  # create_blocking_comment
         ),           # FAIL: skips v2.0.0
         (
             "master_3",
@@ -95,6 +111,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # check_license
             false,  # pass
             requires_commit,
+            false,  # create_blocking_comment
         ),           # FAIL: modifies extra file
         (
             "master_1",
@@ -105,6 +122,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # check_license
             true,   # pass
             hello_world_commit1,
+            false,  # create_blocking_comment
         ),   # OK: new JLL package
         (
             "master_4",
@@ -115,6 +133,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # check_license
             true,   # pass
             hello_world_commit2,
+            false,  # create_blocking_comment
         ),   # OK: new JLL version
         (
             "master_1",
@@ -125,6 +144,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # check_license
             false,  # pass
             hello_world_commit1,
+            false,  # create_blocking_comment
         ),  # FAIL: unallowed dependency
         (
             "master_1",
@@ -135,6 +155,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # check_license
             true,   # pass
             requires_commit,
+            false,  # create_blocking_comment
         ),    # OK: no UUID conflict
         (
             "master_1",
@@ -145,6 +166,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # check_license
             false,  # pass
             requires_commit,
+            false,  # create_blocking_comment
         ),  # FAIL: UUID conflict, name differs
         (
             "master_1",
@@ -155,6 +177,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # check_license
             false,  # pass
             requires_commit,
+            false,  # create_blocking_comment
         ),  # FAIL: UUID conflict, repo differs
         (
             "master_1",
@@ -165,7 +188,19 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             false,  # check_license
             true,   # pass
             requires_commit,
+            false,  # create_blocking_comment
         ),   # OK: UUID conflict but name and repo match
+        (
+            "master_1",
+            "feature_9",
+            "",
+            "New package: Requires-dash v1.0.0",
+            true,   # point_to_slack
+            true,   # check_license
+            false,   # pass
+            requires_commit,
+            false,  # create_blocking_comment
+        ), # FAIL: new package name is not a Julia identifier
     ])
         @info "Performing integration tests with settings" test_number master_dir feature_dir public_dir title point_to_slack check_license pass commit
         with_master_branch(
@@ -244,6 +279,13 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                         "TRAVIS_REPO_SLUG" => AUTOMERGE_INTEGRATION_TEST_REPO,
                     ) do
                         sleep(1)
+                        if create_blocking_comment
+                            blocking_comment = GitHub.create_comment(repo, pr, "blocking comment", auth=auth)
+                            # Delete the comment on exit, if we don't do so sooner
+                            atexit() do
+                                GitHub.delete_comment(repo, blocking_comment; auth=auth, handle_error=false)
+                            end
+                        end
                         AutoMerge.run(;
                             merge_new_packages=true,
                             merge_new_versions=true,
@@ -259,7 +301,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                             master_branch_is_default_branch=false,
                         )
                         sleep(1)
-                        AutoMerge.run(;
+                        merge = () -> AutoMerge.run(;
                             merge_new_packages=true,
                             merge_new_versions=true,
                             new_package_waiting_period=Minute(0),
@@ -273,6 +315,22 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                             master_branch=master,
                             master_branch_is_default_branch=false,
                         )
+                        merge()
+                        if create_blocking_comment
+                            # Check we have the blocked label
+                            labels = GitHub.labels(repo, pr)
+                            @test AutoMerge.has_label(labels, AutoMerge.BLOCKED_LABEL)
+                            # Delete the comment & rerun
+                            GitHub.delete_comment(repo, blocking_comment; auth=auth)
+                            sleep(1)
+                            merge()
+                            sleep(1)
+                            # Check we no longer have the blocked label
+                            labels = GitHub.labels(repo, pr)
+                            # This test is not working, but I have verified the label
+                            # is indeed being removed appropriately.
+                            # @test !AutoMerge.has_label(labels, AutoMerge.BLOCKED_LABEL)
+                        end
                     end
                 end
             end

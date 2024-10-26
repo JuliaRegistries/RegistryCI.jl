@@ -22,8 +22,10 @@ function guidelines_to_markdown_output(guidelines_function::Function)
         check_license = true,
         this_is_jll_package = false,
         this_pr_can_use_special_jll_exceptions = false,
+        use_distance_check = false,
+        package_author_approved = false,
     )
-    filter!(x -> x[1] != :update_status, guidelines)
+    filter!(x -> !(x[1] isa Symbol), guidelines)
     filter!(x -> !(x[1].docs isa Nothing), guidelines)
     docs = [rstrip(x[1].docs) for x in guidelines]
     output_string = join(string.(collect(1:length(docs)), Ref(". "), docs), "\n")
@@ -50,8 +52,10 @@ function guidelines_to_markdown_output(guidelines_function::Function)
         check_license = true,
         this_is_jll_package = false,
         this_pr_can_use_special_jll_exceptions = false,
+        use_distance_check = false,
+        package_author_approved = false,
     )
-    filter!(x -> x[1] != :update_status, guidelines)
+    filter!(x -> !(x[1] isa Symbol), guidelines)
     filter!(x -> !(x[1].docs isa Nothing), guidelines)
     docs = [rstrip(x[1].docs) for x in guidelines]
     output_string = join(string.(collect(1:length(docs)), Ref(". "), docs), "\n")
@@ -105,17 +109,19 @@ To test yourself that a tentative package name, say `MyPackage` meets these
 checks, you can use the following code (after adding the RegistryCI package
 to your Julia environment):
 
-```julia
-using RegistryCI
+```@example
+using RegistryCI, RegistryInstances
 using RegistryCI.AutoMerge
-all_pkg_names = AutoMerge.get_all_non_jll_package_names(path_to_registry)
-AutoMerge.meets_distance_check("MyPackage", all_pkg_names)
+path_to_registry = joinpath(DEPOT_PATH[1], "registries", "General.toml")
+all_pkg_names = AutoMerge.get_all_non_jll_package_names(RegistryInstance(path_to_registry))
+AutoMerge.meets_distance_check("MyPackage123", all_pkg_names)
 ```
 
-where `path_to_registry` is a path to the folder containing the registry of
+where `path_to_registry` is a path to the registry of
 interest. For the General Julia registry, usually `path_to_registry =
-joinpath(DEPOT_PATH[1], "registries", "General")` if you haven't changed
-your `DEPOT_PATH` and have an extracted version of the Pkg server registry (see JuliaRegistries/RegistryCI.jl#442). This will return a boolean, indicating whether or not
+joinpath(DEPOT_PATH[1], "registries", "General.toml")` if you haven't changed
+your `DEPOT_PATH` (or `path_to_registry =
+joinpath(DEPOT_PATH[1], "registries", "General")` if you have an uncompressed registry at the directory there). This will return a boolean, indicating whether or not
 your tentative package name passed the check, as well as a string,
 indicating what the problem is in the event the check did not pass.
 
@@ -123,3 +129,16 @@ Note that these automerge guidelines are deliberately conservative: it is
 very possible for a perfectly good name to not pass the automatic checks and
 require manual merging. They simply exist to provide a fast path so that
 manual review is not required for every new package.
+
+## List of all GitHub PR labels that can influence AutoMerge
+
+AutoMerge reads certain labels on GitHub registration pull requests to influence its decisions.
+Specifically, these labels are:
+
+* `Override AutoMerge: name similarity is okay`
+    * This label can be manually applied by folks with triage-level access to the registry repository.
+    * AutoMerge skips the "name similarity check" on new package registration PRs with this label.
+* `Override AutoMerge: package author approved`
+    * This label can be manually applied, but typically is applied by a separate Github Actions workflow which monitors the PR for comments by the package author, and applies this label if they write `[merge approved]`.
+    * This label currently only skips the "sequential version number" check in new versions. In the future, the author-approval mechanism may be used for other checks (on both "new version" registrations and also "new package" registrations).
+        * When AutoMerge fails a check that can be skipped by author-approval, it will mention so in the comment, and direct authors to comment `[merge approved]` if they want to skip the check.

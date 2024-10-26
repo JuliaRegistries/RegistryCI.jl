@@ -1,5 +1,12 @@
 using HTTP: HTTP
 
+# TODO: change this value to `true` once we are ready to re-enable the
+# "Require `[compat]` for stdlib dependencies" feature.
+#
+# For example, we might consider changing this value to `true`
+# once Julia 1.6 is no longer the LTS.
+const _AUTOMERGE_REQUIRE_STDLIB_COMPAT = false
+
 const guideline_registry_consistency_tests_pass = Guideline(;
     info="Registy consistency tests",
     docs=nothing,
@@ -77,6 +84,41 @@ const guideline_compat_for_all_deps = Guideline(;
     check=data -> meets_compat_for_all_deps(data.registry_head, data.pkg, data.version),
 )
 
+function compat_violation_message(bad_dependencies)
+    return string(
+        "The following dependencies do not have a `[compat]` entry ",
+        "that is upper-bounded and only includes a finite number ",
+        "of breaking releases: ",
+        join(bad_dependencies, ", "),
+        # Note the indentation here is important for the proper formatting within a bulleted list later
+        """
+
+            <details><summary>Extended explanation</summary>
+
+            Your package has a Project.toml file which might look something like the following:
+
+            ```toml
+            name = "YourPackage"
+            uuid = "random id"
+            authors = ["Author Names"]
+            version = "major.minor"
+
+            [deps]
+            # Package dependencies
+            # ...
+
+            [compat]
+            # ...
+            ```
+
+            Every package listed in `[deps]`, along with `julia` itself, must also be listed under `[compat]` (if you don't have a `[compat]` section, make one!). See the [Pkg docs](https://pkgdocs.julialang.org/v1/compatibility/) for the syntax for compatibility bounds, and [this documentation](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/#Upper-bounded-%5Bcompat%5D-entries) for more on the kinds of compat bounds required for AutoMerge.
+
+            </details>
+        """
+    )
+
+end
+
 function meets_compat_for_all_deps(working_directory::AbstractString, pkg, version)
     package_relpath = get_package_relpath_in_registry(;
         package_name=pkg, registry_path=working_directory
@@ -91,8 +133,15 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
     for version_range in keys(deps)
         if version in Pkg.Types.VersionRange(version_range)
             for name in keys(deps[version_range])
-                if !is_jll_name(name)
-                    @debug("Found a new (non-JLL) dependency: $(name)")
+                if _AUTOMERGE_REQUIRE_STDLIB_COMPAT
+                    debug_msg = "Found a new (non-JLL) dependency: $(name)"
+                    apply_compat_requirement = !is_jll_name(name)
+                else
+                    debug_msg = "Found a new (non-stdlib non-JLL) dependency: $(name)"
+                    apply_compat_requirement = !is_jll_name(name) && !is_julia_stdlib(name)
+                end
+                if apply_compat_requirement
+                    @debug debug_msg
                     dep_has_compat_with_upper_bound[name] = false
                 end
             end
@@ -141,12 +190,7 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
             end
         end
         sort!(bad_dependencies)
-        message = string(
-            "The following dependencies do not have a `[compat]` entry ",
-            "that is upper-bounded and only includes a finite number ",
-            "of breaking releases: ",
-            join(bad_dependencies, ", "),
-        )
+        message = compat_violation_message(bad_dependencies)
         return false, message
     end
 end
@@ -230,7 +274,7 @@ function meets_name_ascii(pkg)
 end
 
 const guideline_julia_name_check = Guideline(;
-    info="Name does not include \"julia\" or start with \"Ju\".",
+    info="Name does not include \"julia\", start with \"Ju\", or end with \"jl\".",
     check=data -> meets_julia_name_check(data.pkg),
 )
 
@@ -240,6 +284,8 @@ function meets_julia_name_check(pkg)
         "Lowercase package name $(lowercase(pkg)) contains the string \"julia\"."
     elseif startswith(pkg, "Ju")
         return false, "Package name starts with \"Ju\"."
+    elseif endswith(lowercase(pkg), "jl")
+        return false, "Lowercase package name $(lowercase(pkg)) ends with \"jl\"."
     else
         return true, ""
     end
@@ -250,6 +296,35 @@ function sqrt_normalized_vd(name1, name2)
     return VisualStringDistances.visual_distance(name1, name2; normalize=x -> 5 + sqrt(x))
 end
 
+# This check cannot be overridden, since it's important for registry integrity
+const guideline_name_match_check = Guideline(;
+    info = "Name does not match the name of any existing package names (up-to-case)",
+    docs = "Packages must not match the name of existing package up-to-case, since on case-insensitive filesystems, this will break the registry.",
+    check=data -> meets_name_match_check(data.pkg, data.registry_master))
+
+function meets_name_match_check(pkg_name::AbstractString, registry_master::AbstractString)
+    other_packages = get_all_non_jll_package_names(registry_master)
+    return meets_name_match_check(pkg_name, other_packages)
+end
+
+function meets_name_match_check(
+    pkg_name::AbstractString,
+    other_packages::Vector;
+)
+    for other_pkg in other_packages
+        if pkg_name == other_pkg
+            # We short-circuit in this case; more information doesn't help.
+            return (false, "Package name already exists in the registry.")
+        elseif lowercase(pkg_name) == lowercase(other_pkg)
+            return (false, "Package name matches existing package name $(other_pkg) up-to-case.")
+        end
+    end
+    return (true, "")
+end
+
+
+# This check looks for similar (but not exactly matching) names. It can be
+# overridden by a label.
 const guideline_distance_check = Guideline(;
     info="Name is not too similar to existing package names",
     docs="""
@@ -265,6 +340,8 @@ To prevent confusion between similarly named packages, the names of new packages
       [VisualStringDistances.jl](https://github.com/ericphanson/VisualStringDistances.jl)
       between the package name and any existing package must exceeds a certain
       a hand-chosen threshold (currently 2.5).
+
+These checks can be overridden by applying a label `Override AutoMerge: name similarity is okay` to the PR. This will turn off the check as long as the label is applied to the PR.
   """,
     check=data -> meets_distance_check(data.pkg, data.registry_master),
 )
@@ -286,18 +363,9 @@ function meets_distance_check(
 )
     problem_messages = Tuple{String,Tuple{Float64,Float64,Float64}}[]
     for other_pkg in other_packages
-        if pkg_name == other_pkg
-            # We short-circuit in this case; more information doesn't help.
-            return (false, "Package name already exists in the registry.")
-        elseif lowercase(pkg_name) == lowercase(other_pkg)
-            # We'll sort this first
-            push!(
-                problem_messages,
-                (
-                    "Package name matches existing package name $(other_pkg) up to case.",
-                    (0, 0, 0),
-                ),
-            )
+        if lowercase(pkg_name) == lowercase(other_pkg)
+            # We handle this case in `meets_name_match_check`
+            continue
         else
             msg = ""
 
@@ -373,6 +441,40 @@ function meets_distance_check(
     return (false, message)
 end
 
+# Used in `pull_request_build` to determine if we should
+# perform the distance check or not.
+# We expect to be passed the `labels` field of a PullRequest:
+# <https://github.com/JuliaWeb/GitHub.jl/blob/d24bd6798609ae356db308d65577e99aad0cf432/src/issues/pull_requests.jl#L33>
+function perform_distance_check(labels)
+    # No labels? Do the check
+    isnothing(labels) && return true
+    for label in labels
+        if label.name === "Override AutoMerge: name similarity is okay"
+            # found the override! Skip the check
+            @debug "Found label; skipping distance check" label.name
+            return false
+        end
+    end
+    # Did not find the override. Perform the check.
+    return true
+end
+
+const guideline_name_identifier = Guideline(;
+    info="Name is a Julia identifier",
+    docs=string(
+        "The package name should be a valid Julia identifier (according to `Base.isidentifier`).",
+    ),
+    check=data -> meets_name_is_identifier(data.pkg),
+)
+
+function meets_name_is_identifier(pkg)
+    if Base.isidentifier(pkg)
+        return true, ""
+    else
+        return false, "The package's name ($pkg) is not a valid Julia identifier according to `Base.isidentifier`. Typically this means it contains `-` or other characters that can't be used in defining a variable name or module. The package must be renamed to be registered."
+    end
+end
+
 const guideline_normal_capitalization = Guideline(;
     info="Normal capitalization",
     docs=string(
@@ -424,11 +526,21 @@ function meets_repo_url_requirement(pkg::String; registry_head::String)
 end
 
 function _invalid_sequential_version(reason::AbstractString)
-    return false, "Does not meet sequential version number guideline: $reason", :invalid
+    return false, "Does not meet sequential version number guideline: $(reason). $PACKAGE_AUTHOR_APPROVAL_INSTRUCTIONS", :invalid
 end
 
 function _valid_change(old_version::VersionNumber, new_version::VersionNumber)
     diff = difference(old_version, new_version)
+    if !(diff isa VersionNumber)
+        if diff isa ErrorCannotComputeVersionDifference
+            old_msg = diff.msg
+        else
+            T = typeof(diff)
+            old_msg = "Unknown diff type: $(T)"
+        end
+        new_msg = "Error occured while trying to compute version bump. Message: $(old_msg)"
+        return _invalid_sequential_version(new_msg)
+    end
     @debug("Difference between versions: ", old_version, new_version, diff)
     if diff == v"0.0.1"
         return true, "", :patch
@@ -440,6 +552,10 @@ function _valid_change(old_version::VersionNumber, new_version::VersionNumber)
         return _invalid_sequential_version("increment is not one of: 0.0.1, 0.1.0, 1.0.0")
     end
 end
+
+const PACKAGE_AUTHOR_APPROVAL_INSTRUCTIONS = string(
+    "**If this was not a mistake and you wish to merge this PR anyway, ",
+    "write a comment that says `[merge approved]`.**")
 
 const guideline_sequential_version_number = Guideline(;
     info="Sequential version number",
@@ -722,7 +838,7 @@ function meets_version_can_be_pkg_added(
         string(
             "I was not able to install the package ",
             "(i.e. `Pkg.add(\"$(pkg)\")` failed). ",
-            "See the CI logs for details.",
+            "See the AutoMerge logs for details.",
         )
     end
 end
@@ -858,7 +974,7 @@ function meets_version_can_be_imported(
         string(
             "I was not able to load the package ",
             "(i.e. `import $(pkg)` failed). ",
-            "See the CI logs for details.",
+            "See the AutoMerge logs for details.",
         )
     end
 end
@@ -933,6 +1049,11 @@ function _run_pkg_commands(
         pushfirst!(cmd.exec, xvfb)
     end
     @info(before_message)
+    @info(string(
+        "IMPORTANT: If you see any messages of the form \"Error: Some registries failed to update\"",
+        "or \"registry dirty\", ",
+        "please disregard those messages. Those messages are normal and do not indicate an error.",
+    ))
     cmd_ran_successfully = success(pipeline(cmd; stdout=stdout, stderr=stderr))
     cd(original_directory)
 
@@ -956,8 +1077,14 @@ function get_automerge_guidelines(
     check_license::Bool,
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
+    use_distance_check::Bool,
+    package_author_approved::Bool # currently unused for new packages
 )
     guidelines = [
+        # We first verify the name is a valid Julia identifier.
+        # If not, we early exit (`:early_exit_if_failed`), since we don't want to proceed further.
+        (guideline_name_identifier, true),
+        (:early_exit_if_failed, true),
         (guideline_registry_consistency_tests_pass, true),
         (guideline_pr_only_changes_allowed_files, true),
         # (guideline_only_changes_specified_package, true), # not yet implemented
@@ -982,12 +1109,14 @@ function get_automerge_guidelines(
         (guideline_version_can_be_imported, true),
         (:update_status, true),
         (guideline_dependency_confusion, true),
+        # this is the non-optional part of name checking
+        (guideline_name_match_check, true),
         # We always run the `guideline_distance_check`
         # check last, because if the check fails, it
         # prints the list of similar package names in
         # the automerge comment. To make the comment easy
         # to read, we want this list to be at the end.
-        (guideline_distance_check, true),
+        (guideline_distance_check, use_distance_check),
     ]
     return guidelines
 end
@@ -997,11 +1126,13 @@ function get_automerge_guidelines(
     check_license::Bool,
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
+    use_distance_check::Bool, # unused for new versions
+    package_author_approved::Bool,
 )
     guidelines = [
         (guideline_registry_consistency_tests_pass, true),
         (guideline_pr_only_changes_allowed_files, true),
-        (guideline_sequential_version_number, !this_pr_can_use_special_jll_exceptions),
+        (guideline_sequential_version_number, !this_pr_can_use_special_jll_exceptions && !package_author_approved),
         (guideline_version_number_no_prerelease, true),
         (guideline_version_number_no_build, !this_pr_can_use_special_jll_exceptions),
         (guideline_compat_for_julia, true),

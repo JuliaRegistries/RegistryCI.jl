@@ -4,10 +4,19 @@ on:
   schedule:
     - cron: '05,17,29,41,53 * * * *'
   pull_request:
+    # opened = run when the PR is first opened
+    # labeled = run when labels are applied, so that the "Override AutoMerge: name similarity is okay label is respected.
+    # synchronize = run when a commit is pushed to the PR
+    types: [opened, labeled, synchronize]
   workflow_dispatch:
 
 jobs:
   AutoMerge:
+    # Run if the we are not triggered by a label OR we are triggered by a label, and that
+    # label is one that affects the execution of the workflow
+    # Note: since the label contains a colon, we need to use a workaround like https://github.com/actions/runner/issues/1019#issuecomment-810482716
+    # for the syntax to parse correctly.
+    if: "${{ github.event.action != 'labeled' || (github.event.action == 'labeled' && (github.event.label.name == 'Override AutoMerge: name similarity is okay' || github.event.label.name == 'Override AutoMerge: package author approved')) }}"
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

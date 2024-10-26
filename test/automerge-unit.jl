@@ -45,7 +45,53 @@ function pkgdir_from_depot(depot_path::String, pkg::String)
     return only_pkdir
 end
 
+strip_equal(x, y) = strip(x) == strip(y)
+
+# Here we reference test all the permutations of the AutoMerge comments.
+# This allows us to see the diffs in PRs that change the AutoMerge comment.
+function comment_reference_test()
+    for pass in (true, false),
+        (type_name,type) in (("new_version", AutoMerge.NewVersion()), ("new_package", AutoMerge.NewPackage())),
+        suggest_onepointzero in (true, false),
+        # some code depends on above or below v"1"
+        version in (v"0.1", v"1")
+
+        if pass
+            for is_jll in (true, false)
+                name = string("comment", "_pass_", pass, "_type_", type_name,
+                "_suggest_onepointzero_", suggest_onepointzero,
+                "_version_", version, "_is_jll_", is_jll)
+                @test_reference "reference_comments/$name.md" AutoMerge.comment_text_pass(type, suggest_onepointzero, version, is_jll, new_package_waiting_period=Day(3)) by=strip_equal
+            end
+        else
+            for point_to_slack in (true, false)
+                name = string("comment", "_pass_", pass, "_type_", type_name,
+                "_suggest_onepointzero_", suggest_onepointzero,
+                "_version_", version, "_point_to_slack_", point_to_slack)
+                reasons = [
+                            AutoMerge.compat_violation_message(["julia"]),
+                            "Example guideline failed. Please fix it."]
+                fail_text = AutoMerge.comment_text_fail(type, reasons, suggest_onepointzero, version; point_to_slack=point_to_slack)
+
+                @test_reference "reference_comments/$name.md" fail_text by=strip_equal
+
+                # `point_to_slack=false` should yield no references to Slack in the text
+                if !point_to_slack
+                    @test !occursin("slack", fail_text)
+                end
+            end
+        end
+    end
+end
+
 @testset "Utilities" begin
+    @testset "comment_reference_test" begin
+        comment_reference_test()
+    end
+    @testset "Customized `new_package_waiting_period` in AutoMerge comment " begin
+        text = AutoMerge.comment_text_pass(AutoMerge.NewPackage(), false, v"1", false; new_package_waiting_period=Minute(45))
+        @test occursin("(45 minutes)", text)
+    end
     @testset "`AutoMerge.parse_registry_pkg_info`" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
         result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI", "1.0.0")
@@ -76,6 +122,10 @@ end
 end
 
 @testset "Guidelines for new packages" begin
+    @testset "Package name is a valid identifier" begin
+        @test AutoMerge.meets_name_is_identifier("Hello")[1]
+        @test !AutoMerge.meets_name_is_identifier("Hello-GoodBye")[1]
+    end
     @testset "Normal capitalization" begin
         @test AutoMerge.meets_normal_capitalization("Zygote")[1]  # Regular name
         @test AutoMerge.meets_normal_capitalization("Zygote")[1]
@@ -94,17 +144,23 @@ end
         @test !AutoMerge.meets_name_length("Flux")[1]
         @test !AutoMerge.meets_name_length("Flux")[1]
     end
-    @testset "Name does not include \"julia\" or start with \"Ju\"" begin
+    @testset "Name does not include \"julia\", start with \"Ju\", or end with \"jl\"" begin
         @test AutoMerge.meets_julia_name_check("Zygote")[1]
         @test AutoMerge.meets_julia_name_check("RegistryCI")[1]
         @test !AutoMerge.meets_julia_name_check("JuRegistryCI")[1]
         @test !AutoMerge.meets_julia_name_check("ZygoteJulia")[1]
         @test !AutoMerge.meets_julia_name_check("Zygotejulia")[1]
+        @test !AutoMerge.meets_julia_name_check("Sortingjl")[1]
+        @test !AutoMerge.meets_julia_name_check("BananasJL")[1]
         @test !AutoMerge.meets_julia_name_check("AbcJuLiA")[1]
     end
     @testset "Package name is ASCII" begin
         @test !AutoMerge.meets_name_ascii("ábc")[1]
         @test AutoMerge.meets_name_ascii("abc")[1]
+    end
+    @testset "Package name match check" begin
+        @test AutoMerge.meets_name_match_check("Flux", ["Abc", "Def"])[1]
+        @test !AutoMerge.meets_name_match_check("Websocket", ["websocket"])[1]
     end
     @testset "Package name distance" begin
         @test AutoMerge.meets_distance_check("Flux", ["Abc", "Def"])[1]
@@ -122,6 +178,25 @@ end
         @test !AutoMerge.meets_distance_check(
             "ReallyLooooongNameCD", ["ReallyLooooongNameAB"]
         )[1]
+    end
+    @testset "perform_distance_check" begin
+        @test AutoMerge.perform_distance_check(nothing)
+        @test AutoMerge.perform_distance_check([GitHub.Label(; name="hi")])
+        @test !AutoMerge.perform_distance_check([GitHub.Label(; name="Override AutoMerge: name similarity is okay")])
+        @test !AutoMerge.perform_distance_check([GitHub.Label(; name="hi"), GitHub.Label(; name="Override AutoMerge: name similarity is okay")])
+    end
+    @testset "has_author_approved_label" begin
+        @test !AutoMerge.has_package_author_approved_label(nothing)
+        @test !AutoMerge.has_package_author_approved_label([GitHub.Label(; name="hi")])
+        @test AutoMerge.has_package_author_approved_label([GitHub.Label(; name="Override AutoMerge: package author approved")])
+        @test AutoMerge.has_package_author_approved_label([GitHub.Label(; name="hi"), GitHub.Label(; name="Override AutoMerge: package author approved")])
+    end
+    @testset "pr_comment_is_blocking" begin
+        @test AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="hi"))
+        @test AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="block"))
+        @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]"))
+        @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]hi"))
+        @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[merge approved] abc"))
     end
     @testset "`get_all_non_jll_package_names`" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
@@ -335,6 +410,11 @@ end
                 @test occursin(
                     AutoMerge.new_package_title_regex, "New package: HelloWorld v1.2.3"
                 )
+                # This one is not a valid package name, but nonetheless we want AutoMerge
+                # to run and fail.
+                @test occursin(
+                    AutoMerge.new_package_title_regex, "New package: Mathieu-Functions v1.0.0"
+                )
                 @test occursin(
                     AutoMerge.new_package_title_regex, "New package: HelloWorld v1.2.3+0"
                 )
@@ -449,8 +529,8 @@ end
         @test AutoMerge.nextmajor(v"1.2") == v"2"
         @test AutoMerge.nextmajor(v"1.2.3") == v"2"
         @test AutoMerge.difference(v"1", v"2") == v"1"
-        @test_throws ArgumentError AutoMerge.difference(v"1", v"1")
-        @test_throws ArgumentError AutoMerge.difference(v"2", v"1")
+        @test AutoMerge.difference(v"1", v"1") isa AutoMerge.ErrorCannotComputeVersionDifference
+        @test AutoMerge.difference(v"2", v"1") isa AutoMerge.ErrorCannotComputeVersionDifference
         @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("0"))
         @test AutoMerge._has_upper_bound(Pkg.Types.VersionRange("1"))
         @test !AutoMerge._has_upper_bound(Pkg.Types.VersionRange("*"))
@@ -617,7 +697,7 @@ end
             @test result[1]
             result = has_osi_license_in_depot("VisualStringDistances")
             @test result[1]
-    
+
             # Now, what happens if there's also a non-OSI license in another file?
             pkg_path = pkgdir_from_depot(tmp_depot, "UnbalancedOptimalTransport")
             open(joinpath(pkg_path, "LICENSE2"); write=true) do io
@@ -627,12 +707,12 @@ end
             end
             result = has_osi_license_in_depot("UnbalancedOptimalTransport")
             @test result[1]
-    
+
             # What if we also remove the original license, leaving only the CC0 license?
             rm(joinpath(pkg_path, "LICENSE"))
             result = has_osi_license_in_depot("UnbalancedOptimalTransport")
             @test !result[1]
-    
+
             # What about no license at all?
             pkg_path = pkgdir_from_depot(tmp_depot, "VisualStringDistances")
             rm(joinpath(pkg_path, "LICENSE"))
