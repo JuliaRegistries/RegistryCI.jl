@@ -322,6 +322,74 @@ function meets_name_match_check(
     return (true, "")
 end
 
+# This check checks for an explanation of why a breaking change is breaking
+const guideline_breaking_explanation = Guideline(;
+    info = "Release notes have not been provided that explain why this is a breaking change.",
+    docs = "If this is a breaking change, release notes must be given that explain why this is a breaking change (i.e. mention \"breaking\"). To update the release notes, please see the \"Providing and updating release notes\" subsection under \"Additional information\" below.",
+    check=data -> meets_breaking_explanation_check(data))
+
+function meets_breaking_explanation_check(data::GitHubAutoMergeData)
+    # Look up PR here in case the labels are slow to be applied by the Registrator bot
+    # which decides whether to add the BREAKING label
+    pr = GitHub.pull_request(data.api, data.registry, data.pr.number; auth=data.auth)
+    return meets_breaking_explanation_check(pr.labels, pr.body)
+end
+
+function breaking_explanation_message(has_release_notes)
+    example_detail = """
+        <details><summary>Example of adding release notes with breaking notice</summary>
+
+        If you are using the comment bot `@JuliaRegistrator`, you can add release notes to this registration by re-triggering registration while specifying release notes:
+
+        ```
+        @JuliaRegistrator register
+
+        Release notes:
+
+        ## Breaking changes
+
+        - Explanation of breaking change, ideally with upgrade tips
+        - ...
+        ```
+
+        If you are using JuliaHub, trigger registration the same way you did the first time, but enter release notes that specify the breaking changes.
+        </details>
+    """
+    if has_release_notes
+        return """
+        This is a breaking change, but no release notes have been provided. Please add release notes that explain the breaking change.
+        $(example_detail)
+        """
+    else
+        return """
+        This is a breaking change, but the release notes do not mention it. Please add a mention of the breaking change to the release notes.
+        $(example_detail)
+        """
+    end
+end
+
+function meets_breaking_explanation_check(labels::Vector, body::AbstractString)
+    if any(==("BREAKING"), labels)
+        release_notes = get_release_notes(body)
+        if release_notes === nothing
+            msg = breaking_explanation_message(false)
+            return false, msg
+        elseif !occursin(r"breaking", lowercase(release_notes))
+            msg = breaking_explanation_message(true)
+            return false, msg
+        else
+            return true, ""
+        end
+    else
+        return true, ""
+    end
+end
+
+function get_release_notes(body::AbstractString)
+    pattern = r"<!-- BEGIN RELEASE NOTES -->(?s)(.*?)<!-- END RELEASE NOTES -->"
+    m = match(pattern, body)
+    return m === nothing ? nothing : m.captures[1]
+end
 
 # This check looks for similar (but not exactly matching) names. It can be
 # overridden by a label.
@@ -1078,7 +1146,8 @@ function get_automerge_guidelines(
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
     use_distance_check::Bool,
-    package_author_approved::Bool # currently unused for new packages
+    package_author_approved::Bool, # currently unused for new packages
+    check_breaking_explanation::Bool # not valid for new packages
 )
     guidelines = [
         # We first verify the name is a valid Julia identifier.
@@ -1124,6 +1193,7 @@ end
 function get_automerge_guidelines(
     ::NewVersion;
     check_license::Bool,
+    check_breaking_explanation::Bool,
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
     use_distance_check::Bool, # unused for new versions
@@ -1151,6 +1221,7 @@ function get_automerge_guidelines(
         (guideline_version_has_osi_license, check_license),
         (guideline_src_names_OK, true),
         (guideline_version_can_be_imported, true),
+        (guideline_breaking_explanation, check_breaking_explanation && !this_is_jll_package),
     ]
     return guidelines
 end

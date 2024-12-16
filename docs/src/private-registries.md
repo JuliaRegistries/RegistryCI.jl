@@ -73,6 +73,7 @@ RegistryCI.AutoMerge.run(
     additional_statuses = String[],
     additional_check_runs = String[],
     check_license = true,
+    check_breaking_explanation = true,
     public_registries = String["https://github.com/HolyLab/HolyLabRegistry"],
 )
 ```

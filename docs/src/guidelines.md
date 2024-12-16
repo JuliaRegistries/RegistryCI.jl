@@ -20,6 +20,7 @@ function guidelines_to_markdown_output(guidelines_function::Function)
     guidelines = guidelines_function(
         registration_type;
         check_license = true,
+        check_breaking_explanation = true,
         this_is_jll_package = false,
         this_pr_can_use_special_jll_exceptions = false,
         use_distance_check = false,
@@ -50,6 +51,7 @@ function guidelines_to_markdown_output(guidelines_function::Function)
     guidelines = guidelines_function(
         registration_type;
         check_license = true,
+        check_breaking_explanation = true,
         this_is_jll_package = false,
         this_pr_can_use_special_jll_exceptions = false,
         use_distance_check = false,
@@ -129,6 +131,28 @@ Note that these automerge guidelines are deliberately conservative: it is
 very possible for a perfectly good name to not pass the automatic checks and
 require manual merging. They simply exist to provide a fast path so that
 manual review is not required for every new package.
+
+### Providing and updating release notes
+
+When invoking a registration with the `@JuliaRegister` bot, release notes can be added in the form
+```
+@JuliaRegistrator register
+
+Release notes:
+
+## Breaking changes
+
+- Explanation of breaking change, ideally with upgrade tips
+- ...
+```
+
+These can also be added/updated on the General PR by re-invoking with the above.
+
+Doing this has two benefits:
+ - helps explanations during the registration process, especially for breaking changes
+ - release notes are picked up by TagBot such that they are added to the new release on the orignial repo
+
+Automerge is disabled for breaking changes where release notes are not provided mentioning "breaking".
 
 ## List of all GitHub PR labels that can influence AutoMerge
 
