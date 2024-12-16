@@ -1110,7 +1110,8 @@ function get_automerge_guidelines(
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
     use_distance_check::Bool,
-    package_author_approved::Bool # currently unused for new packages
+    package_author_approved::Bool, # currently unused for new packages
+    check_breaking_explanation::Bool # not valid for new packages
 )
     guidelines = [
         # We first verify the name is a valid Julia identifier.
