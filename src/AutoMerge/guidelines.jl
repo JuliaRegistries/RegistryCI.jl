@@ -350,20 +350,19 @@ function meets_breaking_explanation_check(labels::Vector, body::AbstractString)
             - ...
             ```
             </details>
-            """
+        """
         if release_notes === nothing
-            return false, "This is a breaking change, but no release notes have been provided."
             msg = """
-            This is a breaking change, but no release notes have been provided.
-            Please add releas notes that explain the breaking change.
-            $(example_detail)
+                This is a breaking change, but no release notes have been provided.
+                Please add release notes that explain the breaking change.
+                $(example_detail)
             """
             return false, msg
         elseif !occursin(r"breaking", lowercase(release_notes))
             msg = """
-            This is a breaking change, but the release notes do not mention it.
-            Please add a mention of the breaking change to the release notes.
-            $(example_detail)
+                This is a breaking change, but the release notes do not mention it.
+                Please add a mention of the breaking change to the release notes.
+                $(example_detail)
             """
             return false, msg
         else
