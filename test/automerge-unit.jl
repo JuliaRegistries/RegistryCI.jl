@@ -70,6 +70,8 @@ function comment_reference_test()
                 "_version_", version, "_point_to_slack_", point_to_slack)
                 reasons = [
                             AutoMerge.compat_violation_message(["julia"]),
+                            AutoMerge.breaking_explanation_message(true),
+                            AutoMerge.breaking_explanation_message(false),
                             "Example guideline failed. Please fix it."]
                 fail_text = AutoMerge.comment_text_fail(type, reasons, suggest_onepointzero, version; point_to_slack=point_to_slack)
 
