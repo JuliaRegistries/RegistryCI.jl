@@ -321,6 +321,35 @@ end
         @test !AutoMerge.range_did_not_narrow(r2, r3)[1]
         @test !AutoMerge.range_did_not_narrow(r3, r2)[1]
     end
+
+    @testset "Breaking change releases must have explanatory release notes" begin
+        body_good = """
+        <!-- BEGIN RELEASE NOTES -->
+        `````
+        ## Breaking changes
+        - something
+        - something else
+        `````
+        <!-- END RELEASE NOTES -->
+        """
+        body_bad = """
+        <!-- BEGIN RELEASE NOTES -->
+        `````
+        ## Features
+        - something
+        - something else
+        `````
+        <!-- END RELEASE NOTES -->
+        """
+        body_bad_no_notes = ""
+
+        @test AutoMerge.meets_breaking_explanation_check(["BREAKING"], body_good)[1]
+        @test !AutoMerge.meets_breaking_explanation_check(["BREAKING"], body_bad)[1]
+        @test !AutoMerge.meets_breaking_explanation_check(["BREAKING"], body_bad_no_notes)[1]
+
+        # Maybe this should fail as the label isn't applied by JuliaRegistrator, so the version isn't breaking?
+        @test AutoMerge.meets_breaking_explanation_check([], body_good)[1]
+    end
 end
 
 @testset "Guidelines for both new packages and new versions" begin
