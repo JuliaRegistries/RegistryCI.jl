@@ -344,10 +344,10 @@ function meets_breaking_explanation_check(labels, body)
 end
 
 function get_release_notes(body::AbstractString)
-    pattern = r"<!-- BEGIN RELEASE NOTES -->\s*(.*?)\s*<!-- END RELEASE NOTES -->"
-    return findfirst(pattern, body)
+    pattern = r"<!-- BEGIN RELEASE NOTES -->(?s)(.*?)<!-- END RELEASE NOTES -->"
+    m = match(pattern, body)
+    return m === nothing ? nothing : m.captures[1]
 end
-
 
 # This check looks for similar (but not exactly matching) names. It can be
 # overridden by a label.
