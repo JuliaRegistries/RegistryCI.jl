@@ -337,10 +337,35 @@ end
 function meets_breaking_explanation_check(labels::Vector, body::AbstractString)
     if any(==("BREAKING"), labels)
         release_notes = get_release_notes(body)
+        example_detail = """
+            <details><summary>Example of adding release notes with breaking notice</summary>
+            ```
+            @JuliaRegistrator register
+
+            Release notes:
+
+            ## Breaking changes
+
+            - Explanation of breaking change, ideally with upgrade tips
+            - ...
+            ```
+            </details>
+            """
         if release_notes === nothing
             return false, "This is a breaking change, but no release notes have been provided."
+            msg = """
+            This is a breaking change, but no release notes have been provided.
+            Please add releas notes that explain the breaking change.
+            $(example_detail)
+            """
+            return false, msg
         elseif !occursin(r"breaking", lowercase(release_notes))
-            return false, "This is a breaking change, but the release notes do not mention it."
+            msg = """
+            This is a breaking change, but the release notes do not mention it.
+            Please add a mention of the breaking change to the release notes.
+            $(example_detail)
+            """
+            return false, msg
         else
             return true, ""
         end
