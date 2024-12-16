@@ -20,6 +20,7 @@ function guidelines_to_markdown_output(guidelines_function::Function)
     guidelines = guidelines_function(
         registration_type;
         check_license = true,
+        check_breaking_explanation = true,
         this_is_jll_package = false,
         this_pr_can_use_special_jll_exceptions = false,
         use_distance_check = false,
@@ -50,6 +51,7 @@ function guidelines_to_markdown_output(guidelines_function::Function)
     guidelines = guidelines_function(
         registration_type;
         check_license = true,
+        check_breaking_explanation = true,
         this_is_jll_package = false,
         this_pr_can_use_special_jll_exceptions = false,
         use_distance_check = false,
