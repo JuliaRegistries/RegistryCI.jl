@@ -339,6 +339,8 @@ function breaking_explanation_message(has_release_notes)
     example_detail = """
         <details><summary>Example of adding release notes with breaking notice</summary>
 
+        If you are using the comment bot `@JuliaRegistrator`, you can add release notes to this registration by re-triggering registration while specifying release notes:
+
         ```
         @JuliaRegistrator register
 
@@ -350,6 +352,7 @@ function breaking_explanation_message(has_release_notes)
         - ...
         ```
 
+        If you are using JuliaHub, trigger registration the same way you did the first time, but enter release notes that specify the breaking changes.
         </details>
     """
     if has_release_notes
