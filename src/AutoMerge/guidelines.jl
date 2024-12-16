@@ -330,7 +330,7 @@ const guideline_breaking_explanation = Guideline(;
 
 function meets_breaking_explanation_check(data)
     # Look up PR here in case the labels are slow to be applied by the Registrator bot
-    # which decides wheter to add the BREAKING label
+    # which decides whether to add the BREAKING label
     pr = GitHub.pull_request(data.api, data.registry, data.pr.number; auth=data.auth)
     if any(==("BREAKING"), pr.labels)
         release_notes = get_release_notes(pr.body)
