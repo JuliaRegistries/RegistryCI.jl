@@ -322,6 +322,32 @@ function meets_name_match_check(
     return (true, "")
 end
 
+# This check checks for an explanation of why a breaking change is breaking
+const guideline_breaking_explanation = Guideline(;
+    info = "Release notes have not been provided that explain why this is a breaking change.",
+    docs = "If this is a breaking change, release notes must be given that explain why this is a breaking change (i.e. mention \"breaking\"). To update the release notes, please see the \"Providing and updating release notes\" subsection under \"Additional information\" below.",
+    check=data -> meets_breaking_explanation_check(data.pr.labels, data.pr.body))
+
+function meets_breaking_explanation_check(labels, body)
+    if any(==("BREAKING"), labels)
+        release_notes = get_release_notes(body)
+        if release_notes === nothing
+            return false, "This is a breaking change, but no release notes have been provided."
+        elseif !occursin(r"breaking", lowercase(release_notes))
+            return false, "This is a breaking change, but the release notes do not mention it."
+        else
+            return true, ""
+        end
+    else
+        return true, ""
+    end
+end
+
+function get_release_notes(body::AbstractString)
+    pattern = r"<!-- BEGIN RELEASE NOTES -->\s*(.*?)\s*<!-- END RELEASE NOTES -->"
+    return findfirst(pattern, body)
+end
+
 
 # This check looks for similar (but not exactly matching) names. It can be
 # overridden by a label.
@@ -1078,6 +1104,7 @@ function get_automerge_guidelines(
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
     use_distance_check::Bool,
+    use_breaking_explanation_check::Bool = !this_is_jll_package,
     package_author_approved::Bool # currently unused for new packages
 )
     guidelines = [
@@ -1111,6 +1138,7 @@ function get_automerge_guidelines(
         (guideline_dependency_confusion, true),
         # this is the non-optional part of name checking
         (guideline_name_match_check, true),
+        (guideline_breaking_explanation, use_breaking_explanation_check),
         # We always run the `guideline_distance_check`
         # check last, because if the check fails, it
         # prints the list of similar package names in
