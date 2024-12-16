@@ -328,12 +328,15 @@ const guideline_breaking_explanation = Guideline(;
     docs = "If this is a breaking change, release notes must be given that explain why this is a breaking change (i.e. mention \"breaking\"). To update the release notes, please see the \"Providing and updating release notes\" subsection under \"Additional information\" below.",
     check=data -> meets_breaking_explanation_check(data))
 
-function meets_breaking_explanation_check(data)
+function meets_breaking_explanation_check(data::GitHubAutoMergeData)
     # Look up PR here in case the labels are slow to be applied by the Registrator bot
     # which decides whether to add the BREAKING label
     pr = GitHub.pull_request(data.api, data.registry, data.pr.number; auth=data.auth)
-    if any(==("BREAKING"), pr.labels)
-        release_notes = get_release_notes(pr.body)
+    return meets_breaking_explanation_check(pr.labels, pr.body)
+end
+function meets_breaking_explanation_check(labels::Vector, body::AbstractString)
+    if any(==("BREAKING"), labels)
+        release_notes = get_release_notes(body)
         if release_notes === nothing
             return false, "This is a breaking change, but no release notes have been provided."
         elseif !occursin(r"breaking", lowercase(release_notes))
