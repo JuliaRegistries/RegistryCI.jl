@@ -1110,7 +1110,6 @@ function get_automerge_guidelines(
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
     use_distance_check::Bool,
-    use_breaking_explanation_check::Bool = !this_is_jll_package,
     package_author_approved::Bool # currently unused for new packages
 )
     guidelines = [
@@ -1144,7 +1143,6 @@ function get_automerge_guidelines(
         (guideline_dependency_confusion, true),
         # this is the non-optional part of name checking
         (guideline_name_match_check, true),
-        (guideline_breaking_explanation, use_breaking_explanation_check),
         # We always run the `guideline_distance_check`
         # check last, because if the check fails, it
         # prints the list of similar package names in
@@ -1158,6 +1156,7 @@ end
 function get_automerge_guidelines(
     ::NewVersion;
     check_license::Bool,
+    check_breaking_explanation::Bool,
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
     use_distance_check::Bool, # unused for new versions
@@ -1185,6 +1184,7 @@ function get_automerge_guidelines(
         (guideline_version_has_osi_license, check_license),
         (guideline_src_names_OK, true),
         (guideline_version_can_be_imported, true),
+        (guideline_breaking_explanation, check_breaking_explanation && !this_is_jll_package),
     ]
     return guidelines
 end
