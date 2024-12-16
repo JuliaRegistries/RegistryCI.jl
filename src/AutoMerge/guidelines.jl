@@ -334,36 +334,45 @@ function meets_breaking_explanation_check(data::GitHubAutoMergeData)
     pr = GitHub.pull_request(data.api, data.registry, data.pr.number; auth=data.auth)
     return meets_breaking_explanation_check(pr.labels, pr.body)
 end
+
+function breaking_explanation_message(has_release_notes)
+    example_detail = """
+        <details><summary>Example of adding release notes with breaking notice</summary>
+
+        ```
+        @JuliaRegistrator register
+
+        Release notes:
+
+        ## Breaking changes
+
+        - Explanation of breaking change, ideally with upgrade tips
+        - ...
+        ```
+
+        </details>
+    """
+    if has_release_notes
+        return """
+        This is a breaking change, but no release notes have been provided. Please add release notes that explain the breaking change.
+        $(example_detail)
+        """
+    else
+        return """
+        This is a breaking change, but the release notes do not mention it. Please add a mention of the breaking change to the release notes.
+        $(example_detail)
+        """
+    end
+end
+
 function meets_breaking_explanation_check(labels::Vector, body::AbstractString)
     if any(==("BREAKING"), labels)
         release_notes = get_release_notes(body)
-        example_detail = """
-            <details><summary>Example of adding release notes with breaking notice</summary>
-            ```
-            @JuliaRegistrator register
-
-            Release notes:
-
-            ## Breaking changes
-
-            - Explanation of breaking change, ideally with upgrade tips
-            - ...
-            ```
-            </details>
-        """
         if release_notes === nothing
-            msg = """
-                This is a breaking change, but no release notes have been provided.
-                Please add release notes that explain the breaking change.
-                $(example_detail)
-            """
+            msg = breaking_explanation_message(false)
             return false, msg
         elseif !occursin(r"breaking", lowercase(release_notes))
-            msg = """
-                This is a breaking change, but the release notes do not mention it.
-                Please add a mention of the breaking change to the release notes.
-                $(example_detail)
-            """
+            msg = breaking_explanation_message(true)
             return false, msg
         else
             return true, ""
