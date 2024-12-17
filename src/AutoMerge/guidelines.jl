@@ -8,7 +8,7 @@ using HTTP: HTTP
 const _AUTOMERGE_REQUIRE_STDLIB_COMPAT = false
 
 const guideline_registry_consistency_tests_pass = Guideline(;
-    info="Registy consistency tests",
+    info="Registry consistency tests",
     docs=nothing,
     check=data ->
         meets_registry_consistency_tests_pass(data.registry_head, data.registry_deps),
@@ -325,7 +325,7 @@ end
 # This check checks for an explanation of why a breaking change is breaking
 const guideline_breaking_explanation = Guideline(;
     info = "Release notes have not been provided that explain why this is a breaking change.",
-    docs = "If this is a breaking change, release notes must be given that explain why this is a breaking change (i.e. mention \"breaking\"). To update the release notes, please see the \"Providing and updating release notes\" subsection under \"Additional information\" below.",
+    docs = "If this is a breaking change, release notes must be given that explain why this is a breaking change (i.e. mention \"breaking\" or \"changelog\"). To update the release notes, please see the \"Providing and updating release notes\" subsection under \"Additional information\" below.",
     check=data -> meets_breaking_explanation_check(data))
 
 function meets_breaking_explanation_check(data::GitHubAutoMergeData)
@@ -374,7 +374,7 @@ function meets_breaking_explanation_check(labels::Vector, body::AbstractString)
         if release_notes === nothing
             msg = breaking_explanation_message(false)
             return false, msg
-        elseif !occursin(r"breaking", lowercase(release_notes))
+        elseif !occursin(r"breaking|changelog", lowercase(release_notes))
             msg = breaking_explanation_message(true)
             return false, msg
         else

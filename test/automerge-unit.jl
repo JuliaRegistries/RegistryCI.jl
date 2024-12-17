@@ -334,6 +334,13 @@ end
         `````
         <!-- END RELEASE NOTES -->
         """
+        body_good_changelog = """
+        <!-- BEGIN RELEASE NOTES -->
+        `````
+        See the changelog at xyz for a list of changes.
+        `````
+        <!-- END RELEASE NOTES -->
+        """
         body_bad = """
         <!-- BEGIN RELEASE NOTES -->
         `````
@@ -346,6 +353,7 @@ end
         body_bad_no_notes = ""
 
         @test AutoMerge.meets_breaking_explanation_check(["BREAKING"], body_good)[1]
+        @test AutoMerge.meets_breaking_explanation_check(["BREAKING"], body_good_changelog)[1]
         @test !AutoMerge.meets_breaking_explanation_check(["BREAKING"], body_bad)[1]
         @test !AutoMerge.meets_breaking_explanation_check(["BREAKING"], body_bad_no_notes)[1]
 
