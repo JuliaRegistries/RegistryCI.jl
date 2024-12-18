@@ -351,11 +351,11 @@ end
         <!-- END RELEASE NOTES -->
         """
         body_bad_no_notes = ""
-
-        @test AutoMerge.meets_breaking_explanation_check(["BREAKING"], body_good)[1]
-        @test AutoMerge.meets_breaking_explanation_check(["BREAKING"], body_good_changelog)[1]
-        @test !AutoMerge.meets_breaking_explanation_check(["BREAKING"], body_bad)[1]
-        @test !AutoMerge.meets_breaking_explanation_check(["BREAKING"], body_bad_no_notes)[1]
+        breaking_label = GitHub.Label(; name="BREAKING")
+        @test AutoMerge.meets_breaking_explanation_check([breaking_label], body_good)[1]
+        @test AutoMerge.meets_breaking_explanation_check([breaking_label], body_good_changelog)[1]
+        @test !AutoMerge.meets_breaking_explanation_check([breaking_label], body_bad)[1]
+        @test !AutoMerge.meets_breaking_explanation_check([breaking_label], body_bad_no_notes)[1]
 
         # Maybe this should fail as the label isn't applied by JuliaRegistrator, so the version isn't breaking?
         @test AutoMerge.meets_breaking_explanation_check([], body_good)[1]
