@@ -25,7 +25,7 @@ Hello, I am an automated registration bot. I help manage the registration proces
 
     </details>
 
-- This is a breaking change, but no release notes have been provided. Please add release notes that explain the breaking change.
+- This is a breaking change, but the release notes do not mention it. Please add a mention of the breaking change to the release notes.
     <details><summary>Example of adding release notes with breaking notice</summary>
 
     If you are using the comment bot `@JuliaRegistrator`, you can add release notes to this registration by re-triggering registration while specifying release notes:
@@ -45,7 +45,7 @@ Hello, I am an automated registration bot. I help manage the registration proces
     </details>
 
 
-- This is a breaking change, but the release notes do not mention it. Please add a mention of the breaking change to the release notes.
+- This is a breaking change, but no release notes have been provided. Please add release notes that explain the breaking change.
     <details><summary>Example of adding release notes with breaking notice</summary>
 
     If you are using the comment bot `@JuliaRegistrator`, you can add release notes to this registration by re-triggering registration while specifying release notes:
