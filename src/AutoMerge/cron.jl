@@ -2,6 +2,7 @@ using GitHub: GitHub
 
 const OVERRIDE_BLOCKS_LABEL = "Override AutoMerge: ignore blocking comments"
 const BLOCKED_LABEL = "AutoMerge: last run blocked by comment"
+const BREAKING_LABEL = "BREAKING"
 
 function all_specified_statuses_passed(
     api::GitHub.GitHubAPI,
