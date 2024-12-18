@@ -369,7 +369,7 @@ function breaking_explanation_message(has_release_notes)
 end
 
 function meets_breaking_explanation_check(labels::Vector, body::AbstractString)
-    if any(==("BREAKING"), labels)
+    if has_label(labels, BREAKING_LABEL)
         release_notes = get_release_notes(body)
         if release_notes === nothing
             msg = breaking_explanation_message(false)
