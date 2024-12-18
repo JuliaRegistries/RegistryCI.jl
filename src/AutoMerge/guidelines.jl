@@ -357,12 +357,12 @@ function breaking_explanation_message(has_release_notes)
     """
     if has_release_notes
         return """
-        This is a breaking change, but no release notes have been provided. Please add release notes that explain the breaking change.
+        This is a breaking change, but the release notes do not mention it. Please add a mention of the breaking change to the release notes.
         $(example_detail)
         """
     else
         return """
-        This is a breaking change, but the release notes do not mention it. Please add a mention of the breaking change to the release notes.
+        This is a breaking change, but no release notes have been provided. Please add release notes that explain the breaking change.
         $(example_detail)
         """
     end
