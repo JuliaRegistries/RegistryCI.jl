@@ -152,7 +152,7 @@ Doing this has two benefits:
  - helps explanations during the registration process, especially for breaking changes
  - release notes are picked up by TagBot such that they are added to the new release on the orignial repo
 
-Automerge is disabled for breaking changes where release notes are not provided mentioning "breaking".
+Automerge is disabled for breaking changes where release notes are not provided mentioning "breaking" (or "changelog" if there is a repository file that you prefer to direct users to).
 
 ## List of all GitHub PR labels that can influence AutoMerge
 
