@@ -49,6 +49,7 @@ strip_equal(x, y) = strip(x) == strip(y)
 
 # Here we reference test all the permutations of the AutoMerge comments.
 # This allows us to see the diffs in PRs that change the AutoMerge comment.
+# You can set `ENV["JULIA_REFERENCETESTS_UPDATE"] = true` to easily update the reference tests.
 function comment_reference_test()
     for pass in (true, false),
         (type_name,type) in (("new_version", AutoMerge.NewVersion()), ("new_package", AutoMerge.NewPackage())),

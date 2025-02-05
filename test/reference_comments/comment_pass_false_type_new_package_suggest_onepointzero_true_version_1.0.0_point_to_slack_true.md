@@ -29,7 +29,7 @@ Please make sure that you have read the [package naming guidelines](https://juli
 
     </details>
 
-- This is a breaking change, but the release notes do not mention it. Please add a mention of the breaking change to the release notes.
+- This is a breaking change, but the release notes do not mention it. Please add a mention of the breaking change to the release notes (use the words "breaking" or "changelog").
     <details><summary>Example of adding release notes with breaking notice</summary>
 
     If you are using the comment bot `@JuliaRegistrator`, you can add release notes to this registration by re-triggering registration while specifying release notes:
@@ -46,6 +46,8 @@ Please make sure that you have read the [package naming guidelines](https://juli
     ```
 
     If you are using JuliaHub, trigger registration the same way you did the first time, but enter release notes that specify the breaking changes.
+
+    Either way, you need to mention the words "breaking" or "changelog", even if it is just to say "there are no breaking changes", or "see the changelog".
     </details>
 
 
@@ -66,6 +68,8 @@ Please make sure that you have read the [package naming guidelines](https://juli
     ```
 
     If you are using JuliaHub, trigger registration the same way you did the first time, but enter release notes that specify the breaking changes.
+
+    Either way, you need to mention the words "breaking" or "changelog", even if it is just to say "there are no breaking changes", or "see the changelog".
     </details>
 
 
