@@ -354,7 +354,7 @@ function breaking_explanation_message(has_release_notes)
 
         If you are using JuliaHub, trigger registration the same way you did the first time, but enter release notes that specify the breaking changes.
 
-        Either way, you need to mention the words \"breaking\" or \"changelog\", even if it is just to say "there are no breaking changes", or "see the changelog for changes".
+        Either way, you need to mention the words \"breaking\" or \"changelog\", even if it is just to say "there are no breaking changes", or "see the changelog".
         </details>
     """
     if has_release_notes
