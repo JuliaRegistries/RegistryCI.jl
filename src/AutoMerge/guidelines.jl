@@ -325,11 +325,7 @@ end
 # This check checks for an explanation of why a breaking change is breaking
 const guideline_breaking_explanation = Guideline(;
     info = "Release notes have not been provided that explain why this is a breaking change.",
-    docs = "If this is a breaking change, release notes must be given that explain why this is a \
-    breaking change (i.e. mention \"breaking\" or \"changelog\"). To update the release notes, \
-    please see the \"Providing and updating release notes\" subsection under \"Additional information\" below. \
-    If this is a pre-v1 release, maybe you didn't intend to make a breaking change release? \
-    https://pkgdocs.julialang.org/v1/compatibility/#compat-pre-1.0",
+    docs = "If this is a breaking change, release notes must be given that explain why this is a breaking change (i.e. mention \"breaking\" or \"changelog\"). To update the release notes, please see the \"Providing and updating release notes\" subsection under \"Additional information\" below.",
     check=data -> meets_breaking_explanation_check(data))
 
 function meets_breaking_explanation_check(data::GitHubAutoMergeData)
