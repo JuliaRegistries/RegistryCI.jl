@@ -347,8 +347,7 @@ function breaking_explanation_message(has_release_notes, version::VersionNumber)
     end
     if version < v"1.0.0"
         msg *= """
-        Given this is a pre-v1.0.0 release, you may have not intended to make a breaking change release. \
-        [More information](https://pkgdocs.julialang.org/v1/compatibility/#compat-pre-1.0) on Julia's handling of pre-v1.0.0 versioning.
+        Given this is a pre-v1.0.0 release, you may have not intended to make a breaking change release. [More information](https://pkgdocs.julialang.org/v1/compatibility/#compat-pre-1.0) on Julia's handling of pre-v1.0.0 versioning.
         """
     end
     msg *= """
