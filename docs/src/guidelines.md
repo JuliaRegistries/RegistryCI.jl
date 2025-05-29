@@ -150,7 +150,7 @@ These can also be added/updated on the General PR by re-invoking with the above.
 
 Doing this has two benefits:
  - helps explanations during the registration process, especially for breaking changes
- - release notes are picked up by TagBot such that they are added to the new release on the orignial repo
+ - release notes are picked up by TagBot such that they are added to the new release on the original repo
 
 Automerge is disabled for breaking changes where release notes are not provided mentioning "breaking" (or "changelog" if there is a repository file that you prefer to direct users to).
 
