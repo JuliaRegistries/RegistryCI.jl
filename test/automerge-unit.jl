@@ -49,6 +49,7 @@ strip_equal(x, y) = strip(x) == strip(y)
 
 # Here we reference test all the permutations of the AutoMerge comments.
 # This allows us to see the diffs in PRs that change the AutoMerge comment.
+# You can set `ENV["JULIA_REFERENCETESTS_UPDATE"] = true` to easily update the reference tests.
 function comment_reference_test()
     for pass in (true, false),
         (type_name,type) in (("new_version", AutoMerge.NewVersion()), ("new_package", AutoMerge.NewPackage())),
@@ -70,6 +71,8 @@ function comment_reference_test()
                 "_version_", version, "_point_to_slack_", point_to_slack)
                 reasons = [
                             AutoMerge.compat_violation_message(["julia"]),
+                            AutoMerge.breaking_explanation_message(true),
+                            AutoMerge.breaking_explanation_message(false),
                             "Example guideline failed. Please fix it."]
                 fail_text = AutoMerge.comment_text_fail(type, reasons, suggest_onepointzero, version; point_to_slack=point_to_slack)
 
@@ -320,6 +323,43 @@ end
         @test !AutoMerge.range_did_not_narrow(r1, r3)[1]
         @test !AutoMerge.range_did_not_narrow(r2, r3)[1]
         @test !AutoMerge.range_did_not_narrow(r3, r2)[1]
+    end
+
+    @testset "Breaking change releases must have explanatory release notes" begin
+        body_good = """
+        <!-- BEGIN RELEASE NOTES -->
+        `````
+        ## Breaking changes
+        - something
+        - something else
+        `````
+        <!-- END RELEASE NOTES -->
+        """
+        body_good_changelog = """
+        <!-- BEGIN RELEASE NOTES -->
+        `````
+        See the changelog at xyz for a list of changes.
+        `````
+        <!-- END RELEASE NOTES -->
+        """
+        body_bad = """
+        <!-- BEGIN RELEASE NOTES -->
+        `````
+        ## Features
+        - something
+        - something else
+        `````
+        <!-- END RELEASE NOTES -->
+        """
+        body_bad_no_notes = ""
+        breaking_label = GitHub.Label(; name="BREAKING")
+        @test AutoMerge.meets_breaking_explanation_check([breaking_label], body_good)[1]
+        @test AutoMerge.meets_breaking_explanation_check([breaking_label], body_good_changelog)[1]
+        @test !AutoMerge.meets_breaking_explanation_check([breaking_label], body_bad)[1]
+        @test !AutoMerge.meets_breaking_explanation_check([breaking_label], body_bad_no_notes)[1]
+
+        # Maybe this should fail as the label isn't applied by JuliaRegistrator, so the version isn't breaking?
+        @test AutoMerge.meets_breaking_explanation_check([], body_good)[1]
     end
 end
 

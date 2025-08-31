@@ -31,6 +31,7 @@ Run the `RegistryCI.AutoMerge` service.
 - `registry_deps`: list of registry dependencies, e.g your packages may depend on `General`.
 - `api_url`: the registry host API URL, default is `"https://api.github.com"`.
 - `check_license`: check package has a valid license, default is `false`.
+- `check_breaking_explanation`: Check whether the PR has release notes (collected via Registrator.jl) with a breaking change explanation, default is `false`.
 - `public_registries`: If a new package registration has a UUID that matches
    that of a package already registered in one of these registries supplied here
    (and has either a different name or different URL) then an error will be thrown.
@@ -62,6 +63,7 @@ RegistryCI.AutoMerge.run(
     additional_statuses = String[],
     additional_check_runs = String[],
     check_license = true,
+    check_breaking_explanation = true,
     public_registries = String["https://github.com/HolyLab/HolyLabRegistry"],
 )
 ```
@@ -95,6 +97,7 @@ function run(;
     registry_deps::Vector{<:AbstractString}=String[],
     api_url::String="https://api.github.com",
     check_license::Bool=false,
+    check_breaking_explanation::Bool=false,
     # A list of public Julia registries (repository URLs)
     # which will be checked for UUID collisions in order to
     # mitigate the dependency confusion vulnerability. See
@@ -158,6 +161,7 @@ function run(;
             whoami=whoami,
             registry_deps=registry_deps,
             check_license=check_license,
+            check_breaking_explanation=check_breaking_explanation,
             public_registries=public_registries,
             read_only=read_only,
             environment_variables_to_pass=environment_variables_to_pass,

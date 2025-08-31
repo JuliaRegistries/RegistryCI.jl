@@ -2,6 +2,7 @@ using GitHub: GitHub
 
 const OVERRIDE_BLOCKS_LABEL = "Override AutoMerge: ignore blocking comments"
 const BLOCKED_LABEL = "AutoMerge: last run blocked by comment"
+const BREAKING_LABEL = "BREAKING"
 
 function all_specified_statuses_passed(
     api::GitHub.GitHubAPI,
@@ -313,9 +314,9 @@ function cron_or_api_build(
     # of the other steps (e.g. automerge passing, waiting period, etc).
     blocked = pr_has_blocking_comments(api, registry, pr; auth=auth) && !has_label(pr.labels, OVERRIDE_BLOCKS_LABEL)
     if blocked
-        if !read_only
-            # add `BLOCKED_LABEL` to communicate to users
-            # that the PR is blocked from automerging
+        if !read_only && !has_label(pr.labels, BLOCKED_LABEL)
+            # add `BLOCKED_LABEL` to communicate to users that the PR is blocked
+            # from automerging, unless the label is already there.
             GitHub.add_labels(api, registry.full_name, pr_number, [BLOCKED_LABEL]; auth=auth)
         end
         @info(
