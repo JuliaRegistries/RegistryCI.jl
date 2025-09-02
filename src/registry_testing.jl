@@ -177,6 +177,12 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     # "yanked" is correct.
                     # "yank" (and all other variants) are incorrect.
                     @test keys(data) ⊆ ["git-tree-sha1", "yanked"]
+                    for (k, v) in pairs(data)
+                        if k == "yanked"
+                            # https://github.com/JuliaRegistries/RegistryCI.jl/issues/604
+                            @test v isa Bool 
+                        end
+                    end
                 end
 
                 # Deps.toml testing
