@@ -1026,33 +1026,43 @@ function meets_version_can_be_imported(
         @info("Successfully `import`ed package");
         """
 
-    cmd_ran_successfully = _run_pkg_commands(
-        working_directory,
-        pkg,
-        version;
-        code=code,
-        before_message="Attempting to `import` the package",
-        environment_variables_to_pass=environment_variables_to_pass,
-    )
-
-    if cmd_ran_successfully
-        @info "Successfully `import`ed the package"
-        return true, ""
-    else
-        @error "Was not able to successfully `import` the package"
-        return false,
-        string(
-            "I was not able to load the package ",
-            "(i.e. `import $(pkg)` failed). ",
-            "See the AutoMerge logs for details.",
-        )
+    julia_compat = julia_compat(pkg, version, working_directory)
+    julia_versions = get_compatible_julia_versions(julia_compat)
+    if isempty(julia_versions)
+        @error "Was not able to find a compatible Julia version. julia_compat: $(julia_compat)"
+        return false, "I was not able to find a compatible Julia version. See the AutoMerge logs for details."
     end
+    for (binary, version_text) in julia_versions
+        cmd_ran_successfully = _run_pkg_commands(
+            working_directory,
+            pkg,
+            version;
+            binary=binary,
+            code=code,
+            before_message="Attempting to `import` the package on $(version_text)",
+            environment_variables_to_pass=environment_variables_to_pass,
+        )
+
+        if !cmd_ran_successfully
+            @info "Successfully `import`ed the package on $(version_text)"
+        else
+            @error "Was not able to successfully `import` the package on $(version_text)"
+            return false,
+            string(
+                "I was not able to load the package on $(version_text)",
+                "(i.e. `import $(pkg)` failed). ",
+                "See the AutoMerge logs for details.",
+            )
+        end
+    end
+    return true, ""
 end
 
 function _run_pkg_commands(
     working_directory::String,
     pkg::String,
     version::VersionNumber;
+    binary=nothing,
     code,
     before_message,
     environment_variables_to_pass::Vector{String},
@@ -1109,7 +1119,10 @@ function _run_pkg_commands(
         end
     end
 
-    cmd = Cmd(`$(Base.julia_cmd()) -e $(code)`; env=env)
+    if isnothing(binary)
+        binary = Base.julia_cmd()
+    end
+    cmd = Cmd(`$(binary) -e $(code)`; env=env)
 
     # GUI toolkits may need a display just to load the package
     xvfb = Sys.which("xvfb-run")
