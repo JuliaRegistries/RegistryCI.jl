@@ -994,6 +994,14 @@ const guideline_version_can_be_imported = Guideline(;
     ),
 )
 
+# This guideline has an indirection to make it possible for the
+# juliaup package extension to replace it with an improved version if
+# juliaup_jll is loaded. The reason for juliaup_jll not being a strong
+# dependency is that it requires julia 1.6 or later whereas RegistryCI
+# support goes back to Julia 1.3.
+const guideline_version_can_be_imported_trampoline =
+    Ref(guideline_version_can_be_imported)
+
 function meets_version_can_be_imported(
     working_directory::String,
     pkg::String,
@@ -1053,6 +1061,7 @@ function _run_pkg_commands(
     working_directory::String,
     pkg::String,
     version::VersionNumber;
+    binary=nothing,
     code,
     before_message,
     environment_variables_to_pass::Vector{String},
@@ -1109,7 +1118,10 @@ function _run_pkg_commands(
         end
     end
 
-    cmd = Cmd(`$(Base.julia_cmd()) -e $(code)`; env=env)
+    if isnothing(binary)
+        binary = Base.julia_cmd()
+    end
+    cmd = Cmd(`$(binary) -e $(code)`; env=env)
 
     # GUI toolkits may need a display just to load the package
     xvfb = Sys.which("xvfb-run")
@@ -1177,7 +1189,7 @@ function get_automerge_guidelines(
         # that it can use the downloaded code!
         (guideline_version_has_osi_license, check_license),
         (guideline_src_names_OK, true),
-        (guideline_version_can_be_imported, true),
+        (guideline_version_can_be_imported_trampoline[], true),
         (:update_status, true),
         (guideline_dependency_confusion, true),
         # this is the non-optional part of name checking
@@ -1222,7 +1234,7 @@ function get_automerge_guidelines(
         # that it can use the downloaded code!
         (guideline_version_has_osi_license, check_license),
         (guideline_src_names_OK, true),
-        (guideline_version_can_be_imported, true),
+        (guideline_version_can_be_imported_trampoline[], true),
         (guideline_breaking_explanation, check_breaking_explanation && !this_is_jll_package),
     ]
     return guidelines
