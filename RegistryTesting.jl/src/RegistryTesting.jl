@@ -1,5 +1,6 @@
+module RegistryTesting
+
 using Pkg: Pkg
-# import GitCommand
 using HTTP: HTTP
 using RegistryTools: RegistryTools
 using Test: Test, @testset, @test
@@ -63,9 +64,19 @@ function load_registry_dep_uuids(registry_deps_names::Vector{<:AbstractString}=S
         extrauuids = Set{Base.UUID}()
         for spec in collect_registries()
             if _include_this_registry(spec, registry_deps_names)
-                reg = Pkg.TOML.parsefile(joinpath(spec.path, "Registry.toml"))
-                for x in keys(reg["packages"])
-                    push!(extrauuids, Base.UUID(x))
+                registry_path = if endswith(spec.path, ".toml")
+                    # If path ends with .toml, it's probably a path to the toml file itself
+                    dirname(spec.path)
+                else
+                    # Otherwise, it's a directory path
+                    spec.path
+                end
+                registry_file = joinpath(registry_path, "Registry.toml")
+                if isfile(registry_file)
+                    reg = Pkg.TOML.parsefile(registry_file)
+                    for x in keys(reg["packages"])
+                        push!(extrauuids, Base.UUID(x))
+                    end
                 end
             end
         end
@@ -294,3 +305,22 @@ end
 
 _spacify_hyphens(range::Pkg.Types.VersionRange) = range
 _spacify_hyphens(ranges::Vector{Pkg.Types.VersionRange}) = ranges
+
+# Function to provide a temporary depot path for package operations
+function with_temp_depot(f)
+    temp_depot = mktempdir()
+    old_depot_path = copy(DEPOT_PATH)
+    try
+        empty!(DEPOT_PATH)
+        push!(DEPOT_PATH, temp_depot)
+        return f()
+    finally
+        empty!(DEPOT_PATH)
+        append!(DEPOT_PATH, old_depot_path)
+        rm(temp_depot; recursive=true, force=true)
+    end
+end
+
+export test, load_registry_dep_uuids
+
+end
