@@ -6,6 +6,8 @@ using URIs: URIs
 using RegistryTools: RegistryTools
 using Test: Test, @testset, @test
 
+export test, load_registry_dep_uuids
+
 function gather_stdlib_uuids()
     return Set{Base.UUID}(x for x in keys(RegistryTools.stdlibs()))
 end
@@ -185,7 +187,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     @test VersionNumber(v) isa VersionNumber
                     @test haskey(data, "git-tree-sha1")
 
-                    # URIss://github.com/JuliaRegistries/RegistryCI.jl/issues/523
+                    # https://github.com/JuliaRegistries/RegistryCI.jl/issues/523
                     # "yanked" is correct.
                     # "yank" (and all other variants) are incorrect.
                     @test keys(data) ⊆ ["git-tree-sha1", "yanked"]
@@ -238,7 +240,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     end
 
                     # Make sure that each compat spec is a valid registry compat spec.
-                    # URIss://github.com/JuliaRegistries/General/issues/104849
+                    # https://github.com/JuliaRegistries/General/issues/104849
                     for (versionrange, compatinfo) in pairs(compat)
                         @test Pkg.Types.VersionRange(versionrange) isa Pkg.Types.VersionRange
                         for (name, spec_unparsed) in pairs(compatinfo)
@@ -321,7 +323,5 @@ function with_temp_depot(f)
         rm(temp_depot; recursive=true, force=true)
     end
 end
-
-export test, load_registry_dep_uuids
 
 end
