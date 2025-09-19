@@ -1,7 +1,7 @@
 name = "RegistryTesting"
 uuid = "d1ada04f-98ad-4fd1-8c46-e043e52bc99b"
 authors = ["Dilum Aluthge <dilum@aluthge.com>", "Fredrik Ekre <ekrefredrik@gmail.com>", "contributors"]
-version = "0.1.0"
+version = "1.0.0"
 
 [deps]
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
