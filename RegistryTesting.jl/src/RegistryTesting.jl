@@ -1,7 +1,8 @@
 module RegistryTesting
 
 using Pkg: Pkg
-using HTTP: HTTP
+using TOML: TOML
+using URIs: URIs
 using RegistryTools: RegistryTools
 using Test: Test, @testset, @test
 
@@ -15,7 +16,7 @@ else
     const collect_registries = Pkg.Types.collect_registries
 end
 
-is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str))
+is_valid_url(str::AbstractString) = !isempty(URIs.URI(str).scheme) && isvalid(URIs.URI(str))
 
 function _include_this_registry(
     registry_spec, registry_deps_names::Vector{<:AbstractString}
@@ -73,7 +74,7 @@ function load_registry_dep_uuids(registry_deps_names::Vector{<:AbstractString}=S
                 end
                 registry_file = joinpath(registry_path, "Registry.toml")
                 if isfile(registry_file)
-                    reg = Pkg.TOML.parsefile(registry_file)
+                    reg = TOML.parsefile(registry_file)
                     for x in keys(reg["packages"])
                         push!(extrauuids, Base.UUID(x))
                     end
@@ -91,7 +92,7 @@ end
 function load_package_data(
     ::Type{T}, path::String, versions::Vector{VersionNumber}
 ) where {T}
-    compressed = Pkg.TOML.parsefile(path)
+    compressed = TOML.parsefile(path)
     compressed = convert(Dict{String,Dict{String,Union{String,Vector{String}}}}, compressed)
     uncompressed = Dict{VersionNumber,Dict{String,T}}()
     # Many of the entries are repeated so we keep a cache so there is no need to re-create
@@ -161,7 +162,7 @@ using the `registry_deps` parameter.
 function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
     @testset "(Registry|Package|Versions|Deps|Compat).toml" begin
         cd(path) do
-            reg = Pkg.TOML.parsefile("Registry.toml")
+            reg = TOML.parsefile("Registry.toml")
             reguuids = Set{Base.UUID}(Base.UUID(x) for x in keys(reg["packages"]))
             stdlibuuids = gather_stdlib_uuids()
             registry_dep_uuids = load_registry_dep_uuids(registry_deps)
@@ -171,20 +172,20 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
             # at the expected path with the correct uuid and name
             @testset "$(get(data, "name", uuid))" for (uuid, data) in reg["packages"]
                 # Package.toml testing
-                pkg = Pkg.TOML.parsefile(abspath(data["path"], "Package.toml"))
+                pkg = TOML.parsefile(abspath(data["path"], "Package.toml"))
                 @test Base.UUID(uuid) == Base.UUID(pkg["uuid"])
                 @test data["name"] == pkg["name"]
                 @test Base.isidentifier(data["name"])
                 @test haskey(pkg, "repo")
 
                 # Versions.toml testing
-                vers = Pkg.TOML.parsefile(abspath(data["path"], "Versions.toml"))
+                vers = TOML.parsefile(abspath(data["path"], "Versions.toml"))
                 vnums = VersionNumber.(keys(vers))
                 for (v, data) in vers
                     @test VersionNumber(v) isa VersionNumber
                     @test haskey(data, "git-tree-sha1")
 
-                    # https://github.com/JuliaRegistries/RegistryCI.jl/issues/523
+                    # URIss://github.com/JuliaRegistries/RegistryCI.jl/issues/523
                     # "yanked" is correct.
                     # "yank" (and all other variants) are incorrect.
                     @test keys(data) ⊆ ["git-tree-sha1", "yanked"]
@@ -193,7 +194,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                 # Deps.toml testing
                 depsfile = abspath(data["path"], "Deps.toml")
                 if isfile(depsfile)
-                    deps = Pkg.TOML.parsefile(depsfile)
+                    deps = TOML.parsefile(depsfile)
                     # Require all deps to exist in the General registry or be a stdlib
                     depuuids = Set{Base.UUID}(
                         Base.UUID(x) for (_, d) in deps for (_, x) in d
@@ -217,7 +218,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                 # Compat.toml testing
                 compatfile = abspath(data["path"], "Compat.toml")
                 if isfile(compatfile)
-                    compat = Pkg.TOML.parsefile(compatfile)
+                    compat = TOML.parsefile(compatfile)
 
                     # Test that all names with compat is a dependency
                     compatnames = Set{String}(x for (_, d) in compat for (x, _) in d)
@@ -226,7 +227,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                         (length(compatnames) == 1 && "julia" in compatnames)
                     )
                         depnames = Set{String}(
-                            x for (_, d) in Pkg.TOML.parsefile(depsfile) for (x, _) in d
+                            x for (_, d) in TOML.parsefile(depsfile) for (x, _) in d
                         )
                         push!(depnames, "julia") # All packages has an implicit dependency on julia
                         if !(compatnames ⊆ depnames)
@@ -237,7 +238,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     end
 
                     # Make sure that each compat spec is a valid registry compat spec.
-                    # https://github.com/JuliaRegistries/General/issues/104849
+                    # URIss://github.com/JuliaRegistries/General/issues/104849
                     for (versionrange, compatinfo) in pairs(compat)
                         @test Pkg.Types.VersionRange(versionrange) isa Pkg.Types.VersionRange
                         for (name, spec_unparsed) in pairs(compatinfo)
