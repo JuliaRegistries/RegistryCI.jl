@@ -16,6 +16,7 @@ using Printf: Printf
 using RegistryTools: RegistryTools
 using ..RegistryCI: RegistryCI
 using Tar: Tar
+using Changelog: find_changelog, find_version
 
 include("types.jl")
 include("ciservice.jl")

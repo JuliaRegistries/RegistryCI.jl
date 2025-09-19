@@ -332,7 +332,48 @@ function meets_breaking_explanation_check(data::GitHubAutoMergeData)
     # Look up PR here in case the labels are slow to be applied by the Registrator bot
     # which decides whether to add the BREAKING label
     pr = GitHub.pull_request(data.api, data.registry, data.pr.number; auth=data.auth)
-    return meets_breaking_explanation_check(pr.labels, pr.body)
+    if has_label(labels, BREAKING_LABEL)
+        ret = find_changelog(data.pkg_code_path)
+        msg = ""
+        OK = false
+        if ret === nothing
+            msg *= "Found no changelog in package directory."
+        else
+            changelog_path, changelog = ret
+            msg *= "Found changelog at `$(relpath(changelog_path, data.pkg_code_path))`."
+            ver = find_version(changelog, data.version)
+            if ver === nothing
+                found_versions = join([repr(v.version) for v in cl.versions], ", ", ", and ")
+                msg *= "Did not find version matching $(data.version) in changelog. Found versions: $(found_versions)"
+            else
+                r = r"breaking"i
+                OK |= any(contains(r), ver.toplevel_changes)
+                for (section_name, changes) in ver.sectioned_changes
+                    OK |= contains(section_name, r)
+                    OK |= any(contains(r), changes)
+                end
+                if OK
+                    msg *= "Found version matching $(data.version) and found mention of breaking changes in the version notes."
+                else
+                    msg *= "Found version matching $(data.version) but did not find any mention of breaking changes in the version notes."
+                end
+
+            end
+        end
+        @info msg
+        if OK
+            return true, ""
+        end
+        body_ok, body_msg = meets_breaking_explanation_check(pr.labels, pr.body)
+        if body_ok
+            return true, ""
+        else
+            return false, msg*body_msg # TODO format better
+        end
+    else
+
+        return true, ""
+    end
 end
 
 function breaking_explanation_message(has_release_notes)
