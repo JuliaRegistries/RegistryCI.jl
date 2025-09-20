@@ -14,8 +14,10 @@ using LicenseCheck: LicenseCheck
 using TOML: TOML
 using Printf: Printf
 using RegistryTools: RegistryTools
-using ..RegistryCI: RegistryCI
 using Tar: Tar
+using RegistryCI: RegistryCI
+
+include("TagBot/TagBot.jl")
 
 include("types.jl")
 include("ciservice.jl")

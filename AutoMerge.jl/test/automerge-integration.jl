@@ -4,11 +4,10 @@ using GitHub
 using JSON
 using Pkg
 using Printf
-using RegistryCI
+using AutoMerge
 using Test
 using TimeZones
 
-const AutoMerge = RegistryCI.AutoMerge
 
 include("automerge-integration-utils.jl")
 

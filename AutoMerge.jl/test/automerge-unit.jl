@@ -4,11 +4,9 @@ using GitHub
 using JSON
 using Pkg
 using Printf
-using RegistryCI
+using AutoMerge
 using Test
 using TimeZones
-
-const AutoMerge = RegistryCI.AutoMerge
 
 
 TEMP_DEPOT_FOR_TESTING = nothing

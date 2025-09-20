@@ -1,7 +1,7 @@
 """
     run([env, cicfg::CIService]; kwargs...)
 
-Run the `RegistryCI.AutoMerge` service.
+Run the `AutoMerge` service.
 
 # Arguments
 
@@ -44,10 +44,10 @@ Run the `RegistryCI.AutoMerge` service.
 Here is an example of how `General` registry is configured
 
 ```julia
-using RegistryCI
+using AutoMerge
 using Dates
 
-RegistryCI.AutoMerge.run(
+AutoMerge.run(
     merge_new_packages = ENV["MERGE_NEW_PACKAGES"] == "true",
     merge_new_versions = ENV["MERGE_NEW_VERSIONS"] == "true",
     new_package_waiting_period = Day(3),

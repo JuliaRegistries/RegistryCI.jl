@@ -1,6 +1,6 @@
 using BrokenRecord: BrokenRecord, HTTP, playback
 using Dates: DateTime, Day, UTC, now
-using RegistryCI: TagBot
+using AutoMerge: TagBot
 using SimpleMock: Mock, called_with, mock
 using Test: @test, @testset, @test_logs
 

@@ -9,6 +9,7 @@ regular expressions:
 
 ```@eval
 import RegistryCI
+import AutoMerge
 import Markdown
 
 Base.@kwdef struct TableRow
@@ -37,21 +38,21 @@ function table_row(; regex::Regex,
 end
 
 const row_1 = table_row(;
-    regex = RegistryCI.AutoMerge.new_package_title_regex,
+    regex = AutoMerge.new_package_title_regex,
     pr_field = "PR title",
     pr_type = "New packages",
     example = "New package: HelloWorld v1.2.3",
 )
 
 const row_2 = table_row(;
-    regex = RegistryCI.AutoMerge.new_version_title_regex,
+    regex = AutoMerge.new_version_title_regex,
     pr_field = "PR title",
     pr_type = "New versions",
     example = "New version: HelloWorld v1.2.3",
 )
 
 const row_3 = table_row(;
-    regex = RegistryCI.AutoMerge.commit_regex,
+    regex = AutoMerge.commit_regex,
     pr_field = "PR body",
     pr_type = "All",
     example = "* Commit: 012345678901234567890123456789abcdef0000",
