@@ -23,7 +23,7 @@ function throw_error(a::MovedFunctionality)
     elseif name == "TagBot"
         throw(MovedFunctionalityException("RegistryCI.TagBot has been moved to a new package, AutoMerge.jl. The API of AutoMerge.TagBot v1.0 matches that of RegistryCI.TagBot v10.10.4."))
     else
-        @assert false
+        error("Invalid value for name: $name")
     end
 end
 
