@@ -12,10 +12,10 @@
 [docs-stable-url]: https://JuliaRegistries.github.io/RegistryCI.jl/stable
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg "Documentation (dev)"
 [docs-dev-url]: https://JuliaRegistries.github.io/RegistryCI.jl/dev
-[ci-unit-img]: https://github.com/JuliaRegistries/RegistryCI.jl/workflows/CI%20(unit%20tests)/badge.svg?branch=master "Continuous Integration (Unit Tests)"
-[ci-unit-url]: https://github.com/JuliaRegistries/RegistryCI.jl/actions?query=workflow%3A%22CI+%28unit+tests%29%22
-[ci-integration-img]: https://github.com/JuliaRegistries/RegistryCI.jl/workflows/CI%20(integration%20tests)/badge.svg?branch=master "Continuous Integration (Integration Tests)"
-[ci-integration-url]: https://github.com/JuliaRegistries/RegistryCI.jl/actions?query=workflow%3A%22CI+%28integration+tests%29%22
+[ci-unit-img]: https://github.com/JuliaRegistries/RegistryCI.jl/actions/workflows/ci_unit.yml/badge.svg?branch=master "Continuous Integration (Unit Tests)"
+[ci-unit-url]: https://github.com/JuliaRegistries/RegistryCI.jl/actions/workflows/ci_unit.yml
+[ci-integration-img]: https://github.com/JuliaRegistries/RegistryCI.jl/actions/workflows/ci_integration.yml/badge.svg?branch=master "Continuous Integration (Integration Tests)"
+[ci-integration-url]: https://github.com/JuliaRegistries/RegistryCI.jl/actions/workflows/ci_integration.yml
 [codecov-img]: https://codecov.io/gh/JuliaRegistries/RegistryCI.jl/branch/master/graph/badge.svg "Code Coverage"
 [codecov-url]: https://codecov.io/gh/JuliaRegistries/RegistryCI.jl/branch/master
 [bluestyle-img]: https://img.shields.io/badge/code%20style-blue-4495d1.svg "Blue Style"
