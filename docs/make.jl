@@ -2,9 +2,6 @@ using RegistryCI
 using AutoMerge
 using Documenter
 
-DocMeta.setdocmeta!(RegistryCI, :DocTestSetup, :(using RegistryCI, AutoMerge); recursive=true)
-DocMeta.setdocmeta!(AutoMerge, :DocTestSetup, :(using AutoMerge); recursive=true)
-
 makedocs(;
     modules=[RegistryCI, AutoMerge],
     authors="Dilum Aluthge <dilum@aluthge.com>, Fredrik Ekre <ekrefredrik@gmail.com>, contributors",
