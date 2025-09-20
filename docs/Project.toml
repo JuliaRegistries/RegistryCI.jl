@@ -10,4 +10,4 @@ RegistryInstances = "0.1"
 
 [sources]
 AutoMerge = {path = "../AutoMerge.jl"}
-RegistryCI = {path = ".."}
+RegistryCI = {path = "../RegistryCI.jl"}

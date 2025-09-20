@@ -21,7 +21,11 @@
 [bluestyle-img]: https://img.shields.io/badge/code%20style-blue-4495d1.svg "Blue Style"
 [bluestyle-url]: https://github.com/invenia/BlueStyle
 
-RegistryCI.jl
-provides continuous integration (CI) tools for Julia package registries, including registry consistency testing, automatic merging (automerge) of pull requests, and automatic TagBot triggers.
+This repository contains two Julia packages:
 
-Please see the [documentation](https://JuliaRegistries.github.io/RegistryCI.jl/stable).
+- **RegistryCI.jl** - Registry consistency testing tools for Julia package registries
+- **AutoMerge.jl** - Automatic merging (automerge) of pull requests and TagBot functionality for Julia package registries
+
+Starting with RegistryCI v11.0, the automerge and TagBot functionality has been moved to the separate AutoMerge.jl package. RegistryCI.jl now focuses solely on registry testing.
+
+Please see the [documentation](https://JuliaRegistries.github.io/RegistryCI.jl/stable) for both packages.
