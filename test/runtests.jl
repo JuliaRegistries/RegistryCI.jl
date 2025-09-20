@@ -23,5 +23,7 @@ ENV["JULIA_PKG_SERVER"] = ""
     @testset "MovedFunctionality" begin
         @test_throws RegistryCI.MovedFunctionalityException RegistryCI.TagBot.main()
         @test_throws RegistryCI.MovedFunctionalityException RegistryCI.AutoMerge.run()
+        @test_throws RegistryCI.MovedFunctionalityException sprint(show, RegistryCI.AutoMerge)
+        @test_throws RegistryCI.MovedFunctionalityException sprint(show, RegistryCI.TagBot)
     end
 end
