@@ -138,6 +138,6 @@ jobs:
       - run: |
           julia --project=docs -e '
             using Documenter: DocMeta, doctest
-            using RegistryCI
-            DocMeta.setdocmeta!(RegistryCI, :DocTestSetup, :(using RegistryCI); recursive=true)
-            doctest(RegistryCI)'
+            using RegistryCI, AutoMerge
+            doctest(RegistryCI)
+            doctest(AutoMerge; manual="docs/src")'
