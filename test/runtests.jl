@@ -19,4 +19,9 @@ ENV["JULIA_PKG_SERVER"] = ""
 @testset "RegistryCI.jl" begin
     @info("Running the RegistryCI.jl unit tests")
     include("registryci_registry_testing.jl")
+
+    @testset "MovedFunctionality" begin
+        @test_throws RegistryCI.MovedFunctionalityException RegistryCI.TagBot.main()
+        @test_throws RegistryCI.MovedFunctionalityException RegistryCI.AutoMerge.run()
+    end
 end
