@@ -4,11 +4,10 @@ using GitHub
 using JSON
 using Pkg
 using Printf
-using RegistryCI
+using AutoMerge
 using Test
 using TimeZones
 
-const AutoMerge = RegistryCI.AutoMerge
 
 const timestamp_regex = r"integration\/(\d\d\d\d-\d\d-\d\d-\d\d-\d\d-\d\d-\d\d\d)\/"
 

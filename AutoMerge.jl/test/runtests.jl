@@ -1,19 +1,17 @@
 using Dates
-# using GitCommand
 using GitHub
 using JSON
 using Pkg
 using Printf
+using AutoMerge
 using RegistryCI
 using Test
 using TimeZones
 using ReferenceTests
 
-const AutoMerge = RegistryCI.AutoMerge
-
 # Starting with Julia 1.7, when you use the Pkg server registry, the registry tarball does
-# not get unpacked, and thus the registry files are not available. Of course, RegistryCI
-# requires that the registry files are available. So for the RegistryCI test suite, we will
+# not get unpacked, and thus the registry files are not available. Of course, AutoMerge
+# requires that the registry files are available. So for the AutoMerge test suite, we will
 # disable the Pkg server.
 ENV["JULIA_PKG_SERVER"] = ""
 
@@ -29,12 +27,7 @@ ENV["JULIA_PKG_SERVER"] = ""
     import BrokenRecord
 end
 
-@testset "RegistryCI.jl" begin
-    @testset "RegistryCI.jl unit tests" begin
-        @info("Running the RegistryCI.jl unit tests")
-        include("registryci_registry_testing.jl")
-    end
-
+@testset "AutoMerge.jl" begin
     @testset "TagBot.jl unit tests" begin
         # if v"1.0" <= VERSION < VersionNumber(1, 5, typemax(UInt32))
         if false

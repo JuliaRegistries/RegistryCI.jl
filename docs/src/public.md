@@ -1,16 +1,27 @@
+# Public API
+
+## RegistryCI
+
 ```@meta
 CurrentModule = RegistryCI
 ```
 
-# Public API
-
 ```@docs
 RegistryCI.test
-RegistryCI.AutoMerge.run
+```
+
+## AutoMerge
+
+```@meta
+CurrentModule = AutoMerge
+```
+
+```@docs
+AutoMerge.run
 ```
 
 ```@autodocs
-Modules = [RegistryCI, RegistryCI.AutoMerge, RegistryCI.TagBot]
+Modules = [RegistryCI, AutoMerge]
 Public = true
 Private = false
 ```
