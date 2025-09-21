@@ -237,7 +237,8 @@ function pull_request_build(data::GitHubAutoMergeData; check_license, check_brea
             data.suggest_onepointzero,
             data.version,
             this_pr_can_use_special_jll_exceptions;
-            new_package_waiting_period=new_package_waiting_period
+            new_package_waiting_period=new_package_waiting_period,
+            data=data
         )
         my_retry(() -> update_automerge_comment!(data, this_pr_comment_pass))
     else # failure

@@ -29,7 +29,6 @@ function setup_global_depot()::String
     tmp_depot
 end
 
-
 # helper for testing `AutoMerge.meets_version_has_osi_license`
 function pkgdir_from_depot(depot_path::String, pkg::String)
     pkgdir_parent = joinpath(depot_path, "packages", pkg)
@@ -754,6 +753,130 @@ end
             rm(joinpath(pkg_path, "LICENSE"))
             result = has_osi_license_in_depot("VisualStringDistances")
             @test !result[1]
+        end
+    end
+
+    @testset "Version diff functionality" begin
+        @testset "find_previous_semver_version" begin
+            # Create a temporary registry structure
+            tmp_registry = mktempdir()
+            pkg_dir = joinpath(tmp_registry, "A", "ABC123")
+            mkpath(pkg_dir)
+
+            # Create a mock Versions.toml
+            versions_toml = joinpath(pkg_dir, "Versions.toml")
+            open(versions_toml, "w") do io
+                write(io, """
+                ["0.1.0"]
+                git-tree-sha1 = "abc123"
+
+                ["0.2.0"]
+                git-tree-sha1 = "def456"
+
+                ["1.0.0"]
+                git-tree-sha1 = "ghi789"
+
+                ["1.1.0"]
+                git-tree-sha1 = "jkl012"
+                """)
+            end
+
+            # Create mock Registry.toml
+            registry_toml = joinpath(tmp_registry, "Registry.toml")
+            open(registry_toml, "w") do io
+                write(io, """
+                [packages]
+                ABC123 = { name = "TestPkg", path = "A/ABC123" }
+                """)
+            end
+
+            # Test finding previous versions
+            @test AutoMerge.find_previous_semver_version("TestPkg", v"1.1.0", tmp_registry) == v"1.0.0"
+            @test AutoMerge.find_previous_semver_version("TestPkg", v"1.0.0", tmp_registry) == v"0.2.0"
+            @test AutoMerge.find_previous_semver_version("TestPkg", v"0.2.0", tmp_registry) == v"0.1.0"
+            @test AutoMerge.find_previous_semver_version("TestPkg", v"0.1.0", tmp_registry) === nothing
+
+            # Test with version that doesn't exist
+            @test AutoMerge.find_previous_semver_version("TestPkg", v"2.0.0", tmp_registry) == v"1.1.0"
+
+            rm(tmp_registry; recursive=true)
+        end
+
+        @testset "GitHub URL handling" begin
+            @testset "is_github_repo" begin
+                @test AutoMerge.is_github_repo("https://github.com/owner/repo.git")
+                @test AutoMerge.is_github_repo("git@github.com:owner/repo.git")
+                @test AutoMerge.is_github_repo("https://github.com/owner/repo")
+                @test !AutoMerge.is_github_repo("https://gitlab.com/owner/repo.git")
+                @test !AutoMerge.is_github_repo("https://bitbucket.org/owner/repo.git")
+                @test !AutoMerge.is_github_repo("https://example.com/repo.git")
+            end
+
+            @testset "extract_github_owner_repo" begin
+                @test AutoMerge.extract_github_owner_repo("https://github.com/owner/repo.git") == ("owner", "repo")
+                @test AutoMerge.extract_github_owner_repo("git@github.com:owner/repo.git") == ("owner", "repo")
+                @test AutoMerge.extract_github_owner_repo("https://github.com/owner/repo") == ("owner", "repo")
+                @test AutoMerge.extract_github_owner_repo("https://github.com/owner/repo/") == ("owner", "repo")
+                @test AutoMerge.extract_github_owner_repo("https://gitlab.com/owner/repo.git") === nothing
+                @test AutoMerge.extract_github_owner_repo("invalid-url") === nothing
+            end
+
+            @testset "generate_github_diff_url" begin
+                url = "https://github.com/owner/repo.git"
+                prev_sha = "abc123"
+                curr_sha = "def456"
+                expected = "https://github.com/owner/repo/compare/abc123...def456"
+
+                @test AutoMerge.generate_github_diff_url(url, prev_sha, curr_sha) == expected
+
+                # Test with SSH URL
+                ssh_url = "git@github.com:owner/repo.git"
+                @test AutoMerge.generate_github_diff_url(ssh_url, prev_sha, curr_sha) == expected
+
+                # Test with non-GitHub URL
+                @test AutoMerge.generate_github_diff_url("https://gitlab.com/owner/repo.git", prev_sha, curr_sha) === nothing
+            end
+        end
+
+        @testset "tree_sha_to_commit_sha" begin
+            # Test with invalid directory (should return nothing)
+            fake_sha = "0000000000000000000000000000000000000000"
+            @test AutoMerge.tree_sha_to_commit_sha(fake_sha, "/invalid/path") === nothing
+
+            # Note: Full git repository testing is skipped in unit tests to avoid complexity
+            # This would be better tested in integration tests
+        end
+
+        @testset "Comment generation with diff" begin
+            # Test the _version_diff_section function
+            diff_info = (
+                diff_url="https://github.com/owner/repo/compare/abc123...def456",
+                previous_version=v"1.0.0",
+                current_version=v"1.1.0"
+            )
+
+            result = AutoMerge._version_diff_section(2, diff_info)
+            @test occursin("## 2. Code changes since last version", result)
+            @test occursin("Since the last version (v1.0.0)", result)
+            @test occursin("[View diff](https://github.com/owner/repo/compare/abc123...def456)", result)
+        end
+
+        @testset "Comment text pass with diff integration" begin
+            # Test comment generation with no data (should work as before)
+            result_no_data = AutoMerge.comment_text_pass(
+                AutoMerge.NewVersion(), false, v"1.1.0", false;
+                new_package_waiting_period=Day(3)
+            )
+            @test occursin("## 1.", result_no_data)  # More flexible test
+            @test occursin("To pause or stop registration", result_no_data)
+            @test !occursin("Code changes since last version", result_no_data)
+
+            # Test that with data=nothing, we get the same result
+            result_with_data = AutoMerge.comment_text_pass(
+                AutoMerge.NewVersion(), false, v"1.1.0", false;
+                new_package_waiting_period=Day(3), data=nothing
+            )
+            @test result_with_data == result_no_data
         end
     end
 end
