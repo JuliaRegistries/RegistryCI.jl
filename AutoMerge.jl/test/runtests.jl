@@ -43,6 +43,11 @@ end
         include("automerge-unit.jl")
     end
 
+    @testset "AutoMerge.jl local unit tests" begin
+        @info("Running the AutoMerge.jl local unit tests")
+        include("local-unit.jl")
+    end
+
     AUTOMERGE_RUN_INTEGRATION_TESTS =
         get(ENV, "AUTOMERGE_RUN_INTEGRATION_TESTS", "")::String
     if AUTOMERGE_RUN_INTEGRATION_TESTS == "true"

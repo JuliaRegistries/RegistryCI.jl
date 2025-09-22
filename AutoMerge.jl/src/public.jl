@@ -189,3 +189,182 @@ function run(;
     end
     return nothing
 end
+
+"""
+    local_check(package_path, registry_path; kwargs...) -> LocalCheckResult
+
+Check if a local package would pass AutoMerge guidelines if registered.
+
+This function simulates what would happen if the package at `package_path` were
+registered in the registry at `registry_path`, and runs the same guidelines
+that AutoMerge would check in a real registration PR.
+
+# Arguments
+- `package_path::String`: Path to the package directory (must contain Project.toml)
+- `registry_path::String`: Path to the target registry directory
+
+# Keyword Arguments
+- `pkg::Union{String, Nothing} = nothing`: Package name (auto-detected from Project.toml if not provided)
+- `version::Union{VersionNumber, Nothing} = nothing`: Package version (auto-detected from Project.toml if not provided)
+- `registration_type::Union{RegistrationType, Nothing} = nothing`: Registration type (auto-detected if not provided)
+- `registry_deps::Vector{String} = String[]`: List of registry dependencies
+- `check_license::Bool = false`: Whether to check for valid license
+- `suggest_onepointzero::Bool = true`: Whether to suggest version 1.0
+- `public_registries::Vector{String} = String[]`: Public registries to check for UUID conflicts
+- `environment_variables_to_pass::Vector{String} = String[]`: Environment variables to pass to subprocesses
+
+# Returns
+- `LocalCheckResult`: Struct containing all check results with custom show methods for display
+
+# Examples
+
+```julia
+# Check if MyPackage would pass AutoMerge guidelines
+result = AutoMerge.local_check("/path/to/MyPackage", "/path/to/General")
+
+# Check with license validation enabled
+result = AutoMerge.local_check("/path/to/MyPackage", "/path/to/General"; check_license=true)
+
+# Access results programmatically
+if result.overall_pass
+    println("Package \$(result.pkg) passed all guidelines!")
+else
+    println("Failed guidelines: ", [g.info for g in result.failed_guidelines])
+end
+```
+"""
+function local_check(
+    package_path::String,
+    registry_path::String;
+    # Auto-detected parameters
+    pkg::Union{String, Nothing} = nothing,
+    version::Union{VersionNumber, Nothing} = nothing,
+    registration_type::Union{Union{NewPackage,NewVersion}, Nothing} = nothing,
+
+    # Registry settings
+    registry_deps::Vector{String} = String[],
+
+    # Check settings
+    check_license::Bool = false,
+    suggest_onepointzero::Bool = true,
+
+    # Advanced settings
+    public_registries::Vector{String} = String[],
+    environment_variables_to_pass::Vector{String} = String[],
+)
+    # Validate input paths
+    if !isdir(package_path)
+        throw(ArgumentError("Package path does not exist: $package_path"))
+    end
+    if !isdir(registry_path)
+        throw(ArgumentError("Registry path does not exist: $registry_path"))
+    end
+
+    # Auto-detect package information
+    detected_pkg, detected_version, uuid = detect_package_info(package_path)
+    pkg = something(pkg, detected_pkg)
+    version = something(version, detected_version)
+
+    # Get git information
+    commit_sha, tree_hash = get_current_commit_info(package_path)
+
+    # Auto-detect registration type
+    registration_type = something(registration_type, determine_registration_type(pkg, registry_path))
+
+    # Create temporary registries
+    registry_master = mktempdir(; cleanup=true)
+    cp(registry_path, registry_master; force=true)
+
+    registry_head = create_simulated_registry_with_package(
+        package_path, registry_path, pkg, version, uuid, tree_hash
+    )
+
+    # Create LocalAutoMergeData
+    data = LocalAutoMergeData(
+        registration_type,
+        pkg,
+        version,
+        commit_sha,
+        registry_head,
+        registry_master,
+        suggest_onepointzero,
+        registry_deps,
+        package_path,  # pkg_code_path points directly to the local package
+        public_registries,
+        environment_variables_to_pass,
+    )
+
+    # Run guidelines (subset for Phase 1)
+    guidelines = _get_local_guidelines(registration_type; check_license=check_license)
+
+    checked_guidelines = Guideline[]
+    for (guideline, applicable) in guidelines
+        if !applicable
+            continue
+        end
+
+        try
+            check!(guideline, data)
+            push!(checked_guidelines, guideline)
+        catch e
+            # Create a failed guideline for this error
+            failed_guideline = Guideline(;
+                info=guideline.info,
+                docs=guideline.docs,
+                check=_ -> (false, "Error during check: $e"),
+                passed=false,
+                message="Error during check: $e"
+            )
+            push!(checked_guidelines, failed_guideline)
+        end
+    end
+
+    # Calculate results
+    passed_guidelines = filter(passed, checked_guidelines)
+    failed_guidelines = filter(g -> !passed(g), checked_guidelines)
+    overall_pass = length(failed_guidelines) == 0
+
+    return LocalCheckResult(
+        pkg,
+        version,
+        registration_type,
+        commit_sha,
+        overall_pass,
+        passed_guidelines,
+        failed_guidelines,
+        length(checked_guidelines)
+    )
+end
+
+"""
+    _get_local_guidelines(registration_type; kwargs...) -> Vector{Tuple{Guideline, Bool}}
+
+Get a subset of guidelines suitable for local checking.
+This is a simplified version of `get_automerge_guidelines` that excludes
+GitHub-specific checks that don't make sense in a local context.
+"""
+function _get_local_guidelines(registration_type; check_license::Bool)
+    if registration_type isa NewPackage
+        return [
+            (guideline_name_identifier, true),
+            (guideline_normal_capitalization, true),
+            (guideline_name_length, true),
+            (guideline_julia_name_check, true),
+            (guideline_name_ascii, true),
+            (guideline_standard_initial_version_number, true),
+            (guideline_version_number_no_prerelease, true),
+            (guideline_version_number_no_build, true),
+            (guideline_version_has_osi_license, check_license),
+            (guideline_code_can_be_downloaded, false),  # Skip for local - code is already available
+            (guideline_src_names_OK, true),
+        ]
+    else  # NewVersion
+        return [
+            (guideline_version_number_no_prerelease, true),
+            (guideline_version_number_no_build, true),
+            (guideline_version_has_osi_license, check_license),
+            (guideline_code_can_be_downloaded, false),  # Skip for local - code is already available
+            (guideline_src_names_OK, true),
+        ]
+    end
+end

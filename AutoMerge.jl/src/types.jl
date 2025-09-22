@@ -120,6 +120,46 @@ function GitHubAutoMergeData(; kwargs...)
     return GitHubAutoMergeData(getindex.(Ref(kwargs), fields)...)
 end
 
+struct LocalAutoMergeData
+    # Whether the registration refers to a new package or a new version
+    # of an existing package.
+    registration_type::Union{NewPackage,NewVersion}
+
+    # Name of the package being registered.
+    pkg::String
+
+    # Version of the package being registered.
+    version::VersionNumber
+
+    # Current commit SHA of the package repository.
+    current_pr_head_commit_sha::String
+
+    # Directory of a registry clone that includes the simulated registration.
+    registry_head::String
+
+    # Directory of a registry clone that excludes the simulated registration.
+    registry_master::String
+
+    # Whether to add a comment suggesting bumping package version to
+    # 1.0 if appropriate.
+    suggest_onepointzero::Bool
+
+    # List of dependent registries. Typically this would contain
+    # "General" when running automerge for a private registry.
+    registry_deps::Vector{String}
+
+    # Location of the directory where the package code is located.
+    pkg_code_path::String
+
+    # A list of public Julia registries (repository URLs) which will
+    # be checked for UUID collisions in order to mitigate the
+    # dependency confusion vulnerability.
+    public_registries::Vector{String}
+
+    # Environment variables to pass to the subprocess that does `Pkg.add("Foo")` and `import Foo`
+    environment_variables_to_pass::Vector{String}
+end
+
 Base.@kwdef mutable struct Guideline
     # Short description of the guideline. Only used for logging.
     info::String
@@ -128,7 +168,7 @@ Base.@kwdef mutable struct Guideline
     docs::Union{String,Nothing} = info
 
     # Function that is run in order to determine whether a guideline
-    # is met. Input is an instance of `GitHubAutoMergeData` and output
+    # is met. Input is an instance of `GitHubAutoMergeData` or `LocalAutoMergeData` and output
     # is passed status plus a user facing message explaining the
     # guideline result.
     check::Function
@@ -144,4 +184,57 @@ passed(guideline::Guideline) = guideline.passed
 message(guideline::Guideline) = guideline.message
 function check!(guideline::Guideline, data::GitHubAutoMergeData)
     return guideline.passed, guideline.message = guideline.check(data)
+end
+function check!(guideline::Guideline, data::LocalAutoMergeData)
+    return guideline.passed, guideline.message = guideline.check(data)
+end
+
+struct LocalCheckResult
+    pkg::String
+    version::VersionNumber
+    registration_type::Union{NewPackage,NewVersion}
+    commit_sha::String
+    overall_pass::Bool
+    passed_guidelines::Vector{Guideline}
+    failed_guidelines::Vector{Guideline}
+    total_guidelines::Int
+end
+
+# Single-line show method
+function Base.show(io::IO, result::LocalCheckResult)
+    status = result.overall_pass ? "✓ PASS" : "✗ FAIL"
+    print(io, "LocalCheckResult: $(result.pkg) v$(result.version) ($status)")
+end
+
+# Multi-line show method
+function Base.show(io::IO, ::MIME"text/plain", result::LocalCheckResult)
+    println(io, "="^60)
+    println(io, "LOCAL AUTOMERGE CHECK RESULTS")
+    println(io, "="^60)
+    println(io, "Package: $(result.pkg) v$(result.version)")
+    println(io, "Registration type: $(typeof(result.registration_type))")
+    status = result.overall_pass ? "✓ PASS" : "✗ FAIL"
+    println(io, "Overall result: $status")
+    println(io)
+
+    if !isempty(result.passed_guidelines)
+        println(io, "✓ Passed guidelines ($(length(result.passed_guidelines))):")
+        for guideline in result.passed_guidelines
+            println(io, "  • $(guideline.info)")
+        end
+        println(io)
+    end
+
+    if !isempty(result.failed_guidelines)
+        println(io, "✗ Failed guidelines ($(length(result.failed_guidelines))):")
+        for guideline in result.failed_guidelines
+            println(io, "  • $(guideline.info)")
+            if !isempty(guideline.message)
+                println(io, "    $(guideline.message)")
+            end
+        end
+        println(io)
+    end
+
+    print(io, "="^60)
 end

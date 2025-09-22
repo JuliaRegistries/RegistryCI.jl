@@ -328,7 +328,7 @@ const guideline_breaking_explanation = Guideline(;
     docs = "If this is a breaking change, release notes must be given that explain why this is a breaking change (i.e. mention \"breaking\" or \"changelog\"). To update the release notes, please see the \"Providing and updating release notes\" subsection under \"Additional information\" below.",
     check=data -> meets_breaking_explanation_check(data))
 
-function meets_breaking_explanation_check(data::GitHubAutoMergeData)
+function meets_breaking_explanation_check(data)
     # Look up PR here in case the labels are slow to be applied by the Registrator bot
     # which decides whether to add the BREAKING label
     pr = GitHub.pull_request(data.api, data.registry, data.pr.number; auth=data.auth)

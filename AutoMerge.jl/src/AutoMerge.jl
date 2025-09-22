@@ -20,6 +20,7 @@ using RegistryCI: RegistryCI
 include("TagBot/TagBot.jl")
 
 include("types.jl")
+include("local.jl")
 include("ciservice.jl")
 
 include("api_rate_limiting.jl")
