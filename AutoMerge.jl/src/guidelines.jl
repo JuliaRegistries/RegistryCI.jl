@@ -1021,18 +1021,17 @@ function meets_version_can_be_imported(
         $(pkg_add_command)
         @info("Successfully `Pkg.add`ed package");
         @info("Attempting to `import` package");
-        Pkg.precompile()
         import $(pkg);
         @info("Successfully `import`ed package");
         """
 
-    julia_compat = julia_compat(pkg, version, working_directory)
-    julia_versions = get_compatible_julia_versions(julia_compat)
-    if isempty(julia_versions)
-        @error "Was not able to find a compatible Julia version. julia_compat: $(julia_compat)"
+    jl_compat = julia_compat(pkg, version, working_directory)
+    julia_binaries = get_compatible_julia_binaries(jl_compat, v"1.1.0")
+    if isempty(julia_binaries)
+        @error "Was not able to find a compatible Julia version. julia_compat: $(jl_compat)"
         return false, "I was not able to find a compatible Julia version. See the AutoMerge logs for details."
     end
-    for (binary, version_text) in julia_versions
+    for (binary, version_text) in julia_binaries
         cmd_ran_successfully = _run_pkg_commands(
             working_directory,
             pkg,
@@ -1043,7 +1042,7 @@ function meets_version_can_be_imported(
             environment_variables_to_pass=environment_variables_to_pass,
         )
 
-        if !cmd_ran_successfully
+        if cmd_ran_successfully
             @info "Successfully `import`ed the package on $(version_text)"
         else
             @error "Was not able to successfully `import` the package on $(version_text)"
