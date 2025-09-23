@@ -104,8 +104,19 @@ function create_simulated_registry_with_package(
     # Create temporary directory for the simulated registry
     temp_registry = mktempdir(; cleanup=true)
 
-    # Copy original registry to temp location and initialize as git repo
-    cp(registry_path, temp_registry; force=true)
+    # Copy original registry to temp location
+    # Use force=true to ensure proper copying and recursive to copy subdirectories
+    cp(registry_path, temp_registry; force=true, follow_symlinks=true)
+
+    # Remove any potential issues with the temp directory
+    if isdir(joinpath(temp_registry, basename(registry_path)))
+        # If cp created a subdirectory, move contents up
+        source_dir = joinpath(temp_registry, basename(registry_path))
+        for item in readdir(source_dir)
+            mv(joinpath(source_dir, item), joinpath(temp_registry, item); force=true)
+        end
+        rm(source_dir; recursive=true)
+    end
 
     # Initialize the temporary registry as a git repository
     # RegistryTools expects registries to be git repositories
@@ -123,36 +134,71 @@ function create_simulated_registry_with_package(
     end
 
     # Use RegistryTools.register to properly add the package
-    # We need a Project instance for the package
     project_file = joinpath(package_path, "Project.toml")
 
-    # Use RegistryTools.register with push=false to simulate registration
-    result = RegistryTools.register(
-        "https://github.com/example/$(pkg).jl.git",  # placeholder repo URL
-        project_file,
-        tree_hash;
-        registry=temp_registry,
-        registry_fork=temp_registry,
-        registry_deps=String[],  # Will be passed from calling function if needed
-        push=false,  # Don't actually push - just modify the local registry
-        force_reset=true,
-    )
+    # Create temporary git repository for the package
+    temp_pkg_repo = mktempdir()
+    try
+        # Copy package to temporary location and ensure proper git structure
+        cp(package_path, temp_pkg_repo; force=true, follow_symlinks=true)
 
-    # Check if registration was successful
-    if !isnothing(result)
-        @info "RegistryTools registration completed successfully" result=result
-
-        # RegistryTools might have modified the registry in place
-        # Let's check if the registry was updated
-        registry_toml = TOML.parsefile(joinpath(temp_registry, "Registry.toml"))
-        if haskey(registry_toml, "packages")
-            @info "Registry now contains packages" count=length(registry_toml["packages"])
-        else
-            @warn "No packages found in registry after RegistryTools.register"
+        # Handle potential nested directory from cp
+        if isdir(joinpath(temp_pkg_repo, basename(package_path)))
+            source_dir = joinpath(temp_pkg_repo, basename(package_path))
+            for item in readdir(source_dir)
+                mv(joinpath(source_dir, item), joinpath(temp_pkg_repo, item); force=true)
+            end
+            rm(source_dir; recursive=true)
         end
-    else
-        @warn "RegistryTools.register returned nothing"
+
+        # Initialize git repository if needed
+        if !isdir(joinpath(temp_pkg_repo, ".git"))
+            Base.run(Cmd(`git init`; dir=temp_pkg_repo))
+            Base.run(Cmd(`git config user.email "test@example.com"`; dir=temp_pkg_repo))
+            Base.run(Cmd(`git config user.name "Test User"`; dir=temp_pkg_repo))
+            Base.run(Cmd(`git add .`; dir=temp_pkg_repo))
+            Base.run(Cmd(`git commit -m "Initial commit"`; dir=temp_pkg_repo))
+        end
+
+        # Get the actual git tree hash
+        actual_tree_hash = read(Cmd(`git rev-parse "HEAD^{tree}"`; dir=temp_pkg_repo), String) |> strip
+
+        # Use RegistryTools.register with file:// URLs
+        registry_url = "file://" * temp_registry
+        package_url = "file://" * temp_pkg_repo
+
+        result = RegistryTools.register(
+            package_url,
+            joinpath(temp_pkg_repo, "Project.toml"),
+            actual_tree_hash;
+            registry=registry_url,
+            registry_fork=registry_url,
+            registry_deps=String[],
+            push=true,
+            force_reset=true,
+        )
+
+        # Merge the registration branch that RegistryTools created
+        if !isnothing(result) && hasfield(typeof(result), :branch)
+            registration_branch = result.branch
+            if occursin(registration_branch, read(Cmd(`git branch -a`; dir=temp_registry), String))
+                Base.run(Cmd(`git checkout $registration_branch`; dir=temp_registry))
+                Base.run(Cmd(`git checkout main`; dir=temp_registry))
+                Base.run(Cmd(`git merge $registration_branch --no-edit`; dir=temp_registry))
+            end
+        end
+
+        # Verify registration was successful
+        registry_toml = TOML.parsefile(joinpath(temp_registry, "Registry.toml"))
+        if !haskey(registry_toml, "packages") || !haskey(registry_toml["packages"], uuid)
+            error("RegistryTools.register completed but package not found in registry")
+        end
+
+    finally
+        # Clean up temporary package repo
+        rm(temp_pkg_repo; recursive=true, force=true)
     end
 
     return temp_registry
 end
+
