@@ -2,7 +2,7 @@ Hello, I am an automated registration bot. I help manage the registration proces
 
 ## 1. New package registration
 
-Please make sure that you have read the [package naming guidelines](https://julialang.github.io/Pkg.jl/dev/creating-packages/#Package-naming-guidelines-1).
+Please make sure that you have read the [package naming guidelines](https://pkgdocs.julialang.org/dev/creating-packages/#Package-naming-guidelines).
 
 ## 2. [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) which are not met ❌
 
