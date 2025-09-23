@@ -13,8 +13,8 @@ env:
 
 jobs:
 
-  unit:
-    name: Unit/Julia ${{ matrix.version }}/${{ matrix.os }}/${{ matrix.arch }}
+  registryci-unit:
+    name: RegistryCI Unit/Julia ${{ matrix.version }}/${{ matrix.os }}/${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -40,9 +40,60 @@ jobs:
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
+        with:
+          project: RegistryCI.jl
       - uses: julia-actions/julia-runtest@v1
+        with:
+          project: RegistryCI.jl
+      - uses: julia-actions/julia-processcoverage@v1
+        with:
+          directories: RegistryCI.jl/src
+      - uses: codecov/codecov-action@v5
+        with:
+          files: lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  automerge-unit:
+    name: AutoMerge Unit/Julia ${{ matrix.version }}/${{ matrix.os }}/${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x64
+        os:
+          - ubuntu-latest
+        version:
+          - '1.3'
+          - '1.4'
+          - '1.5'
+          - '1.6'
+          - '1.7'
+          - '1.8'
+          - '1'
+          - 'nightly'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
+      - uses: julia-actions/cache@v2
+      - uses: julia-actions/julia-buildpkg@v1
+        with:
+          project: AutoMerge.jl
+      - uses: julia-actions/julia-runtest@v1
+        with:
+          project: AutoMerge.jl
         env:
           AUTOMERGE_RUN_INTEGRATION_TESTS: "false"
+      - uses: julia-actions/julia-processcoverage@v1
+        with:
+          directories: AutoMerge.jl/src
+      - uses: codecov/codecov-action@v5
+        with:
+          files: lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   documentation:
     env:
@@ -61,7 +112,8 @@ jobs:
             # install compressed registry
             Pkg.Registry.rm("General")
             Pkg.Registry.add("General")
-            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.develop(PackageSpec(path="RegistryCI.jl"))
+            Pkg.develop(PackageSpec(path="AutoMerge.jl"))
             Pkg.instantiate()'
       - run: julia --project=docs docs/make.jl
         env:
@@ -80,13 +132,14 @@ jobs:
       - run: |
           julia --project=docs -e '
             using Pkg
-            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.develop(PackageSpec(path="RegistryCI.jl"))
+            Pkg.develop(PackageSpec(path="AutoMerge.jl"))
             Pkg.instantiate()'
         env:
           JULIA_PKG_SERVER: ''
       - run: |
           julia --project=docs -e '
             using Documenter: DocMeta, doctest
-            using RegistryCI
-            DocMeta.setdocmeta!(RegistryCI, :DocTestSetup, :(using RegistryCI); recursive=true)
-            doctest(RegistryCI)'
+            using RegistryCI, AutoMerge
+            doctest(RegistryCI; manual="docs/src")
+            doctest(AutoMerge; manual="docs/src")'

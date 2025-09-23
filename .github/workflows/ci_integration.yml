@@ -25,12 +25,12 @@ env:
   JULIA_PKG_UNPACK_REGISTRY: 'true'
 
 jobs:
-  integration:
+  automerge-integration:
     # We don't actually want to run integration tests on pull requests,
     # because we want to avoid hitting rate limits.
     # So, if this is a PR build, mark the integration tests as "skipped".
     if: github.event_name != 'pull_request'
-    name: Integration
+    name: AutoMerge Integration
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,15 +40,21 @@ jobs:
           arch: x64
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
+        with:
+          project: AutoMerge.jl
       - run: git config --global user.email "noreply@example.com"
       - run: git config --global user.name "GitHub Actions"
       - uses: julia-actions/julia-runtest@v1
+        with:
+          project: AutoMerge.jl
         env:
           AUTOMERGE_RUN_INTEGRATION_TESTS: "true"
           AUTOMERGE_INTEGRATION_TEST_REPO: "bcbi-test/automerge-integration-test-repo"
           BCBI_TEST_USER_GITHUB_TOKEN: ${{ secrets.BCBI_TEST_USER_GITHUB_TOKEN }}
           INTEGRATION_TEST_READ_ONLY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: julia-actions/julia-processcoverage@v1
+        with:
+          directories: AutoMerge.jl/src
       - uses: codecov/codecov-action@v5
         with:
           files: lcov.info

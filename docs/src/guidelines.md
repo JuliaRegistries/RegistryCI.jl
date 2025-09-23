@@ -14,6 +14,7 @@ For other registries, some of these guidelines can be disabled.
 
 ```@eval
 import RegistryCI
+import AutoMerge
 import Markdown
 
 function guidelines_to_markdown_output(guidelines_function::Function)
@@ -34,8 +35,8 @@ function guidelines_to_markdown_output(guidelines_function::Function)
     return output_markdown
 end
 
-const guidelines_function = RegistryCI.AutoMerge.get_automerge_guidelines
-const registration_type = RegistryCI.AutoMerge.NewPackage()
+const guidelines_function = AutoMerge.get_automerge_guidelines
+const registration_type = AutoMerge.NewPackage()
 const output_markdown = guidelines_to_markdown_output(guidelines_function)
 
 return output_markdown
@@ -45,6 +46,7 @@ return output_markdown
 
 ```@eval
 import RegistryCI
+import AutoMerge
 import Markdown
 
 function guidelines_to_markdown_output(guidelines_function::Function)
@@ -65,8 +67,8 @@ function guidelines_to_markdown_output(guidelines_function::Function)
     return output_markdown
 end
 
-const guidelines_function = RegistryCI.AutoMerge.get_automerge_guidelines
-const registration_type = RegistryCI.AutoMerge.NewVersion()
+const guidelines_function = AutoMerge.get_automerge_guidelines
+const registration_type = AutoMerge.NewVersion()
 const output_markdown = guidelines_to_markdown_output(guidelines_function)
 
 return output_markdown
@@ -113,7 +115,7 @@ to your Julia environment):
 
 ```@example
 using RegistryCI, RegistryInstances
-using RegistryCI.AutoMerge
+using AutoMerge
 path_to_registry = joinpath(DEPOT_PATH[1], "registries", "General.toml")
 all_pkg_names = AutoMerge.get_all_non_jll_package_names(RegistryInstance(path_to_registry))
 AutoMerge.meets_distance_check("MyPackage123", all_pkg_names)
@@ -150,7 +152,7 @@ These can also be added/updated on the General PR by re-invoking with the above.
 
 Doing this has two benefits:
  - helps explanations during the registration process, especially for breaking changes
- - release notes are picked up by TagBot such that they are added to the new release on the orignial repo
+ - release notes are picked up by TagBot such that they are added to the new release on the original repo
 
 Automerge is disabled for breaking changes where release notes are not provided mentioning "breaking" (or "changelog" if there is a repository file that you prefer to direct users to).
 

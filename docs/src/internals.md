@@ -1,11 +1,25 @@
+# Internals
+
+## RegistryCI
+
 ```@meta
 CurrentModule = RegistryCI
 ```
 
-# Internals
+```@autodocs
+Modules = [RegistryCI]
+Public = false
+Private = true
+```
+
+## AutoMerge
+
+```@meta
+CurrentModule = AutoMerge
+```
 
 ```@autodocs
-Modules = [RegistryCI, RegistryCI.AutoMerge, RegistryCI.TagBot]
+Modules = [AutoMerge, AutoMerge.TagBot]
 Public = false
 Private = true
 ```

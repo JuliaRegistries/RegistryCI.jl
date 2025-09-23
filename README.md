@@ -12,16 +12,20 @@
 [docs-stable-url]: https://JuliaRegistries.github.io/RegistryCI.jl/stable
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg "Documentation (dev)"
 [docs-dev-url]: https://JuliaRegistries.github.io/RegistryCI.jl/dev
-[ci-unit-img]: https://github.com/JuliaRegistries/RegistryCI.jl/workflows/CI%20(unit%20tests)/badge.svg?branch=master "Continuous Integration (Unit Tests)"
-[ci-unit-url]: https://github.com/JuliaRegistries/RegistryCI.jl/actions?query=workflow%3A%22CI+%28unit+tests%29%22
-[ci-integration-img]: https://github.com/JuliaRegistries/RegistryCI.jl/workflows/CI%20(integration%20tests)/badge.svg?branch=master "Continuous Integration (Integration Tests)"
-[ci-integration-url]: https://github.com/JuliaRegistries/RegistryCI.jl/actions?query=workflow%3A%22CI+%28integration+tests%29%22
+[ci-unit-img]: https://github.com/JuliaRegistries/RegistryCI.jl/actions/workflows/ci_unit.yml/badge.svg?branch=master "Continuous Integration (Unit Tests)"
+[ci-unit-url]: https://github.com/JuliaRegistries/RegistryCI.jl/actions/workflows/ci_unit.yml
+[ci-integration-img]: https://github.com/JuliaRegistries/RegistryCI.jl/actions/workflows/ci_integration.yml/badge.svg?branch=master "Continuous Integration (Integration Tests)"
+[ci-integration-url]: https://github.com/JuliaRegistries/RegistryCI.jl/actions/workflows/ci_integration.yml
 [codecov-img]: https://codecov.io/gh/JuliaRegistries/RegistryCI.jl/branch/master/graph/badge.svg "Code Coverage"
 [codecov-url]: https://codecov.io/gh/JuliaRegistries/RegistryCI.jl/branch/master
 [bluestyle-img]: https://img.shields.io/badge/code%20style-blue-4495d1.svg "Blue Style"
 [bluestyle-url]: https://github.com/invenia/BlueStyle
 
-RegistryCI.jl
-provides continuous integration (CI) tools for Julia package registries, including registry consistency testing, automatic merging (automerge) of pull requests, and automatic TagBot triggers.
+This repository contains two Julia packages:
 
-Please see the [documentation](https://JuliaRegistries.github.io/RegistryCI.jl/stable).
+- **RegistryCI.jl** - Registry consistency testing tools for Julia package registries
+- **AutoMerge.jl** - Automatic merging (automerge) of pull requests and TagBot functionality for Julia package registries
+
+Starting with RegistryCI v11.0, the automerge and TagBot functionality has been moved to the separate AutoMerge.jl package. RegistryCI.jl now focuses solely on registry testing.
+
+Please see the [documentation](https://JuliaRegistries.github.io/RegistryCI.jl/stable) for both packages.
