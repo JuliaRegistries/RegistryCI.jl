@@ -1026,6 +1026,9 @@ function meets_version_can_be_imported(
         """
 
     jl_compat = julia_compat(pkg, version, working_directory)
+    # The `code` defined above uses Pkg.Registry functionality, which
+    # is not available in Julia 1.0. Thus 1.1.0 is the lowest Julia
+    # version that can be considered for import testing.
     julia_binaries = get_compatible_julia_binaries(jl_compat, v"1.1.0")
     if isempty(julia_binaries)
         @error "Was not able to find a compatible Julia version. julia_compat: $(jl_compat)"
