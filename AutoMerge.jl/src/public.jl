@@ -355,16 +355,20 @@ function _get_local_guidelines(registration_type; check_license::Bool)
             (guideline_version_number_no_prerelease, true),
             (guideline_version_number_no_build, true),
             (guideline_version_has_osi_license, check_license),
-            (guideline_code_can_be_downloaded, false),  # Skip for local - code is already available
             (guideline_src_names_OK, true),
+            # Now we can use the existing robust CI guidelines with simulated registry
+            (guideline_version_can_be_imported, true),
+            (guideline_version_can_be_pkg_added, true),
         ]
     else  # NewVersion
         return [
             (guideline_version_number_no_prerelease, true),
             (guideline_version_number_no_build, true),
             (guideline_version_has_osi_license, check_license),
-            (guideline_code_can_be_downloaded, false),  # Skip for local - code is already available
             (guideline_src_names_OK, true),
+            # Now we can use the existing robust CI guidelines with simulated registry
+            (guideline_version_can_be_imported, true),
+            (guideline_version_can_be_pkg_added, true),
         ]
     end
 end

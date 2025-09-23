@@ -90,7 +90,7 @@ end
         tree_hash::String
     ) -> String
 
-Create a temporary copy of the registry with the package registration simulated.
+Create a temporary copy of the registry with the package registration simulated using RegistryTools.
 Returns the path to the temporary registry directory.
 """
 function create_simulated_registry_with_package(
@@ -104,90 +104,55 @@ function create_simulated_registry_with_package(
     # Create temporary directory for the simulated registry
     temp_registry = mktempdir(; cleanup=true)
 
-    # Copy original registry to temp location
+    # Copy original registry to temp location and initialize as git repo
     cp(registry_path, temp_registry; force=true)
 
-    # Add the package registration to the temporary registry
-    _add_package_to_registry!(temp_registry, pkg, uuid, version, tree_hash, package_path)
+    # Initialize the temporary registry as a git repository
+    # RegistryTools expects registries to be git repositories
+    Base.run(Cmd(`git init`; dir=temp_registry))
+    Base.run(Cmd(`git config user.email "automerge@local"`; dir=temp_registry))
+    Base.run(Cmd(`git config user.name "AutoMerge Local"`; dir=temp_registry))
+    Base.run(Cmd(`git add .`; dir=temp_registry))
+
+    # Make initial commit if there are files to commit
+    try
+        Base.run(Cmd(`git commit -m "Initial registry state"`; dir=temp_registry))
+    catch
+        # If no files to commit, make an empty commit
+        Base.run(Cmd(`git commit --allow-empty -m "Initial registry state"`; dir=temp_registry))
+    end
+
+    # Use RegistryTools.register to properly add the package
+    # We need a Project instance for the package
+    project_file = joinpath(package_path, "Project.toml")
+
+    # Use RegistryTools.register with push=false to simulate registration
+    result = RegistryTools.register(
+        "https://github.com/example/$(pkg).jl.git",  # placeholder repo URL
+        project_file,
+        tree_hash;
+        registry=temp_registry,
+        registry_fork=temp_registry,
+        registry_deps=String[],  # Will be passed from calling function if needed
+        push=false,  # Don't actually push - just modify the local registry
+        force_reset=true,
+    )
+
+    # Check if registration was successful
+    if !isnothing(result)
+        @info "RegistryTools registration completed successfully" result=result
+
+        # RegistryTools might have modified the registry in place
+        # Let's check if the registry was updated
+        registry_toml = TOML.parsefile(joinpath(temp_registry, "Registry.toml"))
+        if haskey(registry_toml, "packages")
+            @info "Registry now contains packages" count=length(registry_toml["packages"])
+        else
+            @warn "No packages found in registry after RegistryTools.register"
+        end
+    else
+        @warn "RegistryTools.register returned nothing"
+    end
 
     return temp_registry
-end
-
-"""
-    _add_package_to_registry!(registry_path, pkg, uuid, version, tree_hash, package_path)
-
-Internal function to add a package registration to a registry.
-This simulates what Registrator would do.
-"""
-function _add_package_to_registry!(registry_path::String, pkg::String, uuid::String, version::VersionNumber, tree_hash::String, package_path::String)
-    # Update Registry.toml
-    registry_toml_path = joinpath(registry_path, "Registry.toml")
-    registry_toml = TOML.parsefile(registry_toml_path)
-
-    # Create package entry if it doesn't exist
-    if !haskey(registry_toml, "packages")
-        registry_toml["packages"] = Dict()
-    end
-
-    # Determine package directory structure (first letter of name)
-    first_letter = uppercase(string(pkg[1]))
-    pkg_dir = joinpath(registry_path, first_letter, pkg)
-    pkg_relpath = joinpath(first_letter, pkg)
-
-    # Add package to registry
-    registry_toml["packages"][uuid] = Dict(
-        "name" => pkg,
-        "path" => pkg_relpath
-    )
-
-    # Write updated Registry.toml
-    open(registry_toml_path, "w") do io
-        TOML.print(io, registry_toml)
-    end
-
-    # Create package directory
-    mkpath(pkg_dir)
-
-    # Create Package.toml
-    package_toml = Dict(
-        "name" => pkg,
-        "uuid" => uuid,
-        "repo" => "https://github.com/example/$(pkg).jl.git"  # placeholder
-    )
-
-    open(joinpath(pkg_dir, "Package.toml"), "w") do io
-        TOML.print(io, package_toml)
-    end
-
-    # Create Versions.toml
-    versions_toml = Dict(
-        string(version) => Dict("git-tree-sha1" => tree_hash)
-    )
-
-    open(joinpath(pkg_dir, "Versions.toml"), "w") do io
-        TOML.print(io, versions_toml)
-    end
-
-    # Create Compat.toml (basic julia compat)
-    project_file = joinpath(package_path, "Project.toml")
-    if isfile(project_file)
-        project = TOML.parsefile(project_file)
-        compat = get(project, "compat", Dict())
-
-        if !isempty(compat)
-            compat_toml = Dict(string(version) => compat)
-            open(joinpath(pkg_dir, "Compat.toml"), "w") do io
-                TOML.print(io, compat_toml)
-            end
-        end
-
-        # Create Deps.toml if there are dependencies
-        deps = get(project, "deps", Dict())
-        if !isempty(deps)
-            deps_toml = Dict(string(version) => deps)
-            open(joinpath(pkg_dir, "Deps.toml"), "w") do io
-                TOML.print(io, deps_toml)
-            end
-        end
-    end
 end
