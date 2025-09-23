@@ -5,7 +5,7 @@ const available_julia_versions = VersionNumber[]
 
 const version_re = r"^(\d+\.\d+\.\d+(-[\w\d]+)?)$"
 
-# Find all available Julia version by running `juliaup list` and
+# Find all available Julia versions by running `juliaup list` and
 # parsing the output.
 #
 # This is inherently brittle with respect to the details of the
@@ -29,6 +29,22 @@ function find_available_julia_versions()
                 version = VersionNumber(m.captures[1])
                 push!(available_julia_versions, version)
             end
+        end
+        # The number of available julia versions is assumed to be
+        # monotonically increasing. On 2025-09-23, when 1.12.0-rc2 was
+        # the highest available version, there were 125 available
+        # versions by this count. Should this number ever decrease,
+        # the only explanations are that either juliaup printing has
+        # changed so that we misinterpret the output or that juliaup
+        # has changed what versions it lists. Either way it needs
+        # investigation, so better error here. (This does not cover
+        # everything but at least provides a simple sanity check. Feel
+        # free to increase this threshold over time.)
+        #
+        # Note: In case an emergency fix or workaround is needed, it
+        # might help to pin juliaup_jll to an earlier version.
+        if length(available_julia_versions) < 125
+            error("Internal error. Parsing of juliaup output might be outdated.")
         end
     end
     return available_julia_versions
