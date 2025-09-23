@@ -52,7 +52,9 @@ end
 
 function get_julia_binary(version, kind)
     Base.run(`$(juliaup()) add $(version)`)
-    cmd = `$(julia()) +$(version)`
+    # Disable adjust_LIBPATH since we are calling a standalone Julia
+    # installation. Otherwise libraries may mismatch.
+    cmd = `$(julia(adjust_LIBPATH = false)) +$(version)`
     text = "julia $(version) ($kind compatible version)"
     return cmd, text
 end
