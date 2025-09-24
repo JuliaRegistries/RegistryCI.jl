@@ -268,16 +268,23 @@ function local_check(
     # Get git information
     commit_sha, tree_hash = get_current_commit_info(package_path)
 
-    # Auto-detect registration type
-    registration_type = something(registration_type, determine_registration_type(pkg, registry_path))
-
     # Create temporary registries
     registry_master = mktempdir(; cleanup=true)
     cp(registry_path, registry_master; force=true)
 
-    registry_head = create_simulated_registry_with_package(
-        package_path, registry_path, pkg, version, uuid, tree_hash
+    registry_head, registration_result = create_simulated_registry_with_package(
+        package_path, registry_path
     )
+
+    println(registration_result)
+
+    registration_type = if registration_result[:kind] == :new_version
+        NewVersion()
+    elseif registration_result[:kind] == :new_package
+        NewPackage()
+    else
+        error("Unknown registration result kind: $(registration_result[:kind]). Expected `:new_version` or `:new_package`.")
+    end
 
     # Create LocalAutoMergeData
     data = LocalAutoMergeData(

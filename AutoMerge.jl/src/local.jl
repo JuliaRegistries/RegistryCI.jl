@@ -3,6 +3,36 @@ Helper functions for local AutoMerge checks.
 """
 
 """
+    temp_git_dir(src::String; email="test@example.com", name="Test User") -> String
+
+Create a temporary git repository by copying the source directory.
+Returns the path to the temporary directory with the copied contents.
+"""
+function temp_git_dir(src::String; email="test@example.com", name="Test User")
+    temp_parent = mktempdir()
+    cp(src, temp_parent; force=true, follow_symlinks=true)
+
+    bname = basename(src)
+    # if src ends with a path separator, then basename(src) == ""
+    if isempty(bname)
+        bname = basename(dirname(src)) # RegistryCI.jl
+    end
+
+    temp_dir = joinpath(temp_parent, bname)
+    @show readdir(temp_parent)
+    @show isdir(temp_dir)
+
+    # Initialize git repository if it isn't one
+    if !isdir(joinpath(temp_dir, ".git"))
+        for cmd in [`git init`, `git config user.email "$email"`, `git config user.name "$name"`, `git add .`, `git commit -m "Initial commit"`]
+            Base.run(Cmd(cmd; dir=temp_dir))
+        end
+    end
+
+    return temp_dir
+end
+
+"""
     detect_package_info(package_path::String) -> (pkg::String, version::VersionNumber, uuid::String)
 
 Extract package name, version, and UUID from Project.toml in the given package directory.
@@ -56,38 +86,9 @@ function get_current_commit_info(package_path::String)
 end
 
 """
-    determine_registration_type(pkg::String, registry_path::String) -> Union{NewPackage, NewVersion}
-
-Determine if this would be a new package or new version registration.
-"""
-function determine_registration_type(pkg::String, registry_path::String)
-    # Check if package already exists in registry
-    registry_toml = joinpath(registry_path, "Registry.toml")
-    if !isfile(registry_toml)
-        throw(ArgumentError("Registry.toml not found in $registry_path"))
-    end
-
-    registry = TOML.parsefile(registry_toml)
-    packages = get(registry, "packages", Dict())
-
-    # Look for package by name in the registry
-    for (uuid, pkg_info) in packages
-        if get(pkg_info, "name", "") == pkg
-            return NewVersion()
-        end
-    end
-
-    return NewPackage()
-end
-
-"""
     create_simulated_registry_with_package(
         package_path::String,
-        registry_path::String,
-        pkg::String,
-        version::VersionNumber,
-        uuid::String,
-        tree_hash::String
+        registry_path::String
     ) -> String
 
 Create a temporary copy of the registry with the package registration simulated using RegistryTools.
@@ -95,70 +96,18 @@ Returns the path to the temporary registry directory.
 """
 function create_simulated_registry_with_package(
     package_path::String,
-    registry_path::String,
-    pkg::String,
-    version::VersionNumber,
-    uuid::String,
-    tree_hash::String
+    registry_path::String
 )
     # Create temporary directory for the simulated registry
-    temp_registry = mktempdir(; cleanup=true)
-
-    # Copy original registry to temp location
-    # Use force=true to ensure proper copying and recursive to copy subdirectories
-    cp(registry_path, temp_registry; force=true, follow_symlinks=true)
-
-    # Remove any potential issues with the temp directory
-    if isdir(joinpath(temp_registry, basename(registry_path)))
-        # If cp created a subdirectory, move contents up
-        source_dir = joinpath(temp_registry, basename(registry_path))
-        for item in readdir(source_dir)
-            mv(joinpath(source_dir, item), joinpath(temp_registry, item); force=true)
-        end
-        rm(source_dir; recursive=true)
-    end
-
-    # Initialize the temporary registry as a git repository
-    # RegistryTools expects registries to be git repositories
-    Base.run(Cmd(`git init`; dir=temp_registry))
-    Base.run(Cmd(`git config user.email "automerge@local"`; dir=temp_registry))
-    Base.run(Cmd(`git config user.name "AutoMerge Local"`; dir=temp_registry))
-    Base.run(Cmd(`git add .`; dir=temp_registry))
-
-    # Make initial commit if there are files to commit
-    try
-        Base.run(Cmd(`git commit -m "Initial registry state"`; dir=temp_registry))
-    catch
-        # If no files to commit, make an empty commit
-        Base.run(Cmd(`git commit --allow-empty -m "Initial registry state"`; dir=temp_registry))
-    end
+    temp_registry = temp_git_dir(registry_path; email="automerge@local", name="AutoMerge Local")
 
     # Use RegistryTools.register to properly add the package
     project_file = joinpath(package_path, "Project.toml")
 
     # Create temporary git repository for the package
-    temp_pkg_repo = mktempdir()
+    temp_pkg_repo = temp_git_dir(package_path)
+    local result
     try
-        # Copy package to temporary location and ensure proper git structure
-        cp(package_path, temp_pkg_repo; force=true, follow_symlinks=true)
-
-        # Handle potential nested directory from cp
-        if isdir(joinpath(temp_pkg_repo, basename(package_path)))
-            source_dir = joinpath(temp_pkg_repo, basename(package_path))
-            for item in readdir(source_dir)
-                mv(joinpath(source_dir, item), joinpath(temp_pkg_repo, item); force=true)
-            end
-            rm(source_dir; recursive=true)
-        end
-
-        # Initialize git repository if needed
-        if !isdir(joinpath(temp_pkg_repo, ".git"))
-            Base.run(Cmd(`git init`; dir=temp_pkg_repo))
-            Base.run(Cmd(`git config user.email "test@example.com"`; dir=temp_pkg_repo))
-            Base.run(Cmd(`git config user.name "Test User"`; dir=temp_pkg_repo))
-            Base.run(Cmd(`git add .`; dir=temp_pkg_repo))
-            Base.run(Cmd(`git commit -m "Initial commit"`; dir=temp_pkg_repo))
-        end
 
         # Get the actual git tree hash
         actual_tree_hash = read(Cmd(`git rev-parse "HEAD^{tree}"`; dir=temp_pkg_repo), String) |> strip
@@ -178,19 +127,27 @@ function create_simulated_registry_with_package(
             force_reset=true,
         )
 
+        # Extract package info from Project.toml for verification
+        project_data = TOML.parsefile(joinpath(temp_pkg_repo, "Project.toml"))
+        pkg_uuid = project_data["uuid"]
+
         # Merge the registration branch that RegistryTools created
-        if !isnothing(result) && hasfield(typeof(result), :branch)
-            registration_branch = result.branch
-            if occursin(registration_branch, read(Cmd(`git branch -a`; dir=temp_registry), String))
-                Base.run(Cmd(`git checkout $registration_branch`; dir=temp_registry))
-                Base.run(Cmd(`git checkout main`; dir=temp_registry))
-                Base.run(Cmd(`git merge $registration_branch --no-edit`; dir=temp_registry))
-            end
+        if isnothing(result) || !hasfield(typeof(result), :branch)
+            error("RegistryTools.register did not return a valid result with branch information")
         end
+
+        registration_branch = result.branch
+        if !occursin(registration_branch, read(Cmd(`git branch -a`; dir=temp_registry), String))
+            error("RegistryTools registration branch '$registration_branch' not found in registry")
+        end
+
+        Base.run(Cmd(`git checkout $registration_branch`; dir=temp_registry))
+        Base.run(Cmd(`git checkout main`; dir=temp_registry))
+        Base.run(Cmd(`git merge $registration_branch --no-edit`; dir=temp_registry))
 
         # Verify registration was successful
         registry_toml = TOML.parsefile(joinpath(temp_registry, "Registry.toml"))
-        if !haskey(registry_toml, "packages") || !haskey(registry_toml["packages"], uuid)
+        if !haskey(registry_toml, "packages") || !haskey(registry_toml["packages"], pkg_uuid)
             error("RegistryTools.register completed but package not found in registry")
         end
 
@@ -199,6 +156,5 @@ function create_simulated_registry_with_package(
         rm(temp_pkg_repo; recursive=true, force=true)
     end
 
-    return temp_registry
+    return temp_registry, result
 end
-

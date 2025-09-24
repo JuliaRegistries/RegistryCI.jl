@@ -37,34 +37,6 @@ using TOML
         rm(tmpdir; recursive=true)
     end
 
-    @testset "determine_registration_type" begin
-        # Create temporary registry
-        tmpregistry = mktempdir()
-        registry_toml = joinpath(tmpregistry, "Registry.toml")
-
-        # Create basic registry structure
-        registry_content = """
-        name = "TestRegistry"
-        uuid = "87654321-4321-8765-4321-876543218765"
-
-        [packages]
-        "12345678-1234-5678-1234-567812345678" = { name = "ExistingPkg", path = "E/ExistingPkg" }
-        """
-
-        write(registry_toml, registry_content)
-
-        # Test new package
-        @test AutoMerge.determine_registration_type("NewPkg", tmpregistry) isa AutoMerge.NewPackage
-
-        # Test existing package (new version)
-        @test AutoMerge.determine_registration_type("ExistingPkg", tmpregistry) isa AutoMerge.NewVersion
-
-        # Test invalid registry
-        @test_throws ArgumentError AutoMerge.determine_registration_type("TestPkg", "/nonexistent/path")
-
-        rm(tmpregistry; recursive=true)
-    end
-
     @testset "create_simulated_registry_with_package" begin
         # Create temporary package directory
         tmppackage = mktempdir()
@@ -95,8 +67,7 @@ using TOML
 
         # Create simulated registry
         simulated_registry = AutoMerge.create_simulated_registry_with_package(
-            tmppackage, tmpregistry, "TestPkg", v"0.1.0",
-            "12345678-1234-5678-1234-567812345678", "abcd1234567890123456789012345678901234ef"
+            tmppackage, tmpregistry
         )
 
         # Verify the simulated registry has the package
