@@ -70,6 +70,7 @@ function parse_pull_request_title(::NewPackage, pull_request::GitHub.PullRequest
 end
 
 function pull_request_build(
+    config::AutoMergeConfiguration,
     api::GitHub.GitHubAPI,
     pr_number::Integer,
     current_pr_head_commit_sha::String,
@@ -77,20 +78,6 @@ function pull_request_build(
     registry_head::String;
     whoami::String,
     auth::GitHub.Authorization,
-    authorized_authors::Vector{String},
-    authorized_authors_special_jll_exceptions::Vector{String},
-    error_exit_if_automerge_not_applicable=error_exit_if_automerge_not_applicable,
-    master_branch::String,
-    master_branch_is_default_branch::Bool,
-    suggest_onepointzero::Bool,
-    point_to_slack::Bool,
-    registry_deps::Vector{<:AbstractString}=String[],
-    check_license::Bool,
-    check_breaking_explanation::Bool,
-    public_registries::Vector{<:AbstractString}=String[],
-    read_only::Bool,
-    environment_variables_to_pass::Vector{<:AbstractString}=String[],
-    new_package_waiting_period=new_package_waiting_period,
 )::Nothing
     pr = my_retry(() -> GitHub.pull_request(api, registry, pr_number; auth=auth))
     _github_api_pr_head_commit_sha = pull_request_head_sha(pr)
@@ -134,9 +121,9 @@ function pull_request_build(
     authorization = check_authorization(
         pkg,
         pr_author_login,
-        authorized_authors,
-        authorized_authors_special_jll_exceptions,
-        error_exit_if_automerge_not_applicable,
+        config.authorized_authors,
+        config.authorized_authors_special_jll_exceptions,
+        config.error_exit_if_automerge_not_applicable,
     )
 
     if authorization == :not_authorized
@@ -144,8 +131,8 @@ function pull_request_build(
     end
 
     registry_master = clone_repo(registry)
-    if !master_branch_is_default_branch
-        checkout_branch(registry_master, master_branch)
+    if !config.master_branch_is_default_branch
+        checkout_branch(registry_master, config.master_branch)
     end
     data = GitHubAutoMergeData(;
         api=api,
@@ -159,15 +146,15 @@ function pull_request_build(
         authorization=authorization,
         registry_head=registry_head,
         registry_master=registry_master,
-        suggest_onepointzero=suggest_onepointzero,
-        point_to_slack=point_to_slack,
+        suggest_onepointzero=config.suggest_onepointzero,
+        point_to_slack=config.point_to_slack,
         whoami=whoami,
-        registry_deps=registry_deps,
-        public_registries=public_registries,
-        read_only=read_only,
-        environment_variables_to_pass=environment_variables_to_pass,
+        registry_deps=config.registry_deps,
+        public_registries=config.public_registries,
+        read_only=config.read_only,
+        environment_variables_to_pass=config.environment_variables_to_pass,
     )
-    pull_request_build(data; check_license=check_license, check_breaking_explanation=check_breaking_explanation, new_package_waiting_period=new_package_waiting_period)
+    pull_request_build(data; check_license=config.check_license, check_breaking_explanation=config.check_breaking_explanation, new_package_waiting_period=config.new_package_waiting_period)
     rm(registry_master; force=true, recursive=true)
     return nothing
 end

@@ -74,27 +74,14 @@ function run(
         pr_number = pull_request_number(cicfg; env=env)
         pr_head_commit_sha = current_pr_head_commit_sha(cicfg; env=env)
         pull_request_build(
+            config,
             api,
             pr_number,
             pr_head_commit_sha,
             registry_repo,
             registry_head;
-            auth=auth,
-            config.authorized_authors,
-            config.authorized_authors_special_jll_exceptions,
-            config.error_exit_if_automerge_not_applicable,
-            config.master_branch,
-            config.master_branch_is_default_branch,
-            config.suggest_onepointzero,
-            config.point_to_slack,
             whoami=whoami,
-            config.registry_deps,
-            config.check_license,
-            config.check_breaking_explanation,
-            config.public_registries,
-            config.read_only,
-            config.environment_variables_to_pass,
-            config.new_package_waiting_period,
+            auth=auth,
         )
     else
         always_assert(run_merge_build)
