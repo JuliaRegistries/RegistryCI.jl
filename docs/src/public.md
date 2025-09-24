@@ -18,10 +18,6 @@ CurrentModule = AutoMerge
 
 ```@docs
 AutoMerge.run
-```
-
-```@autodocs
-Modules = [RegistryCI, AutoMerge]
-Public = true
-Private = false
+AutoMerge.AutoMergeConfiguration
+AutoMerge.GENERAL_AUTOMERGE_CONFIG
 ```

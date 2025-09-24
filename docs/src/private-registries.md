@@ -57,27 +57,14 @@ In order to enable automerge support, you will also have to copy the `automerge.
 
 ```julia
 using AutoMerge
+using AutoMerge: AutoMergeConfiguration
 using Dates
-AutoMerge.run(
-    merge_new_packages = ENV["MERGE_NEW_PACKAGES"] == "true",
-    merge_new_versions = ENV["MERGE_NEW_VERSIONS"] == "true",
-    new_package_waiting_period = Day(3),
-    new_jll_package_waiting_period = Minute(20),
-    new_version_waiting_period = Minute(10),
-    new_jll_version_waiting_period = Minute(10),
-    registry = "MyOrg/MyRegistry",
-    tagbot_enabled = true,
-    authorized_authors = String["TrustedUser"],
-    authorized_authors_special_jll_exceptions = String[""],
-    suggest_onepointzero = false,
-    additional_statuses = String[],
-    additional_check_runs = String[],
-    check_license = true,
-    check_breaking_explanation = true,
-    public_registries = String["https://github.com/HolyLab/HolyLabRegistry"],
-)
+config = AutoMergeConfiguration(; config_settings...)
+AutoMerge.run(config)
 ```
-Most importantly, the following should be changed
+where `config_settings` must set all of the required fields from [`AutoMergeConfiguration`](@ref) (and optionally the settings with default values too). One can refer to [`AutoMerge.GENERAL_AUTOMERGE_CONFIG`](@ref) to see the settings that General uses. If one wants to opt-in to following the same rules as General (which may change in non-breaking releases of AutoMerge.jl), one can directly set `config = AutoMerge.GENERAL_AUTOMERGE_CONFIG`, and pass keyword arguments to `run` to override specific values.
+
+Most importantly, the following configuration settings must be updated for your registry:
 ```
 registry = "MyOrg/MyRegistry",
 authorized_authors = String["TrustedUser"],

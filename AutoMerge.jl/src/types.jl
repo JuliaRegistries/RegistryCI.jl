@@ -111,6 +111,27 @@ const GENERAL_AUTOMERGE_CONFIG = AutoMergeConfiguration(
     check_breaking_explanation = true,
 )
 
+
+@doc """
+    AutoMerge.GENERAL_AUTOMERGE_CONFIG
+
+This is the [`AutoMergeConfiguration`](@ref) object intended for use by the
+[General registry](https://github.com/JuliaRegistries/General).
+General uses the `AutoMerge.GENERAL_AUTOMERGE_CONFIG` from the latest released version of
+AutoMerge.jl (once its manifest has been updated).
+
+!!! warning
+    The values of the fields chosen here may change in non-breaking releases
+    of AutoMerge.jl at the discretion of the maintainers of the General registry,
+    in order to configure the registry for the current needs of the community.
+
+Here are the settings chosen for General in this version of AutoMerge.jl:
+```julia
+julia> AutoMerge.GENERAL_AUTOMERGE_CONFIG
+$(sprint(show, MIME"text/plain"(), GENERAL_AUTOMERGE_CONFIG))
+
+```
+""" GENERAL_AUTOMERGE_CONFIG
 struct NewPackage end
 struct NewVersion end
 
