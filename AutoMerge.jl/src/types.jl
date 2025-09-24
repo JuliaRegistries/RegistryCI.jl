@@ -1,6 +1,115 @@
+using Dates: Day, Minute
+
 struct AlwaysAssertionError <: Exception
     msg::String
 end
+
+
+"""
+    AutoMergeConfiguration
+
+Configuration struct for AutoMerge.
+
+```julia
+AutoMergeConfiguration(; kwargs...)
+```
+
+!!! note
+    New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
+
+# Required keyword arguments
+
+- `merge_new_packages::Bool`: should AutoMerge merge registration PRs for new packages
+- `merge_new_versions::Bool`: should AutoMerge merge registration PRs for new versions of packages
+- `new_package_waiting_period::Dates.Period`: new package waiting period, e.g `Day(3)`.
+- `new_jll_package_waiting_period::Dates.Period`: new JLL package waiting period, e.g `Minute(20)`.
+- `new_version_waiting_period::Dates.Period`: new package version waiting period, e.g `Minute(10)`.
+- `new_jll_version_waiting_period::Dates.Period`: new JLL package version waiting period, e.g `Minute(10)`.
+- `registry::String`: the registry name you want to run AutoMerge on.
+- `authorized_authors::Vector{String}`: list of who can submit registration, e.g `String["JuliaRegistrator"]`.
+- `authorized_authors_special_jll_exceptions::Vector{String}`: a list of users who can submit JLL packages (which have strict rules about allowed dependencies and are subject to `new_jll_*_waiting_period`s instead of `new_*_waiting_period`s).
+
+# Keyword arguments with default values
+
+- `tagbot_enabled::Bool = false`: if tagbot is enabled.
+- `additional_statuses::AbstractVector{<:AbstractString} = String[]`: list of additional commit statuses that must pass before AutoMerge will merge a PR
+- `additional_check_runs::AbstractVector{<:AbstractString} = String[]`: list of additional check runs that must pass before AutoMerge will merge a PR
+- `error_exit_if_automerge_not_applicable::Bool = false`: if `false`, AutoMerge will not error on PRs made by non-AutoMerge-authorized users
+- `master_branch::String = "master"`: name of `master_branch`, e.g you may want to specify this to `"main"` for new GitHub repositories.
+- `master_branch_is_default_branch::Bool = true`: if `master_branch` specified above is the default branch.
+- `suggest_onepointzero::Bool = true`: should the AutoMerge comment include a suggestion to tag a 1.0 release for v0.x.y packages.
+- `point_to_slack::Bool = false`: should the AutoMerge comment recommend sending a message to the `#pkg-registration` Julia-Slack channel when auto-merging is not possible.
+- `registry_deps::Vector{<:AbstractString} = String[]`: list of registry dependencies, e.g your packages may depend on `General`.
+- `api_url::String = "https://api.github.com"`: the registry host API URL.
+- `check_license::Bool = false`: check package has a valid license.
+- `check_breaking_explanation::Bool = false`: Check whether the PR has release notes (collected via Registrator.jl) with a breaking change explanation.
+- `public_registries::Vector{<:AbstractString} = String[]`: If a new package registration has a UUID that matches
+  that of a package already registered in one of these registries supplied here
+  (and has either a different name or different URL) then an error will be thrown.
+  This to prevent AutoMerge from being used for "dependency confusion"
+  attacks on those registries.
+- `read_only::Bool = false`: run in read only mode.
+- `environment_variables_to_pass::Vector{<:AbstractString} = String[]`: Environment variables to pass to the subprocess that does `Pkg.add("Foo")` and `import Foo`
+"""
+Base.@kwdef struct AutoMergeConfiguration
+    merge_new_packages::Bool
+    merge_new_versions::Bool
+    new_package_waiting_period::Dates.Period
+    new_jll_package_waiting_period::Dates.Period
+    new_version_waiting_period::Dates.Period
+    new_jll_version_waiting_period::Dates.Period
+    registry::String
+    tagbot_enabled::Bool = false
+    authorized_authors::Vector{String}
+    authorized_authors_special_jll_exceptions::Vector{String}
+    additional_statuses::AbstractVector{<:AbstractString} = String[]
+    additional_check_runs::AbstractVector{<:AbstractString} = String[]
+    error_exit_if_automerge_not_applicable::Bool = false
+    master_branch::String = "master"
+    master_branch_is_default_branch::Bool = true
+    suggest_onepointzero::Bool = true
+    point_to_slack::Bool = false
+    registry_deps::Vector{<:AbstractString} = String[]
+    api_url::String = "https://api.github.com"
+    check_license::Bool = false
+    check_breaking_explanation::Bool = false
+    public_registries::Vector{<:AbstractString} = String[]
+    read_only::Bool = false
+    environment_variables_to_pass::Vector{<:AbstractString} = String[]
+end
+
+function Base.show(io::IO, ::MIME"text/plain", obj::AutoMergeConfiguration)
+    print(io, AutoMergeConfiguration, " with:")
+    for k in propertynames(obj)
+        print(io, "\n  ", k, ": `", repr(getproperty(obj, k)), "`")
+    end
+end
+
+Base.show(io::IO, ::AutoMergeConfiguration) = print(io, AutoMergeConfiguration, "(…)")
+
+
+const GENERAL_AUTOMERGE_CONFIG = AutoMergeConfiguration(
+    merge_new_packages = true,
+    merge_new_versions = true,
+    new_package_waiting_period = Day(3),
+    new_jll_package_waiting_period = Minute(20),
+    new_version_waiting_period = Minute(10),
+    new_jll_version_waiting_period = Minute(10),
+    registry = "JuliaRegistries/General",
+    tagbot_enabled = true,
+    authorized_authors = String["JuliaRegistrator"],
+    authorized_authors_special_jll_exceptions = String["jlbuild"],
+    suggest_onepointzero = false,
+    additional_statuses = String[],
+    additional_check_runs = String[],
+    check_license = true,
+    public_registries = String[
+        "https://github.com/HolyLab/HolyLabRegistry",
+        "https://github.com/cossio/CossioJuliaRegistry"
+    ],
+    point_to_slack = true,
+    check_breaking_explanation = true,
+)
 
 struct NewPackage end
 struct NewVersion end
