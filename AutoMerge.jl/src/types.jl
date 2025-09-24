@@ -115,7 +115,7 @@ const GENERAL_AUTOMERGE_CONFIG = AutoMergeConfiguration(
 @doc """
     AutoMerge.GENERAL_AUTOMERGE_CONFIG
 
-This is the [`AutoMergeConfiguration`](@ref) object intended for use by the
+This is the [`AutoMerge.AutoMergeConfiguration`](@ref) object intended for use by the
 [General registry](https://github.com/JuliaRegistries/General).
 General uses the `AutoMerge.GENERAL_AUTOMERGE_CONFIG` from the latest released version of
 AutoMerge.jl (once its manifest has been updated).

@@ -12,7 +12,7 @@ Run the `AutoMerge` service.
 
 # Keyword Arguments
 
-Any field from `AutoMergeConfiguration` can be overridden via keyword arguments. See the documentation for [`AutoMergeConfiguration`](@ref) for details on available fields.
+Any field from `AutoMergeConfiguration` can be overridden via keyword arguments. See the documentation for [`AutoMerge.AutoMergeConfiguration`](@ref) for details on available fields.
 
 # Example
 

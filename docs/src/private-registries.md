@@ -62,7 +62,7 @@ using Dates
 config = AutoMergeConfiguration(; config_settings...)
 AutoMerge.run(config)
 ```
-where `config_settings` must set all of the required fields from [`AutoMergeConfiguration`](@ref) (and optionally the settings with default values too). One can refer to [`AutoMerge.GENERAL_AUTOMERGE_CONFIG`](@ref) to see the settings that General uses. If one wants to opt-in to following the same rules as General (which may change in non-breaking releases of AutoMerge.jl), one can directly set `config = AutoMerge.GENERAL_AUTOMERGE_CONFIG`, and pass keyword arguments to `run` to override specific values.
+where `config_settings` must set all of the required fields from [`AutoMerge.AutoMergeConfiguration`](@ref) (and optionally the settings with default values too). One can refer to [`AutoMerge.GENERAL_AUTOMERGE_CONFIG`](@ref) to see the settings that General uses. If one wants to opt-in to following the same rules as General (which may change in non-breaking releases of AutoMerge.jl), one can directly set `config = AutoMerge.GENERAL_AUTOMERGE_CONFIG`, and pass keyword arguments to `run` to override specific values.
 
 Most importantly, the following configuration settings must be updated for your registry:
 ```
