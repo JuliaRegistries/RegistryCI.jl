@@ -179,24 +179,16 @@ function pr_has_passing_automerge_decision_status(
 end
 
 function cron_or_api_build(
+    config::AutoMergeConfiguration,
     api::GitHub.GitHubAPI,
     registry::GitHub.Repo;
     auth::GitHub.Authorization,
-    authorized_authors::Vector{String},
-    authorized_authors_special_jll_exceptions::Vector{String},
-    merge_new_packages::Bool,
-    merge_new_versions::Bool,
-    new_package_waiting_period,
-    new_jll_package_waiting_period,
-    new_version_waiting_period,
-    new_jll_version_waiting_period,
     whoami::String,
     all_statuses::AbstractVector{<:AbstractString},
     all_check_runs::AbstractVector{<:AbstractString},
-    read_only::Bool,
 )
 
-    if !read_only
+    if !config.read_only
         # first, create `BLOCKED_LABEL` as a label in the repo if it doesn't
         # already exist. This way we can add it to PRs as needed.
         maybe_create_blocked_label(api, registry; auth=auth)
@@ -216,22 +208,14 @@ function cron_or_api_build(
             try
                 my_retry() do
                     cron_or_api_build(
+                        config,
                         api,
                         pr,
                         registry;
                         auth=auth,
-                        authorized_authors=authorized_authors,
-                        authorized_authors_special_jll_exceptions=authorized_authors_special_jll_exceptions,
-                        merge_new_packages=merge_new_packages,
-                        merge_new_versions=merge_new_versions,
-                        new_package_waiting_period=new_package_waiting_period,
-                        new_jll_package_waiting_period=new_jll_package_waiting_period,
-                        new_version_waiting_period=new_version_waiting_period,
-                        new_jll_version_waiting_period=new_jll_version_waiting_period,
                         whoami=whoami,
                         all_statuses=all_statuses,
                         all_check_runs=all_check_runs,
-                        read_only=read_only,
                     )
                 end
             catch ex
@@ -253,22 +237,14 @@ function cron_or_api_build(
 end
 
 function cron_or_api_build(
+    config::AutoMergeConfiguration,
     api::GitHub.GitHubAPI,
     pr::GitHub.PullRequest,
     registry::GitHub.Repo;
     auth::GitHub.Authorization,
-    authorized_authors::Vector{String},
-    authorized_authors_special_jll_exceptions::Vector{String},
-    merge_new_packages::Bool,
-    merge_new_versions::Bool,
-    new_package_waiting_period,
-    new_jll_package_waiting_period,
-    new_version_waiting_period,
-    new_jll_version_waiting_period,
     whoami::String,
     all_statuses::AbstractVector{<:AbstractString},
     all_check_runs::AbstractVector{<:AbstractString},
-    read_only::Bool,
 )
     #       first, see if the author is an authorized author. if not, then skip.
     #       next, see if the title matches either the "New Version" regex or
@@ -282,7 +258,7 @@ function cron_or_api_build(
     pr_number = number(pr)
     @info("Now examining pull request $(pr_number)")
     pr_author = author_login(pr)
-    if pr_author ∉ vcat(authorized_authors, authorized_authors_special_jll_exceptions)
+    if pr_author ∉ vcat(config.authorized_authors, config.authorized_authors_special_jll_exceptions)
         @info(
             string(
                 "Pull request: $(pr_number). ",
@@ -290,8 +266,8 @@ function cron_or_api_build(
                 "Reason: pull request author is not authorized to automerge.",
             ),
             pr_author,
-            authorized_authors,
-            authorized_authors_special_jll_exceptions
+            config.authorized_authors,
+            config.authorized_authors_special_jll_exceptions
         )
         return nothing
     end
@@ -314,7 +290,7 @@ function cron_or_api_build(
     # of the other steps (e.g. automerge passing, waiting period, etc).
     blocked = pr_has_blocking_comments(api, registry, pr; auth=auth) && !has_label(pr.labels, OVERRIDE_BLOCKS_LABEL)
     if blocked
-        if !read_only && !has_label(pr.labels, BLOCKED_LABEL)
+        if !config.read_only && !has_label(pr.labels, BLOCKED_LABEL)
             # add `BLOCKED_LABEL` to communicate to users that the PR is blocked
             # from automerging, unless the label is already there.
             GitHub.add_labels(api, registry.full_name, pr_number, [BLOCKED_LABEL]; auth=auth)
@@ -327,7 +303,7 @@ function cron_or_api_build(
             )
         )
         return nothing
-    elseif has_label(pr.labels, BLOCKED_LABEL) && !read_only
+    elseif has_label(pr.labels, BLOCKED_LABEL) && !config.read_only
         # remove block label BLOCKED_LABEL if it exists
         # note we use `try_remove_label` to avoid crashing the job
         # if there is some race condition or manual intervention
@@ -348,13 +324,13 @@ function cron_or_api_build(
         pr_type,
         pr_age;
         pkg=pkg,
-        new_package_waiting_period=new_package_waiting_period,
-        new_jll_package_waiting_period=new_jll_package_waiting_period,
-        new_version_waiting_period=new_version_waiting_period,
-        new_jll_version_waiting_period=new_jll_version_waiting_period,
+        config.new_package_waiting_period,
+        config.new_jll_package_waiting_period,
+        config.new_version_waiting_period,
+        config.new_jll_version_waiting_period,
         pr_author=pr_author,
-        authorized_authors=authorized_authors,
-        authorized_authors_special_jll_exceptions=authorized_authors_special_jll_exceptions,
+        config.authorized_authors,
+        config.authorized_authors_special_jll_exceptions,
     )
     if !this_pr_is_old_enough
         @info(
@@ -425,7 +401,7 @@ function cron_or_api_build(
 
     if pr_type == :NewPackage # it is a new package
         always_assert(status_pr_type == :NewPackage)
-        if merge_new_packages
+        if config.merge_new_packages
             @info(
                 string(
                     "Pull request: $(pr_number). ",
@@ -459,7 +435,7 @@ function cron_or_api_build(
     else # it is a new version
         always_assert(pr_type == :NewVersion)
         always_assert(status_pr_type == :NewVersion)
-        if merge_new_versions
+        if config.merge_new_versions
             @info(
                 string(
                     "Pull request: $(pr_number). ",

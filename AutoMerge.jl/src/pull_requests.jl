@@ -146,15 +146,15 @@ function pull_request_build(
         authorization=authorization,
         registry_head=registry_head,
         registry_master=registry_master,
-        suggest_onepointzero=config.suggest_onepointzero,
-        point_to_slack=config.point_to_slack,
+        config.suggest_onepointzero,
+        config.point_to_slack,
         whoami=whoami,
-        registry_deps=config.registry_deps,
-        public_registries=config.public_registries,
-        read_only=config.read_only,
-        environment_variables_to_pass=config.environment_variables_to_pass,
+        config.registry_deps,
+        config.public_registries,
+        config.read_only,
+        config.environment_variables_to_pass,
     )
-    pull_request_build(data; check_license=config.check_license, check_breaking_explanation=config.check_breaking_explanation, new_package_waiting_period=config.new_package_waiting_period)
+    pull_request_build(data; config.check_license, config.check_breaking_explanation, config.new_package_waiting_period)
     rm(registry_master; force=true, recursive=true)
     return nothing
 end

@@ -86,21 +86,13 @@ function run(
     else
         always_assert(run_merge_build)
         cron_or_api_build(
+            config,
             api,
             registry_repo;
             auth=auth,
-            config.authorized_authors,
-            config.authorized_authors_special_jll_exceptions,
-            config.merge_new_packages,
-            config.merge_new_versions,
-            config.new_package_waiting_period,
-            config.new_jll_package_waiting_period,
-            config.new_version_waiting_period,
-            config.new_jll_version_waiting_period,
             whoami=whoami,
             all_statuses=all_statuses,
             all_check_runs=all_check_runs,
-            config.read_only,
         )
     end
     return nothing
