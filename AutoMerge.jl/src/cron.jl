@@ -323,12 +323,12 @@ function cron_or_api_build(
     this_pr_is_old_enough = pr_is_old_enough(
         pr_type,
         pr_age;
-        pkg=pkg,
+        pkg,
         config.new_package_waiting_period,
         config.new_jll_package_waiting_period,
         config.new_version_waiting_period,
         config.new_jll_version_waiting_period,
-        pr_author=pr_author,
+        pr_author,
         config.authorized_authors,
         config.authorized_authors_special_jll_exceptions,
     )
@@ -345,17 +345,17 @@ function cron_or_api_build(
             _canonicalize_period(pr_age),
             pkg,
             is_jll_name(pkg),
-            new_package_waiting_period,
-            _canonicalize_period(new_package_waiting_period),
-            new_jll_package_waiting_period,
-            _canonicalize_period(new_jll_package_waiting_period),
-            new_version_waiting_period,
-            _canonicalize_period(new_version_waiting_period),
-            new_jll_version_waiting_period,
-            _canonicalize_period(new_jll_version_waiting_period),
+            config.new_package_waiting_period,
+            _canonicalize_period(config.new_package_waiting_period),
+            config.new_jll_package_waiting_period,
+            _canonicalize_period(config.new_jll_package_waiting_period),
+            config.new_version_waiting_period,
+            _canonicalize_period(config.new_version_waiting_period),
+            config.new_jll_version_waiting_period,
+            _canonicalize_period(config.new_jll_version_waiting_period),
             pr_author,
-            authorized_authors,
-            authorized_authors_special_jll_exceptions
+            config.authorized_authors,
+            config.authorized_authors_special_jll_exceptions
         )
         return nothing
     end
@@ -409,7 +409,7 @@ function cron_or_api_build(
                     "Decision: merge now.",
                 )
             )
-            if read_only
+            if config.read_only
                 @info "`read_only` mode on; skipping merge"
             else
                 my_retry(() -> merge!(api, registry, pr, passed_pr_head_sha; auth=auth))
@@ -443,7 +443,7 @@ function cron_or_api_build(
                     "Decision: merge now.",
                 )
             )
-            if read_only
+            if config.read_only
                 @info "`read_only` mode on; skipping merge"
             else
                 my_retry(() -> merge!(api, registry, pr, passed_pr_head_sha; auth=auth))

@@ -98,7 +98,7 @@ function pull_request_build(
         throw_not_automerge_applicable(
             AutoMergePullRequestNotOpen,
             "The pull request is not open. Exiting...";
-            error_exit_if_automerge_not_applicable=error_exit_if_automerge_not_applicable,
+            config.error_exit_if_automerge_not_applicable,
         )
         return nothing
     end
@@ -111,7 +111,7 @@ function pull_request_build(
         throw_not_automerge_applicable(
             AutoMergeNeitherNewPackageNorNewVersion,
             "Neither a new package nor a new version. Exiting...";
-            error_exit_if_automerge_not_applicable=error_exit_if_automerge_not_applicable,
+            config.error_exit_if_automerge_not_applicable,
         )
         return nothing
     end
@@ -135,20 +135,20 @@ function pull_request_build(
         checkout_branch(registry_master, config.master_branch)
     end
     data = GitHubAutoMergeData(;
-        api=api,
-        registration_type=registration_type,
-        pr=pr,
-        pkg=pkg,
-        version=version,
-        current_pr_head_commit_sha=current_pr_head_commit_sha,
-        registry=registry,
-        auth=auth,
-        authorization=authorization,
-        registry_head=registry_head,
-        registry_master=registry_master,
+        api,
+        registration_type,
+        pr,
+        pkg,
+        version,
+        current_pr_head_commit_sha,
+        registry,
+        auth,
+        authorization,
+        registry_head,
+        registry_master,
         config.suggest_onepointzero,
         config.point_to_slack,
-        whoami=whoami,
+        whoami,
         config.registry_deps,
         config.public_registries,
         config.read_only,
@@ -224,7 +224,7 @@ function pull_request_build(data::GitHubAutoMergeData; check_license, check_brea
             data.suggest_onepointzero,
             data.version,
             this_pr_can_use_special_jll_exceptions;
-            new_package_waiting_period=new_package_waiting_period
+            new_package_waiting_period
         )
         my_retry(() -> update_automerge_comment!(data, this_pr_comment_pass))
     else # failure
