@@ -33,7 +33,9 @@ jobs:
           - '1'
           - 'nightly'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # some AutoMerge tests check against the commit history
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
