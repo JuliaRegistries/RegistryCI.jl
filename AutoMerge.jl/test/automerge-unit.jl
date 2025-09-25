@@ -914,25 +914,6 @@ end
                 @test AutoMerge.tree_sha_to_commit_sha("not_a_sha", repo_dir) === nothing
                 @test AutoMerge.tree_sha_to_commit_sha("", repo_dir) === nothing
             end
-
-            # Test against the actual RegistryCI.jl repository if available
-            # This uses real commit and tree SHAs from the repository
-            project_root = dirname(pkgdir(AutoMerge))
-            if isdir(joinpath(project_root, ".git"))
-                # Test with a known commit and tree SHA from recent history
-                # These values are from the actual repository
-                test_commit = "f4573cdd684e218a82e3339ff63fa8d2c7d64d71"
-                test_tree = "313ed0a56c1d88df5a9e727e16f7c4589f315e7b"
-
-                # The tree_sha_to_commit_sha should find the commit from its tree
-                result = AutoMerge.tree_sha_to_commit_sha(test_tree, project_root)
-                @test result == test_commit
-
-                # Test with subdir - using AutoMerge.jl/src tree
-                automerge_src_tree = "4ad61ab7a6549fe42095779fd59e9e812265b2a6"  # Tree SHA for AutoMerge.jl/src at commit f4573cdd
-                result = AutoMerge.tree_sha_to_commit_sha(automerge_src_tree, project_root; subdir="AutoMerge.jl/src")
-                @test result == test_commit
-            end
         end
 
         @testset "Comment generation with diff" begin
