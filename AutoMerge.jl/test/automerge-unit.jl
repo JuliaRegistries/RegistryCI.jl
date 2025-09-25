@@ -843,8 +843,96 @@ end
             fake_sha = "0000000000000000000000000000000000000000"
             @test AutoMerge.tree_sha_to_commit_sha(fake_sha, "/invalid/path") === nothing
 
-            # Note: Full git repository testing is skipped in unit tests to avoid complexity
-            # This would be better tested in integration tests
+            # Test with invalid tree SHA in valid repo
+            project_root = dirname(pkgdir(AutoMerge))  # Go up from AutoMerge.jl to RegistryCI.jl
+            @test AutoMerge.tree_sha_to_commit_sha(fake_sha, project_root) === nothing
+
+            # Create a temporary git repository for comprehensive testing
+            mktempdir() do tmpdir
+                repo_dir = joinpath(tmpdir, "test_repo")
+                mkdir(repo_dir)
+
+                # Initialize git repo
+                run(Cmd(`git init`; dir=repo_dir))
+                run(Cmd(`git config user.name "Test User"`; dir=repo_dir))
+                run(Cmd(`git config user.email "test@example.com"`; dir=repo_dir))
+
+                # Create initial commit
+                write(joinpath(repo_dir, "file1.txt"), "initial content")
+                run(Cmd(`git add file1.txt`; dir=repo_dir))
+                run(Cmd(`git commit -m "Initial commit"`; dir=repo_dir))
+
+                # Get the first commit and tree SHA
+                first_commit = readchomp(Cmd(`git rev-parse HEAD`; dir=repo_dir))
+                tree_cmd = "HEAD^{tree}"
+                first_tree = readchomp(Cmd(`git rev-parse $tree_cmd`; dir=repo_dir))
+
+                # Test: tree_sha_to_commit_sha should find the commit from its tree SHA
+                @test AutoMerge.tree_sha_to_commit_sha(first_tree, repo_dir) == first_commit
+
+                # Create a subdirectory structure for subdir testing
+                subdir = joinpath(repo_dir, "src")
+                mkdir(subdir)
+                write(joinpath(subdir, "main.jl"), "println(\"Hello, World!\")")
+                run(Cmd(`git add src/main.jl`; dir=repo_dir))
+                run(Cmd(`git commit -m "Add src/main.jl"`; dir=repo_dir))
+
+                # Get second commit and the subdir tree SHA
+                second_commit = readchomp(Cmd(`git rev-parse HEAD`; dir=repo_dir))
+                subdir_cmd = "HEAD:src"
+                subdir_tree = readchomp(Cmd(`git rev-parse $subdir_cmd`; dir=repo_dir))
+
+                # Test: finding commit by subdir tree SHA
+                @test AutoMerge.tree_sha_to_commit_sha(subdir_tree, repo_dir; subdir="src") == second_commit
+
+                # Create another commit that doesn't modify the subdirectory
+                write(joinpath(repo_dir, "README.md"), "# Test Project")
+                run(Cmd(`git add README.md`; dir=repo_dir))
+                run(Cmd(`git commit -m "Add README"`; dir=repo_dir))
+
+                # The subdir tree SHA should still point to the second commit (not the third)
+                @test AutoMerge.tree_sha_to_commit_sha(subdir_tree, repo_dir; subdir="src") == second_commit
+
+                # Test with non-existent subdir - should return nothing
+                third_tree_cmd = "HEAD^{tree}"
+                third_tree = readchomp(Cmd(`git rev-parse $third_tree_cmd`; dir=repo_dir))
+                @test AutoMerge.tree_sha_to_commit_sha(third_tree, repo_dir; subdir="nonexistent") === nothing
+
+                # Test with shortened SHA (git should expand it)
+                short_tree = first_tree[1:12]  # Use first 12 characters
+                result = AutoMerge.tree_sha_to_commit_sha(short_tree, repo_dir)
+                @test result == first_commit
+
+                # Test edge case: very short SHA that might be ambiguous
+                very_short_sha = first_tree[1:4]
+                # This might return a result or nothing depending on whether it's ambiguous
+                # We just test that it doesn't crash
+                result = AutoMerge.tree_sha_to_commit_sha(very_short_sha, repo_dir)
+                @test result === nothing || result isa AbstractString
+
+                # Test with malformed SHA
+                @test AutoMerge.tree_sha_to_commit_sha("not_a_sha", repo_dir) === nothing
+                @test AutoMerge.tree_sha_to_commit_sha("", repo_dir) === nothing
+            end
+
+            # Test against the actual RegistryCI.jl repository if available
+            # This uses real commit and tree SHAs from the repository
+            project_root = dirname(pkgdir(AutoMerge))
+            if isdir(joinpath(project_root, ".git"))
+                # Test with a known commit and tree SHA from recent history
+                # These values are from the actual repository
+                test_commit = "f4573cdd684e218a82e3339ff63fa8d2c7d64d71"
+                test_tree = "313ed0a56c1d88df5a9e727e16f7c4589f315e7b"
+
+                # The tree_sha_to_commit_sha should find the commit from its tree
+                result = AutoMerge.tree_sha_to_commit_sha(test_tree, project_root)
+                @test result == test_commit
+
+                # Test with subdir - using AutoMerge.jl/src tree
+                automerge_src_tree = "4ad61ab7a6549fe42095779fd59e9e812265b2a6"  # Tree SHA for AutoMerge.jl/src at commit f4573cdd
+                result = AutoMerge.tree_sha_to_commit_sha(automerge_src_tree, project_root; subdir="AutoMerge.jl/src")
+                @test result == test_commit
+            end
         end
 
         @testset "Comment generation with diff" begin
