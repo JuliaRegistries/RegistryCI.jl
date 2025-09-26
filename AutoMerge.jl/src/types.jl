@@ -22,7 +22,7 @@ RegistryConfiguration(; kwargs...)
 
 - `registry::String`: the registry name you want to run AutoMerge on.
 - `authorized_authors::Vector{String}`: list of who can submit registration, e.g `String["JuliaRegistrator"]`.
-- `authorized_authors_special_jll_exceptions::Vector{String}`: a list of users who can submit JLL packages (which have strict rules about allowed dependencies and are subject to `new_jll_*_waiting_period`s instead of `new_*_waiting_period`s).
+- `authorized_authors_special_jll_exceptions::Vector{String}`: a list of users who can submit JLL packages (which have strict rules about allowed dependencies and are subject to `new_jll_*_waiting_minutes`s instead of `new_*_waiting_minutes`s).
 - `new_package_waiting_minutes::Dates.Minute`: new package waiting period in minutes.
 - `new_jll_package_waiting_minutes::Dates.Minute`: new JLL package waiting period in minutes.
 - `new_version_waiting_minutes::Dates.Minute`: new package version waiting period in minutes.
