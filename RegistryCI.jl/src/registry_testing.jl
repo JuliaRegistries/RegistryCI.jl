@@ -184,7 +184,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                             # We don't allow `yanked = "true"`, because this breaks the Pkg client.
                             # We could allow `yanked = false`, but we choose to disallow it, because it is redundant.
                             @test v isa Bool
-                            if !v
+                            if v isa Bool && !v
                                 @error "We don't allow yanked=false, because it is redundant. Just omit the yanked=false line."
                             end
                             @test v === true
