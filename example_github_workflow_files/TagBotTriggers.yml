@@ -11,7 +11,7 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged
     runs-on: ubuntu-latest
     steps:
-      - run: julia --project=.ci -e 'using Pkg; Pkg.instantiate(); Pkg.add("RegistryCI")'
-      - run: julia --project=.ci -e 'using RegistryCI.TagBot; TagBot.main()'
+      - run: julia --project=.ci -e 'using Pkg; Pkg.instantiate(); Pkg.add("AutoMerge")'
+      - run: julia --project=.ci -e 'using AutoMerge.TagBot; TagBot.main()'
         env:
           GITHUB_TOKEN: ${{ secrets.TAGBOT_TOKEN }}

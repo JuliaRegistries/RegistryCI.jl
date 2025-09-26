@@ -56,9 +56,9 @@ with:
 In order to enable automerge support, you will also have to copy the `automerge.yml` file and change the `AutoMerge` invocation appropriately
 
 ```julia
-using RegistryCI
+using AutoMerge
 using Dates
-RegistryCI.AutoMerge.run(
+AutoMerge.run(
     merge_new_packages = ENV["MERGE_NEW_PACKAGES"] == "true",
     merge_new_versions = ENV["MERGE_NEW_VERSIONS"] == "true",
     new_package_waiting_period = Day(3),

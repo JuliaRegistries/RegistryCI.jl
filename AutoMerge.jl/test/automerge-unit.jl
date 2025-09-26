@@ -4,11 +4,9 @@ using GitHub
 using JSON
 using Pkg
 using Printf
-using RegistryCI
+using AutoMerge
 using Test
 using TimeZones
-
-const AutoMerge = RegistryCI.AutoMerge
 
 
 TEMP_DEPOT_FOR_TESTING = nothing
@@ -115,12 +113,10 @@ end
         result = AutoMerge.parse_registry_pkg_info(
             registry_path, "SnoopCompileCore", "2.5.2"
         )
-        @test result == (;
-            uuid="e2b509da-e806-4183-be48-004708413034",
-            repo="https://github.com/timholy/SnoopCompile.jl.git",
-            subdir="SnoopCompileCore",
-            tree_hash="bb6d6df44d9aa3494c997aebdee85b713b92c0de",
-        )
+        # Don't test repo field since SnoopCompile.jl has moved repositories (and we don't control it)
+        @test result.uuid == "e2b509da-e806-4183-be48-004708413034"
+        @test result.subdir == "SnoopCompileCore"
+        @test result.tree_hash == "bb6d6df44d9aa3494c997aebdee85b713b92c0de"
     end
 end
 

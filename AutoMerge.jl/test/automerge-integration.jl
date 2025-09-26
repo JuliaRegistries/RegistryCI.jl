@@ -4,11 +4,10 @@ using GitHub
 using JSON
 using Pkg
 using Printf
-using RegistryCI
+using AutoMerge
 using Test
 using TimeZones
 
-const AutoMerge = RegistryCI.AutoMerge
 
 include("automerge-integration-utils.jl")
 
@@ -17,7 +16,7 @@ TEST_USER_GITHUB_TOKEN = ENV["BCBI_TEST_USER_GITHUB_TOKEN"]::String
 INTEGRATION_TEST_READ_ONLY_TOKEN = ENV["INTEGRATION_TEST_READ_ONLY_TOKEN"]::String
 GIT = "git"
 auth = GitHub.authenticate(TEST_USER_GITHUB_TOKEN)
-whoami = RegistryCI.AutoMerge.username(GitHub.DEFAULT_API, auth)
+whoami = AutoMerge.username(GitHub.DEFAULT_API, auth)
 repo_url_without_auth = "https://github.com/$(AUTOMERGE_INTEGRATION_TEST_REPO)"
 repo_url_with_auth = "https://$(whoami):$(TEST_USER_GITHUB_TOKEN)@github.com/$(AUTOMERGE_INTEGRATION_TEST_REPO)"
 repo = GitHub.repo(AUTOMERGE_INTEGRATION_TEST_REPO; auth=auth)
@@ -265,7 +264,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                             run_thunk()
                         else
                             @test_throws(
-                                RegistryCI.AutoMerge.AutoMergeGuidelinesNotMet, run_thunk()
+                                AutoMerge.AutoMergeGuidelinesNotMet, run_thunk()
                             )
                         end
                     end
