@@ -1005,6 +1005,7 @@ function meets_version_can_be_added_or_imported(
     _registry_deps = convert(Vector{String}, registry_deps)
     _registry_deps_is_valid_url = is_valid_url.(_registry_deps)
     code = """
+        ENV["JULIA_PKG_PRECOMPILE_AUTO"] = 0
         import Pkg;
         Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));
         _registry_deps = $(_registry_deps);
