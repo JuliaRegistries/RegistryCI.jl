@@ -17,8 +17,24 @@ Here is an example of how `General` registry is configured:
 
 ```julia
 using AutoMerge
+(; registry_config, check_pr_config) = AutoMerge.general_registry_config()
+AutoMerge.check_pr(registry_config, check_pr_config)
+```
 
-AutoMerge.check_pr(AutoMerge.GENERAL_REGISTRY_CONFIG, AutoMerge.GENERAL_CHECK_PR_CONFIG)
+To configure a custom registry, save a `.toml` configuration file somewhere. This can be based on
+the one General uses, which you can obtain by
+
+```julia
+config = AutoMerge.general_registry_config()
+AutoMerge.write_config("AutoMerge.toml", config)
+```
+
+and then modify to suit your needs. This can then be used via:
+
+```julia
+using AutoMerge
+(; registry_config, check_pr_config) = AutoMerge.read_config("path/to/AutoMerge.toml")
+AutoMerge.check_pr(registry_config, check_pr_config)
 ```
 """
 function check_pr(
@@ -83,7 +99,8 @@ Here is an example of how `General` registry is configured:
 ```julia
 using AutoMerge
 
-AutoMerge.merge_prs(AutoMerge.GENERAL_REGISTRY_CONFIG, AutoMerge.GENERAL_MERGE_PRS_CONFIG)
+(; registry_config, merge_prs_config) = AutoMerge.general_registry_config()
+AutoMerge.merge_prs(registry_config, merge_prs_config)
 ```
 """
 function merge_prs(
