@@ -73,14 +73,14 @@ function get_compatible_julia_binaries(julia_compat, min_version)
         return binaries
     end
 
-    # Find the smallest compatible version.
-    smallest_compat = minimum(all_compatible_versions)
+    # Find the lowest compatible version.
+    lowest_compat = minimum(all_compatible_versions)
     # But we rather want the highest compatible version with the same
     # major.minor.
-    a = smallest_compat.major
-    b = smallest_compat.minor
+    a = lowest_compat.major
+    b = lowest_compat.minor
     same_major_minor = v -> (v.major == a && v.minor == b)
-    smallest_compat = maximum(filter(same_major_minor, all_compatible_versions))
+    lowest_compat = maximum(filter(same_major_minor, all_compatible_versions))
 
     # Find the highest compatible version. Only consider pre-releases
     # if there is no compatible release.
@@ -90,10 +90,10 @@ function get_compatible_julia_binaries(julia_compat, min_version)
         highest_compat = maximum(all_compatible_releases)
     end
 
-    if smallest_compat == highest_compat
-        push!(binaries, get_julia_binary(smallest_compat, "only"))
+    if lowest_compat == highest_compat
+        push!(binaries, get_julia_binary(lowest_compat, "only"))
     else
-        push!(binaries, get_julia_binary(smallest_compat, "smallest"))
+        push!(binaries, get_julia_binary(lowest_compat, "lowest"))
         push!(binaries, get_julia_binary(highest_compat, "highest"))
     end
 

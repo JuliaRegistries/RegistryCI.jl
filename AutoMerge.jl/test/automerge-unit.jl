@@ -127,7 +127,7 @@ end
     binary1, text1 = binaries[1]
     binary2, text2 = binaries[2]
     @test readchomp(`$binary1 -e 'print(VERSION)'`) == "1.1.1"
-    @test text1 == "julia 1.1.1 (smallest compatible version)"
+    @test text1 == "julia 1.1.1 (lowest compatible version)"
     @test readchomp(`$binary2 -e 'print(VERSION)'`) == "1.8.5"
     @test text2 == "julia 1.8.5 (highest compatible version)"
 
