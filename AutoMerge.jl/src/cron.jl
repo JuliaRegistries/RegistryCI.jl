@@ -179,7 +179,8 @@ function pr_has_passing_automerge_decision_status(
 end
 
 function cron_or_api_build(
-    config::AutoMergeConfiguration,
+    registry_config::RegistryConfiguration,
+    merge_config::MergePRsConfiguration,
     api::GitHub.GitHubAPI,
     registry::GitHub.Repo;
     auth::GitHub.Authorization,
@@ -188,7 +189,7 @@ function cron_or_api_build(
     all_check_runs::AbstractVector{<:AbstractString},
 )
 
-    if !config.read_only
+    if !registry_config.read_only
         # first, create `BLOCKED_LABEL` as a label in the repo if it doesn't
         # already exist. This way we can add it to PRs as needed.
         maybe_create_blocked_label(api, registry; auth=auth)
@@ -208,7 +209,8 @@ function cron_or_api_build(
             try
                 my_retry() do
                     cron_or_api_build(
-                        config,
+                        registry_config,
+                        merge_config,
                         api,
                         pr,
                         registry;
@@ -237,7 +239,8 @@ function cron_or_api_build(
 end
 
 function cron_or_api_build(
-    config::AutoMergeConfiguration,
+    registry_config::RegistryConfiguration,
+    merge_config::MergePRsConfiguration,
     api::GitHub.GitHubAPI,
     pr::GitHub.PullRequest,
     registry::GitHub.Repo;
@@ -258,7 +261,7 @@ function cron_or_api_build(
     pr_number = number(pr)
     @info("Now examining pull request $(pr_number)")
     pr_author = author_login(pr)
-    if pr_author ∉ vcat(config.authorized_authors, config.authorized_authors_special_jll_exceptions)
+    if pr_author ∉ vcat(registry_config.registry_config.authorized_authors, registry_config.registry_registry_config.authorized_authors_special_jll_exceptions)
         @info(
             string(
                 "Pull request: $(pr_number). ",
@@ -266,8 +269,8 @@ function cron_or_api_build(
                 "Reason: pull request author is not authorized to automerge.",
             ),
             pr_author,
-            config.authorized_authors,
-            config.authorized_authors_special_jll_exceptions
+            registry_config.authorized_authors,
+            registry_config.registry_config.authorized_authors_special_jll_exceptions
         )
         return nothing
     end
@@ -290,7 +293,7 @@ function cron_or_api_build(
     # of the other steps (e.g. automerge passing, waiting period, etc).
     blocked = pr_has_blocking_comments(api, registry, pr; auth=auth) && !has_label(pr.labels, OVERRIDE_BLOCKS_LABEL)
     if blocked
-        if !config.read_only && !has_label(pr.labels, BLOCKED_LABEL)
+        if !registry_config.read_only && !has_label(pr.labels, BLOCKED_LABEL)
             # add `BLOCKED_LABEL` to communicate to users that the PR is blocked
             # from automerging, unless the label is already there.
             GitHub.add_labels(api, registry.full_name, pr_number, [BLOCKED_LABEL]; auth=auth)
@@ -303,7 +306,7 @@ function cron_or_api_build(
             )
         )
         return nothing
-    elseif has_label(pr.labels, BLOCKED_LABEL) && !config.read_only
+    elseif has_label(pr.labels, BLOCKED_LABEL) && !registry_config.read_only
         # remove block label BLOCKED_LABEL if it exists
         # note we use `try_remove_label` to avoid crashing the job
         # if there is some race condition or manual intervention
@@ -324,13 +327,13 @@ function cron_or_api_build(
         pr_type,
         pr_age;
         pkg,
-        config.new_package_waiting_period,
-        config.new_jll_package_waiting_period,
-        config.new_version_waiting_period,
-        config.new_jll_version_waiting_period,
+        registry_config.new_package_waiting_period,
+        registry_config.new_jll_package_waiting_period,
+        registry_config.new_version_waiting_period,
+        registry_config.new_jll_version_waiting_period,
         pr_author,
-        config.authorized_authors,
-        config.authorized_authors_special_jll_exceptions,
+        registry_config.authorized_authors,
+        registry_config.registry_config.authorized_authors_special_jll_exceptions,
     )
     if !this_pr_is_old_enough
         @info(
@@ -345,17 +348,17 @@ function cron_or_api_build(
             _canonicalize_period(pr_age),
             pkg,
             is_jll_name(pkg),
-            config.new_package_waiting_period,
-            _canonicalize_period(config.new_package_waiting_period),
-            config.new_jll_package_waiting_period,
-            _canonicalize_period(config.new_jll_package_waiting_period),
-            config.new_version_waiting_period,
-            _canonicalize_period(config.new_version_waiting_period),
-            config.new_jll_version_waiting_period,
-            _canonicalize_period(config.new_jll_version_waiting_period),
+            registry_config.new_package_waiting_period,
+            _canonicalize_period(registry_config.new_package_waiting_period),
+            registry_config.new_jll_package_waiting_period,
+            _canonicalize_period(registry_config.new_jll_package_waiting_period),
+            registry_config.new_version_waiting_period,
+            _canonicalize_period(registry_config.new_version_waiting_period),
+            registry_config.new_jll_version_waiting_period,
+            _canonicalize_period(registry_config.new_jll_version_waiting_period),
             pr_author,
-            config.authorized_authors,
-            config.authorized_authors_special_jll_exceptions
+            registry_config.authorized_authors,
+            registry_config.registry_config.authorized_authors_special_jll_exceptions
         )
         return nothing
     end
@@ -401,7 +404,7 @@ function cron_or_api_build(
 
     if pr_type == :NewPackage # it is a new package
         always_assert(status_pr_type == :NewPackage)
-        if config.merge_new_packages
+        if merge_config.merge_new_packages
             @info(
                 string(
                     "Pull request: $(pr_number). ",
@@ -409,7 +412,7 @@ function cron_or_api_build(
                     "Decision: merge now.",
                 )
             )
-            if config.read_only
+            if registry_config.read_only
                 @info "`read_only` mode on; skipping merge"
             else
                 my_retry(() -> merge!(api, registry, pr, passed_pr_head_sha; auth=auth))
@@ -435,7 +438,7 @@ function cron_or_api_build(
     else # it is a new version
         always_assert(pr_type == :NewVersion)
         always_assert(status_pr_type == :NewVersion)
-        if config.merge_new_versions
+        if merge_config.merge_new_versions
             @info(
                 string(
                     "Pull request: $(pr_number). ",
@@ -443,7 +446,7 @@ function cron_or_api_build(
                     "Decision: merge now.",
                 )
             )
-            if config.read_only
+            if registry_config.read_only
                 @info "`read_only` mode on; skipping merge"
             else
                 my_retry(() -> merge!(api, registry, pr, passed_pr_head_sha; auth=auth))
