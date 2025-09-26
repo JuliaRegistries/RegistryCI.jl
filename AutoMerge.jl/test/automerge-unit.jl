@@ -403,6 +403,11 @@ end
         @test !AutoMerge.meets_version_number_no_build(v"1.2.3+456")[1]
         @test !AutoMerge.meets_version_number_no_build(v"1.2.3-alpha+456")[1]
     end
+    @testset "Version can be added" begin
+        registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
+        success, _ = AutoMerge.meets_version_can_be_pkg_added(registry_path, "RegistryCI", v"10.10.4"; environment_variables_to_pass=String[])
+        @test success
+    end
     @testset "Version can be imported" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
         success, _ = AutoMerge.meets_version_can_be_imported(registry_path, "RegistryCI", v"10.10.4"; environment_variables_to_pass=String[])

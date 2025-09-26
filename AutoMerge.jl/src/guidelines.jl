@@ -851,68 +851,6 @@ end
 
 is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str))
 
-const guideline_version_can_be_pkg_added = Guideline(;
-    info="Version can be `Pkg.add`ed",
-    docs="Package installation: The package should be installable (`Pkg.add(\"PackageName\")`).",
-    check=data -> meets_version_can_be_pkg_added(
-        data.registry_head,
-        data.pkg,
-        data.version;
-        registry_deps=data.registry_deps,
-        environment_variables_to_pass=data.environment_variables_to_pass,
-    ),
-)
-
-function meets_version_can_be_pkg_added(
-    working_directory::String,
-    pkg::String,
-    version::VersionNumber;
-    registry_deps::Vector{<:AbstractString}=String[],
-    environment_variables_to_pass::Vector{String},
-)
-    pkg_add_command = _generate_pkg_add_command(pkg, version)
-    _registry_deps = convert(Vector{String}, registry_deps)
-    _registry_deps_is_valid_url = is_valid_url.(_registry_deps)
-    code = """
-        import Pkg;
-        Pkg.Registry.add(Pkg.RegistrySpec(path=\"$(working_directory)\"));
-        _registry_deps = $(_registry_deps);
-        _registry_deps_is_valid_url = $(_registry_deps_is_valid_url);
-        for i = 1:length(_registry_deps)
-            regdep = _registry_deps[i]
-            if _registry_deps_is_valid_url[i]
-                Pkg.Registry.add(Pkg.RegistrySpec(url = regdep))
-            else
-                Pkg.Registry.add(regdep)
-            end
-        end
-        @info("Attempting to `Pkg.add` package...");
-        $(pkg_add_command)
-        @info("Successfully `Pkg.add`ed package");
-        """
-
-    cmd_ran_successfully = _run_pkg_commands(
-        working_directory,
-        pkg,
-        version;
-        code=code,
-        before_message="Attempting to `Pkg.add` the package",
-        environment_variables_to_pass=environment_variables_to_pass,
-    )
-    if cmd_ran_successfully
-        @info "Successfully `Pkg.add`ed the package"
-        return true, ""
-    else
-        @error "Was not able to successfully `Pkg.add` the package"
-        return false,
-        string(
-            "I was not able to install the package ",
-            "(i.e. `Pkg.add(\"$(pkg)\")` failed). ",
-            "See the AutoMerge logs for details.",
-        )
-    end
-end
-
 const guideline_version_has_osi_license = Guideline(;
     info="Version has OSI-approved license",
     docs=string(
@@ -982,6 +920,42 @@ function meets_version_has_osi_license(pkg::String; pkg_code_path)
     end
 end
 
+const guideline_version_can_be_pkg_added = Guideline(;
+    info="Version can be `Pkg.add`ed",
+    docs="Package installation: The package should be installable (`Pkg.add(\"PackageName\")`).",
+    check=data -> meets_version_can_be_pkg_added(
+        data.registry_head,
+        data.pkg,
+        data.version;
+        registry_deps=data.registry_deps,
+        environment_variables_to_pass=data.environment_variables_to_pass,
+    ),
+)
+
+function meets_version_can_be_pkg_added(
+    working_directory::String,
+    pkg::String,
+    version::VersionNumber;
+    registry_deps::Vector{<:AbstractString}=String[],
+    environment_variables_to_pass::Vector{String},
+)
+    # VERSION is replaced with the tested Julia version later.
+    failure_string = string(
+        "I was not able to install the package on VERSION",
+        "(i.e. `Pkg.add(\"$(pkg)\")` failed). ",
+        "See the AutoMerge logs for details.",
+    )
+    return meets_version_can_be_added_or_imported(
+        working_directory,
+        pkg,
+        version;
+        registry_deps,
+        environment_variables_to_pass,
+        failure_string,
+        action = "Pkg.add",
+    )
+end
+
 const guideline_version_can_be_imported = Guideline(;
     info="Version can be `import`ed",
     docs="Package loading: The package should be loadable (`import PackageName`).",
@@ -1000,6 +974,32 @@ function meets_version_can_be_imported(
     version::VersionNumber;
     registry_deps::Vector{<:AbstractString}=String[],
     environment_variables_to_pass::Vector{String},
+)
+    # VERSION is replaced with the tested Julia version later.
+    failure_string = string(
+        "I was not able to load the package on VERSION",
+        "(i.e. `import $(pkg)` failed). ",
+        "See the AutoMerge logs for details.",
+    )
+    return meets_version_can_be_added_or_imported(
+        working_directory,
+        pkg,
+        version;
+        registry_deps,
+        environment_variables_to_pass,
+        failure_string,
+        action = "import",
+    )
+end
+
+function meets_version_can_be_added_or_imported(
+    working_directory::String,
+    pkg::String,
+    version::VersionNumber;
+    registry_deps::Vector{<:AbstractString}=String[],
+    environment_variables_to_pass::Vector{String},
+    failure_string::String,
+    action::String,
 )
     pkg_add_command = _generate_pkg_add_command(pkg, version)
     _registry_deps = convert(Vector{String}, registry_deps)
@@ -1020,15 +1020,20 @@ function meets_version_can_be_imported(
         @info("Attempting to `Pkg.add` package...");
         $(pkg_add_command)
         @info("Successfully `Pkg.add`ed package");
-        @info("Attempting to `import` package");
-        import $(pkg);
-        @info("Successfully `import`ed package");
         """
+
+    if action == "import"
+        code *= """
+            @info("Attempting to `import` package");
+            import $(pkg);
+            @info("Successfully `import`ed package");
+            """
+    end
 
     jl_compat = julia_compat(pkg, version, working_directory)
     # The `code` defined above uses Pkg.Registry functionality, which
     # is not available in Julia 1.0. Thus 1.1.0 is the lowest Julia
-    # version that can be considered for import testing.
+    # version that can be considered for add/import testing.
     julia_binaries = get_compatible_julia_binaries(jl_compat, v"1.1.0")
     if isempty(julia_binaries)
         @error "Was not able to find a compatible Julia version. julia_compat: $(jl_compat)"
@@ -1041,20 +1046,15 @@ function meets_version_can_be_imported(
             version;
             binary=binary,
             code=code,
-            before_message="Attempting to `import` the package on $(version_text)",
+            before_message="Attempting to `$(action)` the package on $(version_text)",
             environment_variables_to_pass=environment_variables_to_pass,
         )
 
         if cmd_ran_successfully
-            @info "Successfully `import`ed the package on $(version_text)"
+            @info "Successfully `$(action)`ed the package on $(version_text)"
         else
-            @error "Was not able to successfully `import` the package on $(version_text)"
-            return false,
-            string(
-                "I was not able to load the package on $(version_text)",
-                "(i.e. `import $(pkg)` failed). ",
-                "See the AutoMerge logs for details.",
-            )
+            @error "Was not able to successfully `$(action)` the package on $(version_text)"
+            return false, replace(failure_string, "VERSION" => version_text)
         end
     end
     return true, ""
