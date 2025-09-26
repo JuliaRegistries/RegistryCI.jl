@@ -15,12 +15,14 @@ new_version_waiting_minutes = 10
 additional_statuses = []
 merge_new_packages = true
 additional_check_runs = []
+merge_token_name = "AUTOMERGE_MERGE_TOKEN"
 merge_new_versions = true
 
 [check_pr_config]
 master_branch_is_default_branch = true
 public_registries = ["https://github.com/HolyLab/HolyLabRegistry", "https://github.com/cossio/CossioJuliaRegistry"]
 environment_variables_to_pass = []
+commit_status_token_name = "AUTOMERGE_GITHUB_TOKEN"
 check_license = true
 suggest_onepointzero = false
 registry_deps = []

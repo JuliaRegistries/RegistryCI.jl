@@ -30,9 +30,12 @@ jobs:
           version: ${{ matrix.julia-version }}
       - name: Install dependencies by running Pkg.instantiate()
         run: julia --project=.ci/ -e 'using Pkg; Pkg.instantiate()'
-      - name: AutoMerge.run
+      - name: AutoMerge.pr_check
         env:
           AUTOMERGE_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          AUTOMERGE_TAGBOT_TOKEN: ${{ secrets.TAGBOT_TOKEN }}
+          AUTOMERGE_MERGE_TOKEN: ${{ secrets.TAGBOT_TOKEN }}
           JULIA_DEBUG: AutoMerge
-        run: julia --project=.ci/ -e 'using AutoMerge; AutoMerge.run(AutoMerge.general_registry_config)'
+        run: |
+          config = AutoMerge.general_registry_config()
+          AutoMerge.pr_check(config.registry_config, config.check_pr_config)
+        shell: julia --color=yes --project=.ci/ {0}
