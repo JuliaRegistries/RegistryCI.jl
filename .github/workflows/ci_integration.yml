@@ -41,12 +41,12 @@ jobs:
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
         with:
-          project: AutoMerge.jl
+          project: AutoMerge
       - run: git config --global user.email "noreply@example.com"
       - run: git config --global user.name "GitHub Actions"
       - uses: julia-actions/julia-runtest@v1
         with:
-          project: AutoMerge.jl
+          project: AutoMerge
         env:
           AUTOMERGE_RUN_INTEGRATION_TESTS: "true"
           AUTOMERGE_INTEGRATION_TEST_REPO: "bcbi-test/automerge-integration-test-repo"
@@ -54,7 +54,7 @@ jobs:
           INTEGRATION_TEST_READ_ONLY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: julia-actions/julia-processcoverage@v1
         with:
-          directories: AutoMerge.jl/src
+          directories: AutoMerge/src
       - uses: codecov/codecov-action@v5
         with:
           files: lcov.info

@@ -41,13 +41,13 @@ jobs:
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
         with:
-          project: RegistryCI.jl
+          project: RegistryCI
       - uses: julia-actions/julia-runtest@v1
         with:
-          project: RegistryCI.jl
+          project: RegistryCI
       - uses: julia-actions/julia-processcoverage@v1
         with:
-          directories: RegistryCI.jl/src
+          directories: RegistryCI/src
       - uses: codecov/codecov-action@v5
         with:
           files: lcov.info
@@ -81,15 +81,15 @@ jobs:
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
         with:
-          project: AutoMerge.jl
+          project: AutoMerge
       - uses: julia-actions/julia-runtest@v1
         with:
-          project: AutoMerge.jl
+          project: AutoMerge
         env:
           AUTOMERGE_RUN_INTEGRATION_TESTS: "false"
       - uses: julia-actions/julia-processcoverage@v1
         with:
-          directories: AutoMerge.jl/src
+          directories: AutoMerge/src
       - uses: codecov/codecov-action@v5
         with:
           files: lcov.info
@@ -112,8 +112,8 @@ jobs:
             # install compressed registry
             Pkg.Registry.rm("General")
             Pkg.Registry.add("General")
-            Pkg.develop(PackageSpec(path="RegistryCI.jl"))
-            Pkg.develop(PackageSpec(path="AutoMerge.jl"))
+            Pkg.develop(PackageSpec(path="RegistryCI"))
+            Pkg.develop(PackageSpec(path="AutoMerge"))
             Pkg.instantiate()'
       - run: julia --project=docs docs/make.jl
         env:
@@ -132,8 +132,8 @@ jobs:
       - run: |
           julia --project=docs -e '
             using Pkg
-            Pkg.develop(PackageSpec(path="RegistryCI.jl"))
-            Pkg.develop(PackageSpec(path="AutoMerge.jl"))
+            Pkg.develop(PackageSpec(path="RegistryCI"))
+            Pkg.develop(PackageSpec(path="AutoMerge"))
             Pkg.instantiate()'
         env:
           JULIA_PKG_SERVER: ''
