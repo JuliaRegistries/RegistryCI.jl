@@ -79,10 +79,10 @@ function pr_is_old_enough(
     pr_type::Symbol,
     pr_age::Dates.Period;
     pkg::AbstractString,
-    new_package_waiting_period::Dates.Period,
-    new_jll_package_waiting_period::Dates.Period,
-    new_version_waiting_period::Dates.Period,
-    new_jll_version_waiting_period::Dates.Period,
+    new_package_waiting_minutes::Dates.Minute,
+    new_jll_package_waiting_minutes::Dates.Minute,
+    new_version_waiting_minutes::Dates.Minute,
+    new_jll_version_waiting_minutes::Dates.Minute,
     pr_author,
     authorized_authors,
     authorized_authors_special_jll_exceptions,
@@ -101,17 +101,17 @@ function pr_is_old_enough(
 
     if this_pr_can_use_special_jll_exceptions
         if pr_type == :NewPackage
-            return pr_age > new_jll_package_waiting_period
+            return pr_age > new_jll_package_waiting_minutes
         elseif pr_type == :NewVersion
-            return pr_age > new_jll_version_waiting_period
+            return pr_age > new_jll_version_waiting_minutes
         else
             throw(ArgumentError("pr_type must be either :NewPackage or :NewVersion"))
         end
     else
         if pr_type == :NewPackage
-            return pr_age > new_package_waiting_period
+            return pr_age > new_package_waiting_minutes
         elseif pr_type == :NewVersion
-            return pr_age > new_version_waiting_period
+            return pr_age > new_version_waiting_minutes
         else
             throw(ArgumentError("pr_type must be either :NewPackage or :NewVersion"))
         end
@@ -327,10 +327,10 @@ function cron_or_api_build(
         pr_type,
         pr_age;
         pkg,
-        registry_config.new_package_waiting_period,
-        registry_config.new_jll_package_waiting_period,
-        registry_config.new_version_waiting_period,
-        registry_config.new_jll_version_waiting_period,
+        registry_config.new_package_waiting_minutes,
+        registry_config.new_jll_package_waiting_minutes,
+        registry_config.new_version_waiting_minutes,
+        registry_config.new_jll_version_waiting_minutes,
         pr_author,
         registry_config.authorized_authors,
         registry_config.registry_config.authorized_authors_special_jll_exceptions,
@@ -348,14 +348,14 @@ function cron_or_api_build(
             _canonicalize_period(pr_age),
             pkg,
             is_jll_name(pkg),
-            registry_config.new_package_waiting_period,
-            _canonicalize_period(registry_config.new_package_waiting_period),
-            registry_config.new_jll_package_waiting_period,
-            _canonicalize_period(registry_config.new_jll_package_waiting_period),
-            registry_config.new_version_waiting_period,
-            _canonicalize_period(registry_config.new_version_waiting_period),
-            registry_config.new_jll_version_waiting_period,
-            _canonicalize_period(registry_config.new_jll_version_waiting_period),
+            registry_config.new_package_waiting_minutes,
+            _canonicalize_period(registry_config.new_package_waiting_minutes),
+            registry_config.new_jll_package_waiting_minutes,
+            _canonicalize_period(registry_config.new_jll_package_waiting_minutes),
+            registry_config.new_version_waiting_minutes,
+            _canonicalize_period(registry_config.new_version_waiting_minutes),
+            registry_config.new_jll_version_waiting_minutes,
+            _canonicalize_period(registry_config.new_jll_version_waiting_minutes),
             pr_author,
             registry_config.authorized_authors,
             registry_config.registry_config.authorized_authors_special_jll_exceptions

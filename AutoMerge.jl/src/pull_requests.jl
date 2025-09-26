@@ -155,12 +155,12 @@ function pull_request_build(
         registry_config.read_only,
         pr_config.environment_variables_to_pass,
     )
-    pull_request_build(data; pr_config.check_license, pr_config.check_breaking_explanation, registry_config.new_package_waiting_period)
+    pull_request_build(data; pr_config.check_license, pr_config.check_breaking_explanation, registry_config.new_package_waiting_minutes)
     rm(registry_master; force=true, recursive=true)
     return nothing
 end
 
-function pull_request_build(data::GitHubAutoMergeData; check_license, check_breaking_explanation, new_package_waiting_period)::Nothing
+function pull_request_build(data::GitHubAutoMergeData; check_license, check_breaking_explanation, new_package_waiting_minutes)::Nothing
     kind = package_or_version(data.registration_type)
     this_is_jll_package = is_jll_name(data.pkg)
     @info(
@@ -225,7 +225,7 @@ function pull_request_build(data::GitHubAutoMergeData; check_license, check_brea
             data.suggest_onepointzero,
             data.version,
             this_pr_can_use_special_jll_exceptions;
-            new_package_waiting_period
+            new_package_waiting_minutes
         )
         my_retry(() -> update_automerge_comment!(data, this_pr_comment_pass))
     else # failure

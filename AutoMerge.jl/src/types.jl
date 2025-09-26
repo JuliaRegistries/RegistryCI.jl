@@ -20,10 +20,10 @@ RegistryConfiguration(; kwargs...)
 - `registry::String`: the registry name you want to run AutoMerge on.
 - `authorized_authors::Vector{String}`: list of who can submit registration, e.g `String["JuliaRegistrator"]`.
 - `authorized_authors_special_jll_exceptions::Vector{String}`: a list of users who can submit JLL packages.
-- `new_package_waiting_period::Dates.Period`: new package waiting period, e.g `Day(3)`.
-- `new_jll_package_waiting_period::Dates.Period`: new JLL package waiting period, e.g `Minute(20)`.
-- `new_version_waiting_period::Dates.Period`: new package version waiting period, e.g `Minute(10)`.
-- `new_jll_version_waiting_period::Dates.Period`: new JLL package version waiting period, e.g `Minute(10)`.
+- `new_package_waiting_minutes::Dates.Minute`: new package waiting period in minutes.
+- `new_jll_package_waiting_minutes::Dates.Minute`: new JLL package waiting period in minutes.
+- `new_version_waiting_minutes::Dates.Minute`: new package version waiting period in minutes.
+- `new_jll_version_waiting_minutes::Dates.Minute`: new JLL package version waiting period in minutes.
 
 # Keyword arguments with default values
 
@@ -36,10 +36,10 @@ Base.@kwdef struct RegistryConfiguration <: AbstractConfiguration
     registry::String
     authorized_authors::Vector{String}
     authorized_authors_special_jll_exceptions::Vector{String}
-    new_package_waiting_period::Dates.Period
-    new_jll_package_waiting_period::Dates.Period
-    new_version_waiting_period::Dates.Period
-    new_jll_version_waiting_period::Dates.Period
+    new_package_waiting_minutes::Dates.Minute
+    new_jll_package_waiting_minutes::Dates.Minute
+    new_version_waiting_minutes::Dates.Minute
+    new_jll_version_waiting_minutes::Dates.Minute
     master_branch::String = "master"
     error_exit_if_automerge_not_applicable::Bool = false
     api_url::String = "https://api.github.com"
@@ -100,59 +100,82 @@ Base.@kwdef struct MergePRsConfiguration <: AbstractConfiguration
     additional_check_runs::AbstractVector{<:AbstractString} = String[]
 end
 
-function Base.show(io::IO, ::MIME"text/plain", obj::AbstractConfiguration)
-    print(io, typeof(obj), " with:")
-    for k in propertynames(obj)
-        print(io, "\n  ", k, ": `", repr(getproperty(obj, k)), "`")
+
+Base.@kwdef struct AutoMergeConfiguration <: AbstractConfiguration
+    registry_config::RegistryConfiguration
+    check_pr_config::CheckPRConfiguration
+    merge_prs_config::MergePRsConfiguration
+end
+
+_serialize(k, x::Any) = x
+function _serialize(k, x::Dates.Minute)
+    if !endswith(string(k), "_minutes")
+        error("field $k does not end with `_minutes` but value $x has type `Dates.Minute`, so cannot be serialized unambiguously.")
+    end
+    return Dates.value(x)
+end
+_serialize(k, x::AbstractConfiguration) = to_dict(x)
+
+function to_dict(config::AbstractConfiguration)
+    Dict{String,Any}(string(k) => _serialize(k, getproperty(config, k)) for k in propertynames(config))
+end
+
+function _deserialize(k::AbstractString, x::Any)
+    if endswith(k, "_minutes")
+       return Dates.Minute(x)
+    elseif k == "registry_config"
+        return from_dict(RegistryConfiguration, x)
+    elseif k == "check_pr_config"
+        return from_dict(CheckPRConfiguration, x)
+    elseif k == "merge_prs_config"
+        return from_dict(MergePRsConfiguration, x)
+    else
+        return x
+    end
+end
+function from_dict(::Type{Config}, dict::AbstractDict{String}) where {Config <: AbstractConfiguration}
+    Config(; (Symbol(k) => _deserialize(k, dict[k]) for k in keys(dict))...)
+end
+
+function read_config(path)
+    return from_dict(AutoMergeConfiguration, TOML.parsefile(path))
+end
+
+function write_config(path, config::AbstractConfiguration)
+    open(path; write=true) do io
+       TOML.print(io, AutoMerge.to_dict(config))
     end
 end
 
+function _full_show(io::IO, obj::Any; indent=0)
+    # one-liner, so don't need indent
+    print(io, " `")
+    show(io, obj)
+    print(io, "`")
+end
+
+function _full_show(io::IO, obj::AbstractConfiguration; indent=0)
+    indent == 0 && print(io, " "^indent, typeof(obj), " with:")
+    for k in propertynames(obj)
+        print(io, "\n  ", " "^indent, k, ":")
+        _full_show(io, getproperty(obj, k); indent = indent+2)
+    end
+end
+Base.show(io::IO, ::MIME"text/plain", obj::AbstractConfiguration) = _full_show(io, obj)
 Base.show(io::IO, obj::AbstractConfiguration) = print(io, typeof(obj), "(…)")
 
 function update_config(config::Config; config_overrides...) where {Config <: AbstractConfiguration}
     return Config(; ((k => getproperty(config, k)) for k in propertynames(config))..., config_overrides...)
 end
 
-const GENERAL_REGISTRY_CONFIG = RegistryConfiguration(
-    registry = "JuliaRegistries/General",
-    authorized_authors = String["JuliaRegistrator"],
-    authorized_authors_special_jll_exceptions = String["jlbuild"],
-    new_package_waiting_period = Day(3),
-    new_jll_package_waiting_period = Minute(20),
-    new_version_waiting_period = Minute(10),
-    new_jll_version_waiting_period = Minute(10),
-    master_branch = "master",
-    error_exit_if_automerge_not_applicable = false,
-    api_url = "https://api.github.com",
-    read_only = false,
-)
-
-const GENERAL_CHECK_PR_CONFIG = CheckPRConfiguration(
-    master_branch_is_default_branch = true,
-    suggest_onepointzero = false,
-    point_to_slack = true,
-    registry_deps = String[],
-    check_license = true,
-    check_breaking_explanation = true,
-    public_registries = String[
-        "https://github.com/HolyLab/HolyLabRegistry",
-        "https://github.com/cossio/CossioJuliaRegistry"
-    ],
-    environment_variables_to_pass = String[],
-)
-
-const GENERAL_MERGE_PRS_CONFIG = MergePRsConfiguration(
-    merge_new_packages = true,
-    merge_new_versions = true,
-    additional_statuses = String[],
-    additional_check_runs = String[],
-)
-
+function general_registry_config()
+    return read_config(joinpath(pkgdir(AutoMerge), "configs", "General.AutoMerge.toml"))
+end
 
 @doc """
-    AutoMerge.GENERAL_REGISTRY_CONFIG
+    AutoMerge.general_registry_config()
 
-This is the [`AutoMerge.RegistryConfiguration`](@ref) object containing shared configuration
+This is the [`AutoMerge.AutoMergeConfiguration`](@ref) object containing shared configuration
 for the [General registry](https://github.com/JuliaRegistries/General). This configuration
 is used by both PR checking and merging functionality.
 
@@ -162,49 +185,12 @@ is used by both PR checking and merging functionality.
 
 Here are the settings chosen for General in this version of AutoMerge.jl:
 ```julia
-julia> AutoMerge.GENERAL_REGISTRY_CONFIG
-$(sprint(show, MIME"text/plain"(), GENERAL_REGISTRY_CONFIG))
+julia> AutoMerge.general_registry_config()
+$(sprint(show, MIME"text/plain"(), general_registry_config()))
 
 ```
-""" GENERAL_REGISTRY_CONFIG
+""" general_registry_config
 
-@doc """
-    AutoMerge.GENERAL_CHECK_PR_CONFIG
-
-This is the [`AutoMerge.CheckPRConfiguration`](@ref) object intended for use by the
-[General registry](https://github.com/JuliaRegistries/General) for checking PR validity.
-General uses these configurations from the latest released version of AutoMerge.jl.
-
-!!! warning
-    The values of the fields chosen here may change in non-breaking releases
-    of AutoMerge.jl at the discretion of the maintainers of the General registry.
-
-Here are the settings chosen for General in this version of AutoMerge.jl:
-```julia
-julia> AutoMerge.GENERAL_CHECK_PR_CONFIG
-$(sprint(show, MIME"text/plain"(), GENERAL_CHECK_PR_CONFIG))
-
-```
-""" GENERAL_CHECK_PR_CONFIG
-
-@doc """
-    AutoMerge.GENERAL_MERGE_PRS_CONFIG
-
-This is the [`AutoMerge.MergePRsConfiguration`](@ref) object intended for use by the
-[General registry](https://github.com/JuliaRegistries/General) for merging approved PRs.
-General uses these configurations from the latest released version of AutoMerge.jl.
-
-!!! warning
-    The values of the fields chosen here may change in non-breaking releases
-    of AutoMerge.jl at the discretion of the maintainers of the General registry.
-
-Here are the settings chosen for General in this version of AutoMerge.jl:
-```julia
-julia> AutoMerge.GENERAL_MERGE_PRS_CONFIG
-$(sprint(show, MIME"text/plain"(), GENERAL_MERGE_PRS_CONFIG))
-
-```
-""" GENERAL_MERGE_PRS_CONFIG
 struct NewPackage end
 struct NewVersion end
 
