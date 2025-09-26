@@ -15,20 +15,23 @@ Shared configuration fields used by both PR checking and merging functionality.
 RegistryConfiguration(; kwargs...)
 ```
 
-# Required keyword arguments
+!!! note
+    New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
+
+## Required keyword arguments (& fields)
 
 - `registry::String`: the registry name you want to run AutoMerge on.
 - `authorized_authors::Vector{String}`: list of who can submit registration, e.g `String["JuliaRegistrator"]`.
-- `authorized_authors_special_jll_exceptions::Vector{String}`: a list of users who can submit JLL packages.
+- `authorized_authors_special_jll_exceptions::Vector{String}`: a list of users who can submit JLL packages (which have strict rules about allowed dependencies and are subject to `new_jll_*_waiting_period`s instead of `new_*_waiting_period`s).
 - `new_package_waiting_minutes::Dates.Minute`: new package waiting period in minutes.
 - `new_jll_package_waiting_minutes::Dates.Minute`: new JLL package waiting period in minutes.
 - `new_version_waiting_minutes::Dates.Minute`: new package version waiting period in minutes.
 - `new_jll_version_waiting_minutes::Dates.Minute`: new JLL package version waiting period in minutes.
 
-# Keyword arguments with default values
+## Keyword arguments (& fields) with default values
 
-- `master_branch::String = "master"`: name of `master_branch`
-- `error_exit_if_automerge_not_applicable::Bool = false`: if `false`, AutoMerge will not error on build type mismatches
+- `master_branch::String = "master"`: name of `master_branch`, e.g you may want to specify this to `"main"` for new GitHub repositories.
+- `error_exit_if_automerge_not_applicable::Bool = false`: if `false`, AutoMerge will not error on PRs made by non-AutoMerge-authorized users
 - `api_url::String = "https://api.github.com"`: the registry host API URL.
 - `read_only::Bool = false`: run in read only mode.
 """
@@ -55,16 +58,23 @@ Configuration struct for checking PR registration validity (security-isolated fu
 CheckPRConfiguration(; kwargs...)
 ```
 
-# Keyword arguments with default values
+!!! note
+    New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
+
+## Keyword arguments (& fields) with default values
 
 - `master_branch_is_default_branch::Bool = true`: if `master_branch` specified above is the default branch.
 - `suggest_onepointzero::Bool = true`: should the AutoMerge comment include a suggestion to tag a 1.0 release for v0.x.y packages.
-- `point_to_slack::Bool = false`: should the AutoMerge comment recommend sending a message to the `#pkg-registration` Julia-Slack channel.
-- `registry_deps::Vector{<:AbstractString} = String[]`: list of registry dependencies.
+- `point_to_slack::Bool = false`: should the AutoMerge comment recommend sending a message to the `#pkg-registration` Julia-Slack channel when auto-merging is not possible.
+- `registry_deps::Vector{<:AbstractString} = String[]`: list of registry dependencies, e.g your packages may depend on `General`.
 - `check_license::Bool = false`: check package has a valid license.
-- `check_breaking_explanation::Bool = false`: Check whether the PR has release notes with a breaking change explanation.
-- `public_registries::Vector{<:AbstractString} = String[]`: Public registries to check for UUID collisions to prevent dependency confusion attacks.
-- `environment_variables_to_pass::Vector{<:AbstractString} = String[]`: Environment variables to pass to package testing subprocess.
+- `check_breaking_explanation::Bool = false`: Check whether the PR has release notes (collected via Registrator.jl) with a breaking change explanation.
+- `public_registries::Vector{<:AbstractString} = String[]`: If a new package registration has a UUID that matches
+  that of a package already registered in one of these registries supplied here
+  (and has either a different name or different URL) then an error will be thrown.
+  This to prevent AutoMerge from being used for "dependency confusion"
+  attacks on those registries.
+- `environment_variables_to_pass::Vector{<:AbstractString} = String[]`: Environment variables to pass to the subprocess that does `Pkg.add("Foo")` and `import Foo`
 - `commit_status_token_name::String = "AUTOMERGE_GITHUB_TOKEN"`: Name of the environment variable containing the GitHub token used for PR validation. The token stored in this environment variable needs `repo:status` permission to set commit statuses and read access to PRs, but does not need write access to the repository.
 """
 Base.@kwdef struct CheckPRConfiguration <: AbstractConfiguration
@@ -88,20 +98,23 @@ Configuration struct for merging approved PRs (requires merge permissions).
 MergePRsConfiguration(; kwargs...)
 ```
 
-# Keyword arguments with default values
+!!! note
+    New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
+
+## Keyword arguments (& fields) with default values
 
 - `merge_new_packages::Bool = true`: should AutoMerge merge registration PRs for new packages
 - `merge_new_versions::Bool = true`: should AutoMerge merge registration PRs for new versions of packages
 - `additional_statuses::AbstractVector{<:AbstractString} = String[]`: list of additional commit statuses that must pass before AutoMerge will merge a PR
 - `additional_check_runs::AbstractVector{<:AbstractString} = String[]`: list of additional check runs that must pass before AutoMerge will merge a PR
-- `merge_token_name::String = "AUTOMERGE_GITHUB_TOKEN"`: Name of the environment variable containing the GitHub token used for PR merging. The token stored in this environment variable needs write access to the repository to merge PRs.
+- `merge_token_name::String = "AUTOMERGE_MERGE_TOKEN"`: Name of the environment variable containing the GitHub token used for PR merging. The token stored in this environment variable needs write access to the repository to merge PRs.
 """
 Base.@kwdef struct MergePRsConfiguration <: AbstractConfiguration
     merge_new_packages::Bool = true
     merge_new_versions::Bool = true
     additional_statuses::AbstractVector{<:AbstractString} = String[]
     additional_check_runs::AbstractVector{<:AbstractString} = String[]
-    merge_token_name::String = "AUTOMERGE_GITHUB_TOKEN"
+    merge_token_name::String = "AUTOMERGE_MERGE_TOKEN"
 end
 
 
@@ -110,7 +123,11 @@ end
 
 Combined configuration object containing registry, PR checking, and PR merging settings.
 
-# Fields
+!!! note
+    New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
+
+## Keyword arguments & fields
+
 - `registry_config::RegistryConfiguration`: Shared registry settings
 - `check_pr_config::CheckPRConfiguration`: PR validation settings
 - `merge_prs_config::MergePRsConfiguration`: PR merging settings
