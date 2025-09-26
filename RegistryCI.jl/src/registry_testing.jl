@@ -181,7 +181,10 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                         if k == "yanked"
                             # https://github.com/JuliaRegistries/RegistryCI.jl/issues/604
                             # only true is allowed (https://github.com/JuliaRegistries/RegistryCI.jl/pull/605#issuecomment-3340500223)
-                            @test v === true
+```suggestion
+                            # only `yanked = true` is allowed (https://github.com/JuliaRegistries/RegistryCI.jl/pull/605#issuecomment-3340500223)
+                            # We don't allow `yanked = "true"`, because this breaks the Pkg client.
+                            # We could allow `yanked = false`, but we choose to disallow it, because it is redundant.
                         end
                     end
                 end
