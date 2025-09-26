@@ -16,8 +16,14 @@ RegistryCI.test
 CurrentModule = AutoMerge
 ```
 
+
+### Main Entrypoints
+
 ```@docs
-AutoMerge.run
-AutoMerge.AutoMergeConfiguration
-AutoMerge.GENERAL_AUTOMERGE_CONFIG
+AutoMerge.check_pr
+AutoMerge.merge_prs
 ```
+
+### Configuration Types
+
+For configuration information, see the [Configuration](@ref) page.

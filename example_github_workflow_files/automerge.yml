@@ -35,4 +35,4 @@ jobs:
           AUTOMERGE_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AUTOMERGE_TAGBOT_TOKEN: ${{ secrets.TAGBOT_TOKEN }}
           JULIA_DEBUG: AutoMerge
-        run: julia --project=.ci/ -e 'using AutoMerge; AutoMerge.run(AutoMerge.GENERAL_AUTOMERGE_CONFIG)'
+        run: julia --project=.ci/ -e 'using AutoMerge; AutoMerge.run(AutoMerge.general_registry_config)'

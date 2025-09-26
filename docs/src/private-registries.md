@@ -53,21 +53,35 @@ with:
 
 ## AutoMerge support
 
-In order to enable automerge support, you will also have to copy the `automerge.yml` file and change the `AutoMerge` invocation appropriately
+In order to enable automerge support, you will also have to copy the `automerge.yml` file and configure AutoMerge appropriately.
+
+!!! info "Configuration Details"
+    For comprehensive AutoMerge configuration information, see the [Configuration](@ref) page.
+
+### Basic Setup
+
+AutoMerge uses separate entrypoints for security isolation:
+- **`check_pr`**: Validates PRs (runs untrusted code, minimal permissions)
+- **`merge_prs`**: Merges approved PRs (elevated permissions, no untrusted code)
 
 ```julia
 using AutoMerge
-using AutoMerge: AutoMergeConfiguration
-using Dates
-config = AutoMergeConfiguration(; config_settings...)
-AutoMerge.run(config)
+
+# Load configuration (see Configuration page for creation details)
+config = AutoMerge.read_config("MyRegistry.AutoMerge.toml")
+
+# In PR checking workflow
+AutoMerge.check_pr(config.registry_config, config.check_pr_config)
+
+# In merge workflow
+AutoMerge.merge_prs(config.registry_config, config.merge_prs_config)
 ```
-where `config_settings` must set all of the required fields from [`AutoMerge.AutoMergeConfiguration`](@ref) (and optionally the settings with default values too). One can refer to [`AutoMerge.GENERAL_AUTOMERGE_CONFIG`](@ref) to see the settings that General uses. If one wants to opt-in to following the same rules as General (which may change in non-breaking releases of AutoMerge.jl), one can directly set `config = AutoMerge.GENERAL_AUTOMERGE_CONFIG`, and pass keyword arguments to `run` to override specific values.
 
 Most importantly, the following configuration settings must be updated for your registry:
-```
-registry = "MyOrg/MyRegistry",
-authorized_authors = String["TrustedUser"],
+```toml
+[registry_config]
+registry = "MyOrg/MyRegistry"
+authorized_authors = ["TrustedUser"]
 ```
 
 You will also have to make the following change in `.ci/stopwatch.jl`

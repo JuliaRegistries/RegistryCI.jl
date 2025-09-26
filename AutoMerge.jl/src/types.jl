@@ -105,6 +105,16 @@ Base.@kwdef struct MergePRsConfiguration <: AbstractConfiguration
 end
 
 
+"""
+    AutoMergeConfiguration
+
+Combined configuration object containing registry, PR checking, and PR merging settings.
+
+# Fields
+- `registry_config::RegistryConfiguration`: Shared registry settings
+- `check_pr_config::CheckPRConfiguration`: PR validation settings
+- `merge_prs_config::MergePRsConfiguration`: PR merging settings
+"""
 Base.@kwdef struct AutoMergeConfiguration <: AbstractConfiguration
     registry_config::RegistryConfiguration
     check_pr_config::CheckPRConfiguration
@@ -141,10 +151,20 @@ function from_dict(::Type{Config}, dict::AbstractDict{String}) where {Config <: 
     Config(; (Symbol(k) => _deserialize(k, dict[k]) for k in keys(dict))...)
 end
 
+"""
+    read_config(path) -> AutoMergeConfiguration
+
+Read an AutoMerge configuration from a TOML file.
+"""
 function read_config(path)
     return from_dict(AutoMergeConfiguration, TOML.parsefile(path))
 end
 
+"""
+    write_config(path, config::AbstractConfiguration) -> Nothing
+
+Write an AutoMerge configuration to a TOML file. Automatically handles serialization of `Dates.Minute` fields to integer values.
+"""
 function write_config(path, config::AbstractConfiguration)
     open(path; write=true) do io
        TOML.print(io, AutoMerge.to_dict(config))
