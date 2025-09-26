@@ -139,16 +139,18 @@ end
     # but 1.11.0 had not yet been released.
     filter!(<(v"1.11"), AutoMerge.available_julia_versions)
 
-    compat = [Pkg.Types.VersionRange("1.11.0-1")]
-    binaries = AutoMerge.get_compatible_julia_binaries(compat, v"1.1")
-    @test length(binaries) == 1
-    binary, text = only(binaries)
-    @test readchomp(`$binary -e 'print(VERSION)'`) == "1.11.0-rc4"
-    @test text == "julia 1.11.0-rc4 (only compatible version)"
-
-    # Untamper the cache of available versions (will be reloaded when
-    # it is empty).
-    empty!(AutoMerge.available_julia_versions)
+    try
+        compat = [Pkg.Types.VersionRange("1.11.0-1")]
+        binaries = AutoMerge.get_compatible_julia_binaries(compat, v"1.1")
+        @test length(binaries) == 1
+        binary, text = only(binaries)
+        @test readchomp(`$binary -e 'print(VERSION)'`) == "1.11.0-rc4"
+        @test text == "julia 1.11.0-rc4 (only compatible version)"
+    finally
+        # Untamper the cache of available versions (will be reloaded
+        # when it is empty).
+        empty!(AutoMerge.available_julia_versions)
+    end
 end
 
 @testset "Guidelines for new packages" begin
