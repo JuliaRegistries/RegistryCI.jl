@@ -4,43 +4,69 @@ struct AlwaysAssertionError <: Exception
     msg::String
 end
 
+abstract type AbstractConfiguration end
 
 """
-    AutoMergeConfiguration
+    RegistryConfiguration
 
-Configuration struct for AutoMerge.
+Shared configuration fields used by both PR checking and merging functionality.
 
 ```julia
-AutoMergeConfiguration(; kwargs...)
+RegistryConfiguration(; kwargs...)
 ```
 
 !!! note
     New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
 
-# Required keyword arguments
+## Required keyword arguments (& fields)
 
-- `merge_new_packages::Bool`: should AutoMerge merge registration PRs for new packages
-- `merge_new_versions::Bool`: should AutoMerge merge registration PRs for new versions of packages
-- `new_package_waiting_period::Dates.Period`: new package waiting period, e.g `Day(3)`.
-- `new_jll_package_waiting_period::Dates.Period`: new JLL package waiting period, e.g `Minute(20)`.
-- `new_version_waiting_period::Dates.Period`: new package version waiting period, e.g `Minute(10)`.
-- `new_jll_version_waiting_period::Dates.Period`: new JLL package version waiting period, e.g `Minute(10)`.
 - `registry::String`: the registry name you want to run AutoMerge on.
 - `authorized_authors::Vector{String}`: list of who can submit registration, e.g `String["JuliaRegistrator"]`.
 - `authorized_authors_special_jll_exceptions::Vector{String}`: a list of users who can submit JLL packages (which have strict rules about allowed dependencies and are subject to `new_jll_*_waiting_period`s instead of `new_*_waiting_period`s).
+- `new_package_waiting_minutes::Dates.Minute`: new package waiting period in minutes.
+- `new_jll_package_waiting_minutes::Dates.Minute`: new JLL package waiting period in minutes.
+- `new_version_waiting_minutes::Dates.Minute`: new package version waiting period in minutes.
+- `new_jll_version_waiting_minutes::Dates.Minute`: new JLL package version waiting period in minutes.
 
-# Keyword arguments with default values
+## Keyword arguments (& fields) with default values
 
-- `tagbot_enabled::Bool = false`: if tagbot is enabled.
-- `additional_statuses::AbstractVector{<:AbstractString} = String[]`: list of additional commit statuses that must pass before AutoMerge will merge a PR
-- `additional_check_runs::AbstractVector{<:AbstractString} = String[]`: list of additional check runs that must pass before AutoMerge will merge a PR
-- `error_exit_if_automerge_not_applicable::Bool = false`: if `false`, AutoMerge will not error on PRs made by non-AutoMerge-authorized users
 - `master_branch::String = "master"`: name of `master_branch`, e.g you may want to specify this to `"main"` for new GitHub repositories.
+- `error_exit_if_automerge_not_applicable::Bool = false`: if `false`, AutoMerge will not error on PRs made by non-AutoMerge-authorized users
+- `api_url::String = "https://api.github.com"`: the registry host API URL.
+- `read_only::Bool = false`: run in read only mode.
+"""
+Base.@kwdef struct RegistryConfiguration <: AbstractConfiguration
+    registry::String
+    authorized_authors::Vector{String}
+    authorized_authors_special_jll_exceptions::Vector{String}
+    new_package_waiting_minutes::Dates.Minute
+    new_jll_package_waiting_minutes::Dates.Minute
+    new_version_waiting_minutes::Dates.Minute
+    new_jll_version_waiting_minutes::Dates.Minute
+    master_branch::String = "master"
+    error_exit_if_automerge_not_applicable::Bool = false
+    api_url::String = "https://api.github.com"
+    read_only::Bool = false
+end
+
+"""
+    CheckPRConfiguration
+
+Configuration struct for checking PR registration validity (security-isolated functionality).
+
+```julia
+CheckPRConfiguration(; kwargs...)
+```
+
+!!! note
+    New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
+
+## Keyword arguments (& fields) with default values
+
 - `master_branch_is_default_branch::Bool = true`: if `master_branch` specified above is the default branch.
 - `suggest_onepointzero::Bool = true`: should the AutoMerge comment include a suggestion to tag a 1.0 release for v0.x.y packages.
 - `point_to_slack::Bool = false`: should the AutoMerge comment recommend sending a message to the `#pkg-registration` Julia-Slack channel when auto-merging is not possible.
 - `registry_deps::Vector{<:AbstractString} = String[]`: list of registry dependencies, e.g your packages may depend on `General`.
-- `api_url::String = "https://api.github.com"`: the registry host API URL.
 - `check_license::Bool = false`: check package has a valid license.
 - `check_breaking_explanation::Bool = false`: Check whether the PR has release notes (collected via Registrator.jl) with a breaking change explanation.
 - `public_registries::Vector{<:AbstractString} = String[]`: If a new package registration has a UUID that matches
@@ -48,90 +74,160 @@ AutoMergeConfiguration(; kwargs...)
   (and has either a different name or different URL) then an error will be thrown.
   This to prevent AutoMerge from being used for "dependency confusion"
   attacks on those registries.
-- `read_only::Bool = false`: run in read only mode.
 - `environment_variables_to_pass::Vector{<:AbstractString} = String[]`: Environment variables to pass to the subprocess that does `Pkg.add("Foo")` and `import Foo`
+- `commit_status_token_name::String = "AUTOMERGE_GITHUB_TOKEN"`: Name of the environment variable containing the GitHub token used for PR validation. The token stored in this environment variable needs `repo:status` permission to set commit statuses and read access to PRs, but does not need write access to the repository.
 """
-Base.@kwdef struct AutoMergeConfiguration
-    merge_new_packages::Bool
-    merge_new_versions::Bool
-    new_package_waiting_period::Dates.Period
-    new_jll_package_waiting_period::Dates.Period
-    new_version_waiting_period::Dates.Period
-    new_jll_version_waiting_period::Dates.Period
-    registry::String
-    tagbot_enabled::Bool = false
-    authorized_authors::Vector{String}
-    authorized_authors_special_jll_exceptions::Vector{String}
-    additional_statuses::AbstractVector{<:AbstractString} = String[]
-    additional_check_runs::AbstractVector{<:AbstractString} = String[]
-    error_exit_if_automerge_not_applicable::Bool = false
-    master_branch::String = "master"
+Base.@kwdef struct CheckPRConfiguration <: AbstractConfiguration
     master_branch_is_default_branch::Bool = true
     suggest_onepointzero::Bool = true
     point_to_slack::Bool = false
     registry_deps::Vector{<:AbstractString} = String[]
-    api_url::String = "https://api.github.com"
     check_license::Bool = false
     check_breaking_explanation::Bool = false
     public_registries::Vector{<:AbstractString} = String[]
-    read_only::Bool = false
     environment_variables_to_pass::Vector{<:AbstractString} = String[]
+    commit_status_token_name::String = "AUTOMERGE_GITHUB_TOKEN"
 end
 
-function Base.show(io::IO, ::MIME"text/plain", obj::AutoMergeConfiguration)
-    print(io, AutoMergeConfiguration, " with:")
-    for k in propertynames(obj)
-        print(io, "\n  ", k, ": `", repr(getproperty(obj, k)), "`")
+"""
+    MergePRsConfiguration
+
+Configuration struct for merging approved PRs (requires merge permissions).
+
+```julia
+MergePRsConfiguration(; kwargs...)
+```
+
+!!! note
+    New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
+
+## Keyword arguments (& fields) with default values
+
+- `merge_new_packages::Bool = true`: should AutoMerge merge registration PRs for new packages
+- `merge_new_versions::Bool = true`: should AutoMerge merge registration PRs for new versions of packages
+- `additional_statuses::AbstractVector{<:AbstractString} = String[]`: list of additional commit statuses that must pass before AutoMerge will merge a PR
+- `additional_check_runs::AbstractVector{<:AbstractString} = String[]`: list of additional check runs that must pass before AutoMerge will merge a PR
+- `merge_token_name::String = "AUTOMERGE_MERGE_TOKEN"`: Name of the environment variable containing the GitHub token used for PR merging. The token stored in this environment variable needs write access to the repository to merge PRs.
+"""
+Base.@kwdef struct MergePRsConfiguration <: AbstractConfiguration
+    merge_new_packages::Bool = true
+    merge_new_versions::Bool = true
+    additional_statuses::AbstractVector{<:AbstractString} = String[]
+    additional_check_runs::AbstractVector{<:AbstractString} = String[]
+    merge_token_name::String = "AUTOMERGE_MERGE_TOKEN"
+end
+
+
+"""
+    AutoMergeConfiguration
+
+Combined configuration object containing registry, PR checking, and PR merging settings.
+
+!!! note
+    New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
+
+## Keyword arguments & fields
+
+- `registry_config::RegistryConfiguration`: Shared registry settings
+- `check_pr_config::CheckPRConfiguration`: PR validation settings
+- `merge_prs_config::MergePRsConfiguration`: PR merging settings
+"""
+Base.@kwdef struct AutoMergeConfiguration <: AbstractConfiguration
+    registry_config::RegistryConfiguration
+    check_pr_config::CheckPRConfiguration
+    merge_prs_config::MergePRsConfiguration
+end
+
+_serialize(k, x::Any) = x
+function _serialize(k, x::Dates.Minute)
+    if !endswith(string(k), "_minutes")
+        error("field $k does not end with `_minutes` but value $x has type `Dates.Minute`, so cannot be serialized unambiguously.")
+    end
+    return Dates.value(x)
+end
+_serialize(k, x::AbstractConfiguration) = to_dict(x)
+
+function to_dict(config::AbstractConfiguration)
+    Dict{String,Any}(string(k) => _serialize(k, getproperty(config, k)) for k in propertynames(config))
+end
+
+function _deserialize(k::AbstractString, x::Any)
+    if endswith(k, "_minutes")
+       return Dates.Minute(x)
+    elseif k == "registry_config"
+        return from_dict(RegistryConfiguration, x)
+    elseif k == "check_pr_config"
+        return from_dict(CheckPRConfiguration, x)
+    elseif k == "merge_prs_config"
+        return from_dict(MergePRsConfiguration, x)
+    else
+        return x
+    end
+end
+function from_dict(::Type{Config}, dict::AbstractDict{String}) where {Config <: AbstractConfiguration}
+    Config(; (Symbol(k) => _deserialize(k, dict[k]) for k in keys(dict))...)
+end
+
+"""
+    read_config(path) -> AutoMergeConfiguration
+
+Read an AutoMerge configuration from a TOML file.
+"""
+function read_config(path)
+    return from_dict(AutoMergeConfiguration, TOML.parsefile(path))
+end
+
+"""
+    write_config(path, config::AbstractConfiguration) -> Nothing
+
+Write an AutoMerge configuration to a TOML file. Automatically handles serialization of `Dates.Minute` fields to integer values.
+"""
+function write_config(path, config::AbstractConfiguration)
+    open(path; write=true) do io
+       TOML.print(io, AutoMerge.to_dict(config))
     end
 end
 
-Base.show(io::IO, ::AutoMergeConfiguration) = print(io, AutoMergeConfiguration, "(…)")
+function _full_show(io::IO, obj::Any; indent=0)
+    # one-liner, so don't need indent
+    print(io, " `")
+    show(io, obj)
+    print(io, "`")
+end
 
+function _full_show(io::IO, obj::AbstractConfiguration; indent=0)
+    indent == 0 && print(io, " "^indent, typeof(obj), " with:")
+    for k in propertynames(obj)
+        print(io, "\n  ", " "^indent, k, ":")
+        _full_show(io, getproperty(obj, k); indent = indent+2)
+    end
+end
+Base.show(io::IO, ::MIME"text/plain", obj::AbstractConfiguration) = _full_show(io, obj)
+Base.show(io::IO, obj::AbstractConfiguration) = print(io, typeof(obj), "(…)")
 
-const GENERAL_AUTOMERGE_CONFIG = AutoMergeConfiguration(
-    merge_new_packages = true,
-    merge_new_versions = true,
-    new_package_waiting_period = Day(3),
-    new_jll_package_waiting_period = Minute(20),
-    new_version_waiting_period = Minute(10),
-    new_jll_version_waiting_period = Minute(10),
-    registry = "JuliaRegistries/General",
-    tagbot_enabled = true,
-    authorized_authors = String["JuliaRegistrator"],
-    authorized_authors_special_jll_exceptions = String["jlbuild"],
-    suggest_onepointzero = false,
-    additional_statuses = String[],
-    additional_check_runs = String[],
-    check_license = true,
-    public_registries = String[
-        "https://github.com/HolyLab/HolyLabRegistry",
-        "https://github.com/cossio/CossioJuliaRegistry"
-    ],
-    point_to_slack = true,
-    check_breaking_explanation = true,
-)
-
+function general_registry_config()
+    return read_config(joinpath(pkgdir(AutoMerge), "configs", "General.AutoMerge.toml"))
+end
 
 @doc """
-    AutoMerge.GENERAL_AUTOMERGE_CONFIG
+    AutoMerge.general_registry_config()
 
-This is the [`AutoMerge.AutoMergeConfiguration`](@ref) object intended for use by the
-[General registry](https://github.com/JuliaRegistries/General).
-General uses the `AutoMerge.GENERAL_AUTOMERGE_CONFIG` from the latest released version of
-AutoMerge.jl (once its manifest has been updated).
+This is the [`AutoMerge.AutoMergeConfiguration`](@ref) object containing shared configuration
+for the [General registry](https://github.com/JuliaRegistries/General). This configuration
+is used by both PR checking and merging functionality.
 
 !!! warning
     The values of the fields chosen here may change in non-breaking releases
-    of AutoMerge.jl at the discretion of the maintainers of the General registry,
-    in order to configure the registry for the current needs of the community.
+    of AutoMerge.jl at the discretion of the maintainers of the General registry.
 
 Here are the settings chosen for General in this version of AutoMerge.jl:
 ```julia
-julia> AutoMerge.GENERAL_AUTOMERGE_CONFIG
-$(sprint(show, MIME"text/plain"(), GENERAL_AUTOMERGE_CONFIG))
+julia> AutoMerge.general_registry_config()
+$(sprint(show, MIME"text/plain"(), general_registry_config()))
 
 ```
-""" GENERAL_AUTOMERGE_CONFIG
+""" general_registry_config
+
 struct NewPackage end
 struct NewVersion end
 

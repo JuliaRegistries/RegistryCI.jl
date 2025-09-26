@@ -1082,8 +1082,8 @@ function _run_pkg_commands(
     # 9. HOME. Lots of things need HOME.
     #
     # If registry maintainers need additional environment variables to be passed
-    # to the child process, they can do so by providing the `environment_variables_to_pass`
-    # kwarg to the `AutoMerge.run` function.
+    # to the child process, they can do so by configuring `environment_variables_to_pass`
+    # in `[check_pr_config]` in the config TOML.
 
     env = Dict(
         "JULIA_DEPOT_PATH" => mktempdir(),
