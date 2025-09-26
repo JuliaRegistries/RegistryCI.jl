@@ -71,23 +71,21 @@ end
                 ["1.0.0"]
                 git-tree-sha1 = "abcdef0123456789abcdef0123456789abcdef01"
                 yanked = true
-
-                ["1.1.0"]
-                git-tree-sha1 = "123456789abcdef0123456789abcdef0123456789"
-                yanked = false
                 """)
 
             @test RegistryCI.test(registry_dir) === nothing
 
-            write(joinpath(pkg_dir, "Versions.toml"), """
-                ["1.0.0"]
-                git-tree-sha1 = "abcdef0123456789abcdef0123456789abcdef01"
-                yanked = "invalid"
-                """)
+            for invalid_key in ("\"invalid\"", "\"false\"", "false", "\"true\"")
+                write(joinpath(pkg_dir, "Versions.toml"), """
+                    ["1.0.0"]
+                    git-tree-sha1 = "abcdef0123456789abcdef0123456789abcdef01"
+                    yanked = $invalid_key
+                    """)
 
-            @testset "Invalid yanked test" begin
-                @test fails() do
-                    RegistryCI.test(registry_dir)
+                @testset "Invalid yanked test" begin
+                    @test fails() do
+                        RegistryCI.test(registry_dir)
+                    end
                 end
             end
         end

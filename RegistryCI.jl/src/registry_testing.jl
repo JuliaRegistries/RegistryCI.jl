@@ -180,7 +180,8 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     for (k, v) in pairs(data)
                         if k == "yanked"
                             # https://github.com/JuliaRegistries/RegistryCI.jl/issues/604
-                            @test v isa Bool 
+                            # only true is allowed (https://github.com/JuliaRegistries/RegistryCI.jl/pull/605#issuecomment-3340500223)
+                            @test v === true
                         end
                     end
                 end
