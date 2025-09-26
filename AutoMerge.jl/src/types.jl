@@ -65,6 +65,7 @@ CheckPRConfiguration(; kwargs...)
 - `check_breaking_explanation::Bool = false`: Check whether the PR has release notes with a breaking change explanation.
 - `public_registries::Vector{<:AbstractString} = String[]`: Public registries to check for UUID collisions to prevent dependency confusion attacks.
 - `environment_variables_to_pass::Vector{<:AbstractString} = String[]`: Environment variables to pass to package testing subprocess.
+- `commit_status_token_name::String = "AUTOMERGE_GITHUB_TOKEN"`: Name of the environment variable containing the GitHub token used for PR validation. The token stored in this environment variable needs `repo:status` permission to set commit statuses and read access to PRs, but does not need write access to the repository.
 """
 Base.@kwdef struct CheckPRConfiguration <: AbstractConfiguration
     master_branch_is_default_branch::Bool = true
@@ -75,6 +76,7 @@ Base.@kwdef struct CheckPRConfiguration <: AbstractConfiguration
     check_breaking_explanation::Bool = false
     public_registries::Vector{<:AbstractString} = String[]
     environment_variables_to_pass::Vector{<:AbstractString} = String[]
+    commit_status_token_name::String = "AUTOMERGE_GITHUB_TOKEN"
 end
 
 """
@@ -92,12 +94,14 @@ MergePRsConfiguration(; kwargs...)
 - `merge_new_versions::Bool = true`: should AutoMerge merge registration PRs for new versions of packages
 - `additional_statuses::AbstractVector{<:AbstractString} = String[]`: list of additional commit statuses that must pass before AutoMerge will merge a PR
 - `additional_check_runs::AbstractVector{<:AbstractString} = String[]`: list of additional check runs that must pass before AutoMerge will merge a PR
+- `merge_token_name::String = "AUTOMERGE_GITHUB_TOKEN"`: Name of the environment variable containing the GitHub token used for PR merging. The token stored in this environment variable needs write access to the repository to merge PRs.
 """
 Base.@kwdef struct MergePRsConfiguration <: AbstractConfiguration
     merge_new_packages::Bool = true
     merge_new_versions::Bool = true
     additional_statuses::AbstractVector{<:AbstractString} = String[]
     additional_check_runs::AbstractVector{<:AbstractString} = String[]
+    merge_token_name::String = "AUTOMERGE_GITHUB_TOKEN"
 end
 
 
@@ -163,10 +167,6 @@ function _full_show(io::IO, obj::AbstractConfiguration; indent=0)
 end
 Base.show(io::IO, ::MIME"text/plain", obj::AbstractConfiguration) = _full_show(io, obj)
 Base.show(io::IO, obj::AbstractConfiguration) = print(io, typeof(obj), "(…)")
-
-function update_config(config::Config; config_overrides...) where {Config <: AbstractConfiguration}
-    return Config(; ((k => getproperty(config, k)) for k in propertynames(config))..., config_overrides...)
-end
 
 function general_registry_config()
     return read_config(joinpath(pkgdir(AutoMerge), "configs", "General.AutoMerge.toml"))

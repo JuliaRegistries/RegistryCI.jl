@@ -57,8 +57,8 @@ function check_pr(
         return nothing
     end
 
-    # Authentication (always use AUTOMERGE_GITHUB_TOKEN for PR builds)
-    auth = my_retry(() -> GitHub.authenticate(api, env["AUTOMERGE_GITHUB_TOKEN"]))
+    # Authentication (use configurable token for PR builds)
+    auth = my_retry(() -> GitHub.authenticate(api, env[pr_config.commit_status_token_name]))
     whoami = my_retry(() -> username(api, cicfg; auth=auth))
     @info("Authenticated to GitHub as \"$(whoami)\"")
     registry_repo = my_retry(() -> GitHub.repo(api, registry_config.registry; auth=auth))
@@ -129,8 +129,8 @@ function merge_prs(
         return nothing
     end
 
-    # Authentication (always use AUTOMERGE_GITHUB_TOKEN for merge builds)
-    auth = my_retry(() -> GitHub.authenticate(api, env["AUTOMERGE_GITHUB_TOKEN"]))
+    # Authentication (use configurable token for merge builds)
+    auth = my_retry(() -> GitHub.authenticate(api, env[merge_config.merge_token_name]))
     whoami = my_retry(() -> username(api, cicfg; auth=auth))
     @info("Authenticated to GitHub as \"$(whoami)\"")
     registry_repo = my_retry(() -> GitHub.repo(api, registry_config.registry; auth=auth))
