@@ -18,7 +18,10 @@ on:
 permissions: read-all
 
 concurrency:
-  group: integration-tests-global-lock
+  # Use a unique group for our no-op PR runs (so they never contend),
+  # but use a shared lock for merge_group/push/workflow_dispatch which
+  # need exclusive access to the test registry.
+  group: ${{ github.event_name == 'pull_request' && format('integration-tests-noop-{0}', github.run_id) || 'integration-tests-global-lock' }}
   cancel-in-progress: false
 
 env:
