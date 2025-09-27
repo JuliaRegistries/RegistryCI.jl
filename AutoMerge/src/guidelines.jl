@@ -39,8 +39,7 @@ function meets_compat_for_julia(working_directory::AbstractString, pkg, version)
     package_relpath = get_package_relpath_in_registry(;
         package_name=pkg, registry_path=working_directory
     )
-    compat_file = joinpath(working_directory, package_relpath, "Compat.toml")
-    compat = maybe_parse_toml(compat_file)
+    compat = parse_registry_toml(working_directory, package_relpath, "Compat.toml"; allow_missing = true)
     # Go through all the compat entries looking for the julia compat
     # of the new version. When found, test
     # 1. that it is a bounded range,
@@ -123,10 +122,8 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
     package_relpath = get_package_relpath_in_registry(;
         package_name=pkg, registry_path=working_directory
     )
-    compat_file = joinpath(working_directory, package_relpath, "Compat.toml")
-    deps_file = joinpath(working_directory, package_relpath, "Deps.toml")
-    compat = maybe_parse_toml(compat_file)
-    deps = maybe_parse_toml(deps_file)
+    compat = parse_registry_toml(working_directory, package_relpath, "Compat.toml"; allow_missing = true)
+    deps = parse_registry_toml(working_directory, package_relpath, "Deps.toml"; allow_missing = true)
     # First, we construct a Dict in which the keys are the package's
     # dependencies, and the value is always false.
     dep_has_compat_with_upper_bound = Dict{String,Bool}()
@@ -577,8 +574,8 @@ function meets_repo_url_requirement(pkg::String; registry_head::String)
     package_relpath = get_package_relpath_in_registry(;
         package_name=pkg, registry_path=registry_head
     )
-    package_toml_parsed = Pkg.TOML.parsefile(
-        joinpath(registry_head, package_relpath, "Package.toml")
+    package_toml_parsed = parse_registry_toml(
+        registry_head, package_relpath, "Package.toml"
     )
 
     url = package_toml_parsed["repo"]
