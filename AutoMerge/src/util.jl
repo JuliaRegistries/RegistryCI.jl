@@ -62,25 +62,16 @@ If `version` is supplied, then the associated `tree_hash` will be returned. Othe
 function parse_registry_pkg_info(registry_path, pkg, version=nothing)
     # We know the name of this package but not its uuid. Look it up in
     # the registry that includes the current PR.
-    packages = TOML.parsefile(joinpath(registry_path, "Registry.toml"))["packages"]
-    filter!(packages) do (key, value)
-        value["name"] == pkg
-    end
-    # For Julia >= 1.4 this can be simplified with the `only` function.
-    always_assert(length(packages) == 1)
-    uuid = convert(String, first(keys(packages)))
+    packages = parse_registry_toml(registry_path, "Registry.toml")["packages"]
+    uuid = only((key for (key, value) in packages if value["name"] == pkg))
     # Also need to find out the package repository.
-    package = TOML.parsefile(
-        joinpath(registry_path, packages[uuid]["path"], "Package.toml")
-    )
-    repo = convert(String, package["repo"])
-    subdir = convert(String, get(package, "subdir", ""))
+    package = parse_registry_toml(registry_path, packages[uuid]["path"], "Package.toml")
+    repo = package["repo"]
+    subdir = get(package, "subdir", "")
     if version === nothing
         tree_hash = nothing
     else
-        versions = TOML.parsefile(
-            joinpath(registry_path, packages[uuid]["path"], "Versions.toml")
-        )
+        versions = parse_registry_toml(registry_path, packages[uuid]["path"], "Versions.toml")
         tree_hash = convert(String, versions[string(version)]["git-tree-sha1"])
     end
     return (; uuid=uuid, repo=repo, subdir=subdir, tree_hash=tree_hash)
@@ -294,7 +285,7 @@ end
 function _new_package_section(n)
     return string("## $n. New package registration", "\n\n",
     "Please make sure that you have read the ",
-    "[package naming guidelines](https://julialang.github.io/Pkg.jl/dev/creating-packages/#Package-naming-guidelines-1).\n\n")
+    "[package naming guidelines](https://pkgdocs.julialang.org/dev/creating-packages/#Package-naming-guidelines).\n\n")
 end
 
 function _what_next_if_fail(n; point_to_slack=false)
@@ -512,7 +503,7 @@ and all the non-JLL packages defined in that registry.
 """
 function get_all_non_jll_package_names(registry_dir::AbstractString)
     # Mimic the structure of a RegistryInstance
-    list = TOML.parsefile(joinpath(registry_dir, "Registry.toml"))["packages"]
+    list = parse_registry_toml(registry_dir, "Registry.toml")["packages"]
     registry = (; pkgs=Dict(k => (; name=v["name"]) for (k,v) in pairs(list)))
     return get_all_non_jll_package_names(registry)
 end

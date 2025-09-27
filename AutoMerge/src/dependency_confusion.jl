@@ -18,7 +18,7 @@ function has_no_dependency_confusion(pkg, registry_head, public_registries)
     for repo in public_registries
         try
             registry = clone_repo(repo)
-            registry_toml = TOML.parsefile(joinpath(registry, "Registry.toml"))
+            registry_toml = parse_registry_toml(registry, "Registry.toml")
             packages = registry_toml["packages"]
             if haskey(packages, uuid)
                 message = string(
@@ -35,9 +35,7 @@ function has_no_dependency_confusion(pkg, registry_head, public_registries)
                     return false, message
                 end
                 package_path = packages[uuid]["path"]
-                other_package_repo = TOML.parsefile(
-                    joinpath(registry, package_path, "Package.toml")
-                )["repo"]
+                other_package_repo = parse_registry_toml(registry, package_path, "Package.toml")["repo"]
                 if package_repo != other_package_repo
                     return false, message
                 end

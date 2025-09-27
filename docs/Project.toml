@@ -9,5 +9,5 @@ Documenter = "1"
 RegistryInstances = "0.1"
 
 [sources]
-AutoMerge = {path = "../AutoMerge.jl"}
-RegistryCI = {path = "../RegistryCI.jl"}
+AutoMerge = {path = "../AutoMerge"}
+RegistryCI = {path = "../RegistryCI"}
