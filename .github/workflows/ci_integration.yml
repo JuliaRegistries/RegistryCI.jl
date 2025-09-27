@@ -27,25 +27,39 @@ env:
 
 jobs:
   automerge-integration:
-    # We don't actually want to run integration tests on pull requests,
-    # because we want to avoid hitting rate limits.
-    # So, if this is a PR build, mark the integration tests as "skipped".
-    if: github.event_name != 'pull_request'
     name: AutoMerge Integration
     runs-on: ubuntu-latest
     steps:
+      # Fast placeholder so the required check is green on PRs,
+      # while real tests only run in merge_group/push/workflow_dispatch.
+      - name: Placeholder on PR builds
+        if: ${{ github.event_name == 'pull_request' }}
+        run: echo "Integration tests are required but only run from the merge queue or on push/workflow_dispatch."
+
       - uses: actions/checkout@v4
+        if: ${{ github.event_name != 'pull_request' }}
+
       - uses: julia-actions/setup-julia@v2
+        if: ${{ github.event_name != 'pull_request' }}
         with:
           version: '1'
           arch: x64
+
       - uses: julia-actions/cache@v2
+        if: ${{ github.event_name != 'pull_request' }}
+
       - uses: julia-actions/julia-buildpkg@v1
+        if: ${{ github.event_name != 'pull_request' }}
         with:
           project: AutoMerge
       - run: git config --global user.email "noreply@example.com"
+        if: ${{ github.event_name != 'pull_request' }}
+
       - run: git config --global user.name "GitHub Actions"
+        if: ${{ github.event_name != 'pull_request' }}
+
       - uses: julia-actions/julia-runtest@v1
+        if: ${{ github.event_name != 'pull_request' }}
         with:
           project: AutoMerge
         env:
@@ -53,10 +67,13 @@ jobs:
           AUTOMERGE_INTEGRATION_TEST_REPO: "bcbi-test/automerge-integration-test-repo"
           BCBI_TEST_USER_GITHUB_TOKEN: ${{ secrets.BCBI_TEST_USER_GITHUB_TOKEN }}
           INTEGRATION_TEST_READ_ONLY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: julia-actions/julia-processcoverage@v1
+        if: ${{ github.event_name != 'pull_request' }}
         with:
           directories: AutoMerge/src
       - uses: codecov/codecov-action@v5
+        if: ${{ github.event_name != 'pull_request' }}
         with:
           files: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
