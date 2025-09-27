@@ -120,6 +120,39 @@ end
     end
 end
 
+@testset "juliaup" begin
+    compat = [Pkg.Types.VersionRange("1.0-1.8")]
+    binaries = AutoMerge.get_compatible_julia_binaries(compat, v"1.1")
+    @test length(binaries) == 2
+    binary1, text1 = binaries[1]
+    binary2, text2 = binaries[2]
+    @test readchomp(`$binary1 -e 'print(VERSION)'`) == "1.1.1"
+    @test text1 == "julia 1.1.1 (lowest compatible version)"
+    @test readchomp(`$binary2 -e 'print(VERSION)'`) == "1.8.5"
+    @test text2 == "julia 1.8.5 (highest compatible version)"
+
+    # Verify that a prerelease version can be returned. This is only
+    # possible when prereleases are available but the corresponding
+    # release has not yet been made. In order to make this stable over
+    # time we tamper with the internal cache of available versions to
+    # simulate the situation when all 1.11 prereleases hade been made
+    # but 1.11.0 had not yet been released.
+    filter!(<(v"1.11"), AutoMerge.available_julia_versions)
+
+    try
+        compat = [Pkg.Types.VersionRange("1.11.0-1")]
+        binaries = AutoMerge.get_compatible_julia_binaries(compat, v"1.1")
+        @test length(binaries) == 1
+        binary, text = only(binaries)
+        @test readchomp(`$binary -e 'print(VERSION)'`) == "1.11.0-rc4"
+        @test text == "julia 1.11.0-rc4 (only compatible version)"
+    finally
+        # Untamper the cache of available versions (will be reloaded
+        # when it is empty).
+        empty!(AutoMerge.available_julia_versions)
+    end
+end
+
 @testset "Guidelines for new packages" begin
     @testset "Package name is a valid identifier" begin
         @test AutoMerge.meets_name_is_identifier("Hello")[1]
@@ -371,6 +404,16 @@ end
         @test AutoMerge.meets_version_number_no_build(v"1.2.3-alpha")[1]
         @test !AutoMerge.meets_version_number_no_build(v"1.2.3+456")[1]
         @test !AutoMerge.meets_version_number_no_build(v"1.2.3-alpha+456")[1]
+    end
+    @testset "Version can be added" begin
+        registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
+        success, _ = AutoMerge.meets_version_can_be_pkg_added(registry_path, "RegistryCI", v"10.10.4"; environment_variables_to_pass=String[])
+        @test success
+    end
+    @testset "Version can be imported" begin
+        registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
+        success, _ = AutoMerge.meets_version_can_be_imported(registry_path, "RegistryCI", v"10.10.4"; environment_variables_to_pass=String[])
+        @test success
     end
 end
 
