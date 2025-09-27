@@ -104,6 +104,22 @@ See [Pkg's documentation](https://julialang.github.io/Pkg.jl/v1/compatibility/) 
 
 You may find [CompatHelper.jl](https://github.com/bcbi/CompatHelper.jl) and [PackageCompatUI.jl](https://github.com/GunnarFarneback/PackageCompatUI.jl) helpful for maintaining up-to-date `[compat]` entries.
 
+### Testing that the package can be imported
+
+AutoMerge tests whether the registered package/version can be
+imported. This is done using the lowest and highest Julia minor
+versions according to the Julia compat declared in `Project.toml`.
+For the chosen minor versions, the highest compatible patch version is
+used. There are two special cases:
+
+* For technical reasons 1.0.x versions cannot be used, so effectively
+  1.1 is the lowest considered minor version.
+
+* If a package only is compatible with a Julia version in prerelease
+  testing phase, the highest available prerelease version (e.g. a beta
+  or a release candidate) is used for import testing. Otherwise
+  prereleases are not used.
+
 ### Name similarity distance check
 
 These checks and tolerances are subject to change in order to improve the
@@ -130,9 +146,8 @@ your tentative package name passed the check, as well as a string,
 indicating what the problem is in the event the check did not pass.
 
 Note that these automerge guidelines are deliberately conservative: it is
-very possible for a perfectly good name to not pass the automatic checks and
-require manual merging. They simply exist to provide a fast path so that
-manual review is not required for every new package.
+very possible for a perfectly good name to not pass the automatic checks. They simply exist to provide a fast path so that
+manual review is not required for every new package. False positives can be overridden with a PR label after manual review.
 
 ### Providing and updating release notes
 
