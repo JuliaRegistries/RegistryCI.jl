@@ -1,7 +1,7 @@
 name = "AutoMerge"
 uuid = "c5732277-7834-41e3-8e1f-5f375898cfe1"
 authors = ["Dilum Aluthge <dilum@aluthge.com>", "Fredrik Ekre <ekrefredrik@gmail.com>", "contributors"]
-version = "1.1.0"
+version = "1.0.0"
 
 [deps]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
