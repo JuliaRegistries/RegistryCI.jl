@@ -1,0 +1,4 @@
+# split out AutoMerge.jl package (https://github.com/JuliaRegistries/RegistryCI.jl/pull/610)
+f4573cdd684e218a82e3339ff63fa8d2c7d64d71
+# Drop `.jl` suffix on subdir packages (https://github.com/JuliaRegistries/RegistryCI.jl/pull/619)
+d7d5f7804e8c9f0318663e4fe78f95fd3f3b8f14
