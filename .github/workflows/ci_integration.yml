@@ -54,8 +54,7 @@ jobs:
       - uses: julia-actions/julia-buildpkg@v1
         if: ${{ github.event_name != 'pull_request' }}
         with:
-          project: AutoMerge.jl
-
+          project: AutoMerge
       - run: git config --global user.email "noreply@example.com"
         if: ${{ github.event_name != 'pull_request' }}
 
@@ -65,7 +64,7 @@ jobs:
       - uses: julia-actions/julia-runtest@v1
         if: ${{ github.event_name != 'pull_request' }}
         with:
-          project: AutoMerge.jl
+          project: AutoMerge
         env:
           AUTOMERGE_RUN_INTEGRATION_TESTS: "true"
           AUTOMERGE_INTEGRATION_TEST_REPO: "bcbi-test/automerge-integration-test-repo"
@@ -75,8 +74,7 @@ jobs:
       - uses: julia-actions/julia-processcoverage@v1
         if: ${{ github.event_name != 'pull_request' }}
         with:
-          directories: AutoMerge.jl/src
-
+          directories: AutoMerge/src
       - uses: codecov/codecov-action@v5
         if: ${{ github.event_name != 'pull_request' }}
         with:
