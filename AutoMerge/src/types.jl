@@ -97,6 +97,11 @@ struct GitHubAutoMergeData
     # via `mktempdir`.
     pkg_code_path::String
 
+    # Location of the directory where the package repository
+    # is cloned for git operations. Populated at construction time
+    # via `mktempdir`.
+    pkg_clone_dir::String
+
     # A list of public Julia registries (repository URLs) which will
     # be checked for UUID collisions in order to mitigate the
     # dependency confusion vulnerability. See the
@@ -110,10 +115,11 @@ struct GitHubAutoMergeData
     environment_variables_to_pass::Vector{String}
 end
 
-# Constructor that requires all fields (except `pkg_code_path`) as named arguments.
+# Constructor that requires all fields (except `pkg_code_path` and `pkg_clone_dir`) as named arguments.
 function GitHubAutoMergeData(; kwargs...)
     pkg_code_path = mktempdir(; cleanup=true)
-    kwargs = (; pkg_code_path=pkg_code_path, kwargs...)
+    pkg_clone_dir = mktempdir(; cleanup=true)
+    kwargs = (; pkg_code_path=pkg_code_path, pkg_clone_dir=pkg_clone_dir, kwargs...)
     fields = fieldnames(GitHubAutoMergeData)
     always_assert(Set(keys(kwargs)) == Set(fields))
     always_assert(kwargs[:authorization] ∈ (:normal, :jll))
