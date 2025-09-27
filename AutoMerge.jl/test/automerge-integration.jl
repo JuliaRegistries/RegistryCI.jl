@@ -241,8 +241,8 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                         "TRAVIS_REPO_SLUG" => AUTOMERGE_INTEGRATION_TEST_REPO,
                     ) do
                         sleep(1)
-                        run_thunk =
-                            () -> AutoMerge.run(;
+
+                        config = AutoMerge.AutoMergeConfiguration(;
                                 merge_new_packages=true,
                                 merge_new_versions=true,
                                 new_package_waiting_period=Minute(typemax(Int32)),
@@ -257,8 +257,9 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                                 master_branch_is_default_branch=false,
                                 point_to_slack=point_to_slack,
                                 check_license=check_license,
-                                public_registries=public_registries,
-                            )
+                                public_registries=public_registries)
+                        run_thunk =
+                            () -> AutoMerge.run(config)
                         @info "Running integration test for " test_number master_dir feature_dir public_dir title point_to_slack check_license pass commit
                         if pass
                             run_thunk()
@@ -285,8 +286,8 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                                 GitHub.delete_comment(repo, blocking_comment; auth=auth, handle_error=false)
                             end
                         end
-                        AutoMerge.run(;
-                            merge_new_packages=true,
+                        config = AutoMerge.AutoMergeConfiguration(;
+                        merge_new_packages=true,
                             merge_new_versions=true,
                             new_package_waiting_period=Minute(typemax(Int32)),
                             new_jll_package_waiting_period=Minute(typemax(Int32)),
@@ -297,10 +298,10 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                             authorized_authors_special_jll_exceptions=String[whoami],
                             error_exit_if_automerge_not_applicable=true,
                             master_branch=master,
-                            master_branch_is_default_branch=false,
-                        )
+                            master_branch_is_default_branch=false,)
+                        AutoMerge.run(config)
                         sleep(1)
-                        merge = () -> AutoMerge.run(;
+                        config = AutoMerge.AutoMergeConfiguration(;
                             merge_new_packages=true,
                             merge_new_versions=true,
                             new_package_waiting_period=Minute(0),
@@ -314,6 +315,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                             master_branch=master,
                             master_branch_is_default_branch=false,
                         )
+                        merge = () -> AutoMerge.run(config)
                         merge()
                         if create_blocking_comment
                             # Check we have the blocked label
