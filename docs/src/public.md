@@ -20,8 +20,8 @@ CurrentModule = AutoMerge
 ### Main Entrypoints
 
 ```@docs
-AutoMerge.check_pr
 AutoMerge.merge_prs
+AutoMerge.check_pr
 ```
 
 ### Configuration Types
