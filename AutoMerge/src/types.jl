@@ -66,26 +66,26 @@ CheckPRConfiguration(; kwargs...)
 - `master_branch_is_default_branch::Bool = true`: if `master_branch` specified above is the default branch.
 - `suggest_onepointzero::Bool = true`: should the AutoMerge comment include a suggestion to tag a 1.0 release for v0.x.y packages.
 - `point_to_slack::Bool = false`: should the AutoMerge comment recommend sending a message to the `#pkg-registration` Julia-Slack channel when auto-merging is not possible.
-- `registry_deps::Vector{<:AbstractString} = String[]`: list of registry dependencies, e.g your packages may depend on `General`.
+- `registry_deps::Vector{String} = String[]`: list of registry dependencies, e.g your packages may depend on `General`.
 - `check_license::Bool = false`: check package has a valid license.
 - `check_breaking_explanation::Bool = false`: Check whether the PR has release notes (collected via Registrator.jl) with a breaking change explanation.
-- `public_registries::Vector{<:AbstractString} = String[]`: If a new package registration has a UUID that matches
+- `public_registries::Vector{String} = String[]`: If a new package registration has a UUID that matches
   that of a package already registered in one of these registries supplied here
   (and has either a different name or different URL) then an error will be thrown.
   This to prevent AutoMerge from being used for "dependency confusion"
   attacks on those registries.
-- `environment_variables_to_pass::Vector{<:AbstractString} = String[]`: Environment variables to pass to the subprocess that does `Pkg.add("Foo")` and `import Foo`
+- `environment_variables_to_pass::Vector{String} = String[]`: Environment variables to pass to the subprocess that does `Pkg.add("Foo")` and `import Foo`
 - `commit_status_token_name::String = "AUTOMERGE_GITHUB_TOKEN"`: Name of the environment variable containing the GitHub token used for PR validation. The token stored in this environment variable needs `repo:status` permission to set commit statuses and read access to PRs, but does not need write access to the repository.
 """
 Base.@kwdef struct CheckPRConfiguration <: AbstractConfiguration
     master_branch_is_default_branch::Bool = true
     suggest_onepointzero::Bool = true
     point_to_slack::Bool = false
-    registry_deps::Vector{<:AbstractString} = String[]
+    registry_deps::Vector{String} = String[]
     check_license::Bool = false
     check_breaking_explanation::Bool = false
-    public_registries::Vector{<:AbstractString} = String[]
-    environment_variables_to_pass::Vector{<:AbstractString} = String[]
+    public_registries::Vector{String} = String[]
+    environment_variables_to_pass::Vector{String} = String[]
     commit_status_token_name::String = "AUTOMERGE_GITHUB_TOKEN"
 end
 
@@ -105,15 +105,15 @@ MergePRsConfiguration(; kwargs...)
 
 - `merge_new_packages::Bool = true`: should AutoMerge merge registration PRs for new packages
 - `merge_new_versions::Bool = true`: should AutoMerge merge registration PRs for new versions of packages
-- `additional_statuses::AbstractVector{<:AbstractString} = String[]`: list of additional commit statuses that must pass before AutoMerge will merge a PR
-- `additional_check_runs::AbstractVector{<:AbstractString} = String[]`: list of additional check runs that must pass before AutoMerge will merge a PR
+- `additional_statuses::Vector{String} = String[]`: list of additional commit statuses that must pass before AutoMerge will merge a PR
+- `additional_check_runs::Vector{String} = String[]`: list of additional check runs that must pass before AutoMerge will merge a PR
 - `merge_token_name::String = "AUTOMERGE_MERGE_TOKEN"`: Name of the environment variable containing the GitHub token used for PR merging. The token stored in this environment variable needs write access to the repository to merge PRs.
 """
 Base.@kwdef struct MergePRsConfiguration <: AbstractConfiguration
     merge_new_packages::Bool = true
     merge_new_versions::Bool = true
-    additional_statuses::AbstractVector{<:AbstractString} = String[]
-    additional_check_runs::AbstractVector{<:AbstractString} = String[]
+    additional_statuses::Vector{String} = String[]
+    additional_check_runs::Vector{String} = String[]
     merge_token_name::String = "AUTOMERGE_MERGE_TOKEN"
 end
 
