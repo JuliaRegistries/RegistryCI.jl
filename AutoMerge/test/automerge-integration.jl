@@ -242,7 +242,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                     ) do
                         sleep(1)
 
-                        run_thunk = () -> AutoMerge.check_pr(;
+                        registry_config = AutoMerge.RegistryConfiguration(
                             registry=AUTOMERGE_INTEGRATION_TEST_REPO,
                             authorized_authors=String[whoami],
                             authorized_authors_special_jll_exceptions=String[whoami],
@@ -251,12 +251,16 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                             new_version_waiting_minutes=Minute(typemax(Int32)),
                             new_jll_version_waiting_minutes=Minute(typemax(Int32)),
                             error_exit_if_automerge_not_applicable=true,
-                            master_branch=master,
+                            master_branch=master
+                        )
+                        check_pr_config = AutoMerge.CheckPRConfiguration(
                             master_branch_is_default_branch=false,
                             point_to_slack=point_to_slack,
                             check_license=check_license,
                             public_registries=public_registries
                         )
+                        run_thunk =
+                            () -> AutoMerge.check_pr(registry_config, check_pr_config)
                         @info "Running integration test for " test_number master_dir feature_dir public_dir title point_to_slack check_license pass commit
                         if pass
                             run_thunk()
@@ -283,7 +287,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                                 GitHub.delete_comment(repo, blocking_comment; auth=auth, handle_error=false)
                             end
                         end
-                        AutoMerge.merge_prs(;
+                        registry_config = AutoMerge.RegistryConfiguration(
                             registry=AUTOMERGE_INTEGRATION_TEST_REPO,
                             authorized_authors=String[whoami],
                             authorized_authors_special_jll_exceptions=String[whoami],
@@ -292,12 +296,15 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                             new_version_waiting_minutes=Minute(typemax(Int32)),
                             new_jll_version_waiting_minutes=Minute(typemax(Int32)),
                             error_exit_if_automerge_not_applicable=true,
-                            master_branch=master,
+                            master_branch=master
+                        )
+                        merge_prs_config = AutoMerge.MergePRsConfiguration(
                             merge_new_packages=true,
                             merge_new_versions=true
                         )
+                        AutoMerge.merge_prs(registry_config, merge_prs_config)
                         sleep(1)
-                        merge = () -> AutoMerge.merge_prs(;
+                        registry_config = AutoMerge.RegistryConfiguration(
                             registry=AUTOMERGE_INTEGRATION_TEST_REPO,
                             authorized_authors=String[whoami],
                             authorized_authors_special_jll_exceptions=String[whoami],
@@ -306,10 +313,13 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                             new_version_waiting_minutes=Minute(0),
                             new_jll_version_waiting_minutes=Minute(0),
                             error_exit_if_automerge_not_applicable=true,
-                            master_branch=master,
+                            master_branch=master
+                        )
+                        merge_prs_config = AutoMerge.MergePRsConfiguration(
                             merge_new_packages=true,
                             merge_new_versions=true
                         )
+                        merge = () -> AutoMerge.merge_prs(registry_config, merge_prs_config)
                         merge()
                         if create_blocking_comment
                             # Check we have the blocked label
