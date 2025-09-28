@@ -68,7 +68,7 @@ For a custom registry, create a TOML configuration file. This can be based on th
 ```@eval
 import Markdown
 str ="```toml\n" * 
-    read("../../AutoMerge.jl/configs/General.AutoMerge.toml", String) *
+    read("../../AutoMerge/configs/General.AutoMerge.toml", String) *
     "\n```"
 @eval Markdown.@md_str($str)
 ```
