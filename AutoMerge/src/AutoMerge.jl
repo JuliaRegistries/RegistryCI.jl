@@ -19,7 +19,7 @@ using RegistryCI: RegistryCI
 
 if VERSION >= v"1.11.0-DEV.469"
     eval(Meta.parse("""
-    public check_pr, merge_prs, TagBot
+    public check_pr, merge_prs, TagBot, AutoMergeConfiguration, RegistryConfiguration, CheckPRConfiguration, MergePRsConfiguration, general_registry_config, read_config, write_config
     """))
 end
 

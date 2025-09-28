@@ -8,6 +8,12 @@ using SHA: sha1
 using GitHub: GitHub
 using JSON: JSON
 
+if VERSION >= v"1.11.0-DEV.469"
+    eval(Meta.parse("""
+    public main
+    """))
+end
+
 const GH = GitHub
 
 const AUTH = Ref{GH.OAuth2}()
