@@ -53,35 +53,34 @@ with:
 
 ## AutoMerge support
 
-In order to enable automerge support, you will also have to copy the `automerge.yml` file and configure AutoMerge appropriately.
-
-!!! info "Configuration Details"
-    For comprehensive AutoMerge configuration information, see the [Configuration](@ref) page.
-
-### Basic Setup
-
-AutoMerge uses separate entrypoints for security isolation:
-- **`check_pr`**: Validates PRs (runs untrusted code, minimal permissions)
-- **`merge_prs`**: Merges approved PRs (elevated permissions, no untrusted code)
+In order to enable automerge support, you will also have to copy the `automerge.yml` file and change the `AutoMerge` invocation appropriately
 
 ```julia
 using AutoMerge
-
-# Load configuration (see Configuration page for creation details)
-config = AutoMerge.read_config("MyRegistry.AutoMerge.toml")
-
-# In PR checking workflow
-AutoMerge.check_pr(config.registry_config, config.check_pr_config)
-
-# In merge workflow
-AutoMerge.merge_prs(config.registry_config, config.merge_prs_config)
+using Dates
+AutoMerge.run(
+    merge_new_packages = ENV["MERGE_NEW_PACKAGES"] == "true",
+    merge_new_versions = ENV["MERGE_NEW_VERSIONS"] == "true",
+    new_package_waiting_period = Day(3),
+    new_jll_package_waiting_period = Minute(20),
+    new_version_waiting_period = Minute(10),
+    new_jll_version_waiting_period = Minute(10),
+    registry = "MyOrg/MyRegistry",
+    tagbot_enabled = true,
+    authorized_authors = String["TrustedUser"],
+    authorized_authors_special_jll_exceptions = String[""],
+    suggest_onepointzero = false,
+    additional_statuses = String[],
+    additional_check_runs = String[],
+    check_license = true,
+    check_breaking_explanation = true,
+    public_registries = String["https://github.com/HolyLab/HolyLabRegistry"],
+)
 ```
-
-Most importantly, the following configuration settings must be updated for your registry:
-```toml
-[registry_config]
-registry = "MyOrg/MyRegistry"
-authorized_authors = ["TrustedUser"]
+Most importantly, the following should be changed
+```
+registry = "MyOrg/MyRegistry",
+authorized_authors = String["TrustedUser"],
 ```
 
 You will also have to make the following change in `.ci/stopwatch.jl`
