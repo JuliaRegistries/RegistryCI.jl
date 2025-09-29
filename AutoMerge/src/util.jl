@@ -82,19 +82,19 @@ end
 #####
 
 """
-    find_previous_semver_version(pkg::String, current_version::VersionNumber, registry_path::String) -> Union{VersionNumber, Nothing}
+    find_previous_semver_version(pkg::AbstractString, current_version::VersionNumber, registry_path::AbstractString) -> Union{VersionNumber, Nothing}
 
 Finds the previous semver version for a package. Returns the maximum version that is less than the current version,
 or `nothing` if there are no previous versions.
 """
-function find_previous_semver_version(pkg::String, current_version::VersionNumber, registry_path::String)
+function find_previous_semver_version(pkg::AbstractString, current_version::VersionNumber, registry_path::AbstractString)
     all_pkg_versions = all_versions(pkg, registry_path)
     previous_versions = filter(<(current_version), all_pkg_versions)
     return isempty(previous_versions) ? nothing : maximum(previous_versions)
 end
 
 """
-    tree_sha_to_commit_sha(tree_sha::String, clone_dir::String; subdir::String="") -> Union{String, Nothing}
+    tree_sha_to_commit_sha(tree_sha::AbstractString, clone_dir::AbstractString; subdir::AbstractString="") -> Union{AbstractString, Nothing}
 
 Converts a git tree SHA to a commit SHA by finding a commit that has that tree.
 Returns the commit SHA string, or `nothing` if no commit is found.
@@ -151,21 +151,21 @@ function tree_sha_to_commit_sha(tree_sha::AbstractString, clone_dir::AbstractStr
 end
 
 """
-    is_github_repo(repo_url::String) -> Bool
+    is_github_repo(repo_url::AbstractString) -> Bool
 
 Checks if a repository URL is a GitHub repository.
 """
-function is_github_repo(repo_url::String)
+function is_github_repo(repo_url::AbstractString)
     return occursin(r"github\.com[:/]", repo_url)
 end
 
 """
-    extract_github_owner_repo(repo_url::String) -> Union{Tuple{String, String}, Nothing}
+    extract_github_owner_repo(repo_url::AbstractString)
 
 Extracts the owner and repository name from a GitHub URL.
 Returns a tuple (owner, repo) or `nothing` if the URL is not a valid GitHub URL.
 """
-function extract_github_owner_repo(repo_url::String)
+function extract_github_owner_repo(repo_url::AbstractString)
     # Handle both HTTPS and SSH GitHub URLs
     # HTTPS: https://github.com/owner/repo.git
     # SSH: git@github.com:owner/repo.git
@@ -174,12 +174,12 @@ function extract_github_owner_repo(repo_url::String)
 end
 
 """
-    generate_github_diff_url(repo_url::String, previous_commit_sha::String, current_commit_sha::String) -> Union{String, Nothing}
+    generate_github_diff_url(repo_url::AbstractString, previous_commit_sha::AbstractString, current_commit_sha::AbstractString) -> Union{AbstractString, Nothing}
 
 Generates a GitHub diff URL comparing two commits.
-Returns the URL string, or `nothing` if the repository is not on GitHub.
+Returns the URL AbstractString, or `nothing` if the repository is not on GitHub.
 """
-function generate_github_diff_url(repo_url::String, previous_commit_sha::String, current_commit_sha::String)
+function generate_github_diff_url(repo_url::AbstractString, previous_commit_sha::AbstractString, current_commit_sha::AbstractString)
     if !is_github_repo(repo_url)
         return nothing
     end
