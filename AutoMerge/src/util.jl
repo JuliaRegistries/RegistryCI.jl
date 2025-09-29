@@ -23,17 +23,18 @@ function _clone_repo_into_dir(url::AbstractString, repo_dir)
 end
 
 """
-    load_files_from_url_and_tree_hash(f, destination::String, url::String, tree_hash::String) -> Bool
+    load_files_from_url_and_tree_hash(f, destination::String, url::String, tree_hash::String, pkg_clone_dir::String) -> Bool
 
-Attempts to clone a git repo from `url` into a temporary directory, runs `f(dir)` on that directory,
-then extract the files and folders from a given `tree_hash`, placing them in `destination`.
+Attempts to clone a git repo from `url` into `pkg_clone_dir` (or reuse existing clone if it exists),
+runs `f(dir)` on that directory, then extract the files and folders from a given `tree_hash`, placing them in `destination`.
+
+The repository is cloned into `pkg_clone_dir`.
 
 Returns a boolean indicating if the cloning succeeded.
 """
 function load_files_from_url_and_tree_hash(
-    f, destination::String, url::String, tree_hash::String
+    f, destination::String, url::String, tree_hash::String, pkg_clone_dir::String
 )
-    pkg_clone_dir = mktempdir()
     clone_success = try
         _clone_repo_into_dir(url, pkg_clone_dir)
         true
@@ -41,6 +42,7 @@ function load_files_from_url_and_tree_hash(
         @error "Cloning $url failed" e
         false
     end
+
     # if cloning failed, bail now
     !clone_success && return clone_success
 
@@ -73,6 +75,181 @@ function parse_registry_pkg_info(registry_path, pkg, version=nothing)
         tree_hash = convert(String, versions[string(version)]["git-tree-sha1"])
     end
     return (; uuid=uuid, repo=repo, subdir=subdir, tree_hash=tree_hash)
+end
+
+#####
+##### Version diff functionality
+#####
+
+"""
+    find_previous_semver_version(pkg::AbstractString, current_version::VersionNumber, registry_path::AbstractString) -> Union{VersionNumber, Nothing}
+
+Finds the previous semver version for a package. Returns the maximum version that is less than the current version,
+or `nothing` if there are no previous versions.
+"""
+function find_previous_semver_version(pkg::AbstractString, current_version::VersionNumber, registry_path::AbstractString)
+    all_pkg_versions = all_versions(pkg, registry_path)
+    previous_versions = filter(<(current_version), all_pkg_versions)
+    return isempty(previous_versions) ? nothing : maximum(previous_versions)
+end
+
+"""
+    tree_sha_to_commit_sha(tree_sha::AbstractString, clone_dir::AbstractString; subdir::AbstractString="") -> Union{AbstractString, Nothing}
+
+Converts a git tree SHA to a commit SHA by finding a commit that has that tree.
+Returns the commit SHA string, or `nothing` if no commit is found.
+"""
+function tree_sha_to_commit_sha(tree_sha::AbstractString, clone_dir::AbstractString; subdir::AbstractString = "")
+    isdir(clone_dir) || error("$clone_dir is not a directory")
+    # Normalize to a full tree object ID; return nothing if it’s not a tree reachable in this repo
+    full_tree = try
+        # --verify fails if not found; --quiet suppresses stderr noise
+        sha_cmd = "$tree_sha^{tree}"
+        readchomp(`git -C $(clone_dir) rev-parse --verify --quiet $sha_cmd`)
+    catch e
+        @warn e
+        return nothing
+    end
+    isempty(full_tree) && return nothing
+
+    if isempty(subdir)
+        # Single pass: (commit_sha tree_sha) per line for all commits across all refs
+        try
+            for line in eachline(`git -C $(clone_dir) log --all --format="%H %T"`)
+                commit_sha, tree_sha = split(line)
+                if tree_sha == full_tree
+                    return commit_sha
+                end
+            end
+        catch e
+            @warn e
+        end
+        return nothing
+    else
+        # Only commits that touched `subdir` (much smaller set)
+        commits = try
+            readlines(`git -C $(clone_dir) log --all --format=%H -- $subdir`)
+        catch e
+            @warn e
+            return nothing
+        end
+        isempty(commits) && return nothing
+
+        # Check subdir tree per candidate commit (fast enough in practice)
+        for c in commits
+            t = try
+                readchomp(`git -C $(clone_dir) rev-parse $c:$subdir`)
+            catch
+                continue  # subdir may not exist at this commit
+            end
+            if t == full_tree
+                return c
+            end
+        end
+        return nothing
+    end
+end
+
+"""
+    is_github_repo(repo_url::AbstractString) -> Bool
+
+Checks if a repository URL is a GitHub repository.
+"""
+function is_github_repo(repo_url::AbstractString)
+    return occursin(r"github\.com[:/]", repo_url)
+end
+
+"""
+    extract_github_owner_repo(repo_url::AbstractString)
+
+Extracts the owner and repository name from a GitHub URL.
+Returns a tuple (owner, repo) or `nothing` if the URL is not a valid GitHub URL.
+"""
+function extract_github_owner_repo(repo_url::AbstractString)
+    # Handle both HTTPS and SSH GitHub URLs
+    # HTTPS: https://github.com/owner/repo.git
+    # SSH: git@github.com:owner/repo.git
+    m = match(r"github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?/?$", repo_url)
+    return m === nothing ? nothing : (m.captures[1], m.captures[2])
+end
+
+"""
+    generate_github_diff_url(repo_url::AbstractString, previous_commit_sha::AbstractString, current_commit_sha::AbstractString) -> Union{AbstractString, Nothing}
+
+Generates a GitHub diff URL comparing two commits.
+Returns the URL AbstractString, or `nothing` if the repository is not on GitHub.
+"""
+function generate_github_diff_url(repo_url::AbstractString, previous_commit_sha::AbstractString, current_commit_sha::AbstractString)
+    if !is_github_repo(repo_url)
+        return nothing
+    end
+
+    owner_repo = extract_github_owner_repo(repo_url)
+    if owner_repo === nothing
+        return nothing
+    end
+
+    owner, repo = owner_repo
+    return "https://github.com/$owner/$repo/compare/$previous_commit_sha...$current_commit_sha"
+end
+
+"""
+    get_version_diff_info(data) -> Union{NamedTuple, Nothing}
+
+Gets diff information for a new version registration. Returns a NamedTuple with fields:
+- `diff_url`: GitHub diff URL
+- `previous_version`: Previous version number
+- `current_version`: Current version number
+
+Returns `nothing` if no previous version exists or if the repository is not on GitHub.
+"""
+function get_version_diff_info(data)
+    # Only applicable for new versions
+    if !(data.registration_type isa NewVersion)
+        return nothing
+    end
+
+    # Find the previous version
+    previous_version = find_previous_semver_version(data.pkg, data.version, data.registry_master)
+    if previous_version === nothing
+        return nothing
+    end
+
+    # Get package repository info
+    current_pkg_info = parse_registry_pkg_info(data.registry_head, data.pkg, data.version)
+    previous_pkg_info = parse_registry_pkg_info(data.registry_master, data.pkg, previous_version)
+
+    # Check if it's a GitHub repo
+    if !is_github_repo(current_pkg_info.repo)
+        return nothing
+    end
+
+    # Get current commit SHA from PR
+    current_commit_sha = commit_from_pull_request_body(data.pr)
+
+    # Convert previous tree SHA to commit SHA
+    previous_commit_sha = tree_sha_to_commit_sha(
+        previous_pkg_info.tree_hash,
+        data.pkg_clone_dir;
+        subdir=previous_pkg_info.subdir
+    )
+
+    if previous_commit_sha === nothing
+        return nothing
+    end
+
+    # Generate diff URL
+    diff_url = generate_github_diff_url(current_pkg_info.repo, previous_commit_sha, current_commit_sha)
+
+    if diff_url === nothing
+        return nothing
+    end
+
+    return (
+        diff_url=diff_url,
+        previous_version=previous_version,
+        current_version=data.version,
+    )
 end
 
 #####
@@ -139,26 +316,49 @@ function _comment_noblock(n)
     return result
 end
 
+function _version_diff_section(n, diff_info)
+    return string(
+        "## $n. Code changes since last version\n\n",
+        "Since the last version (v$(diff_info.previous_version)), ",
+        "you can see the code changes here:\n\n",
+        "[View diff]($(diff_info.diff_url))\n\n",
+    )
+end
+
 function comment_text_pass(
-    ::NewVersion, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool; new_package_waiting_period
+    ::NewVersion, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool; new_package_waiting_period, data=nothing
 )
     # Need to know this ahead of time to get the section numbers right
     suggest_onepointzero &= version < v"1.0.0"
+
+    # Get diff information if data is available
+    diff_info = data !== nothing ? get_version_diff_info(data) : nothing
+    has_diff = diff_info !== nothing
+
+    # Calculate section numbers
+    guidelines_section = 1
+    diff_section = 2
+    onepointzero_section = has_diff ? 3 : 2
+    noblock_section = suggest_onepointzero ? (has_diff ? 4 : 3) : (has_diff ? 3 : 2)
+
     result = string(
         _comment_bot_intro(),
-        _automerge_guidelines_passed_section_title(1),
+        _automerge_guidelines_passed_section_title(guidelines_section),
         "Your new version registration met all of the ",
         "guidelines for auto-merging and is scheduled to ",
         "be merged in the next round (~20 minutes).\n\n",
-        _onepointzero_suggestion(2, suggest_onepointzero, version),
-        _comment_noblock(suggest_onepointzero ? 3 : 2),
+        has_diff ? _version_diff_section(diff_section, diff_info) : "",
+        _onepointzero_suggestion(onepointzero_section, suggest_onepointzero, version),
+        _comment_noblock(noblock_section),
         "<!-- [noblock] -->",
     )
     return result
 end
 
+# We allow passing `data` since the NewVersion method uses it.
+# This way `comment_text_pass` can be called generically.
 function comment_text_pass(
-    ::NewPackage, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool; new_package_waiting_period
+    ::NewPackage, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool; new_package_waiting_period, data = nothing
 )
     suggest_onepointzero &= version < v"1.0.0"
     if is_jll
