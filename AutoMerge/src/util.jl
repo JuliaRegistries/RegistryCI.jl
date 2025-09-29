@@ -100,6 +100,7 @@ Converts a git tree SHA to a commit SHA by finding a commit that has that tree.
 Returns the commit SHA string, or `nothing` if no commit is found.
 """
 function tree_sha_to_commit_sha(tree_sha::AbstractString, clone_dir::AbstractString; subdir::AbstractString = "")
+    isdir(clone_dir) || error("$clone_dir is not a directory")
     # Normalize to a full tree object ID; return nothing if it’s not a tree reachable in this repo
     full_tree = try
         # --verify fails if not found; --quiet suppresses stderr noise

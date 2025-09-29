@@ -839,13 +839,13 @@ end
         end
 
         @testset "tree_sha_to_commit_sha" begin
-            # Test with invalid directory (should return nothing)
+            # Test with non-existent directory
             fake_sha = "0000000000000000000000000000000000000000"
-            @test AutoMerge.tree_sha_to_commit_sha(fake_sha, "/invalid/path") === nothing
+            @test_throws ErrorException AutoMerge.tree_sha_to_commit_sha(fake_sha, "/invalid/path/DOESNOTEXIST")
 
             # Test with invalid tree SHA in valid repo
             project_root = dirname(pkgdir(AutoMerge))  # Go up from AutoMerge.jl to RegistryCI.jl
-            @test AutoMerge.tree_sha_to_commit_sha(fake_sha, project_root) === nothing
+            @test @test_logs (:warn,) AutoMerge.tree_sha_to_commit_sha(fake_sha, project_root) === nothing
 
             # Create a temporary git repository for comprehensive testing
             mktempdir() do tmpdir
@@ -911,8 +911,8 @@ end
                 @test result === nothing || result isa AbstractString
 
                 # Test with malformed SHA
-                @test AutoMerge.tree_sha_to_commit_sha("not_a_sha", repo_dir) === nothing
-                @test AutoMerge.tree_sha_to_commit_sha("", repo_dir) === nothing
+                @test @test_logs (:warn,) AutoMerge.tree_sha_to_commit_sha("not_a_sha", repo_dir) === nothing
+                @test @test_logs (:warn,) AutoMerge.tree_sha_to_commit_sha("", repo_dir) === nothing
             end
         end
 
