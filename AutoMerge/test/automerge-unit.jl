@@ -990,20 +990,20 @@ end
                 @test AutoMerge.extract_github_owner_repo("invalid-url") === nothing
             end
 
-            @testset "generate_github_diff_url" begin
+            @testset "format_github_diff_url" begin
                 url = "https://github.com/owner/repo.git"
                 prev_sha = "abc123"
                 curr_sha = "def456"
                 expected = "https://github.com/owner/repo/compare/abc123...def456"
 
-                @test AutoMerge.generate_github_diff_url(url, prev_sha, curr_sha) == expected
+                @test AutoMerge.format_github_diff_url(url, prev_sha, curr_sha) == expected
 
                 # Test with SSH URL
                 ssh_url = "git@github.com:owner/repo.git"
-                @test AutoMerge.generate_github_diff_url(ssh_url, prev_sha, curr_sha) == expected
+                @test AutoMerge.format_github_diff_url(ssh_url, prev_sha, curr_sha) == expected
 
                 # Test with non-GitHub URL
-                @test AutoMerge.generate_github_diff_url("https://gitlab.com/owner/repo.git", prev_sha, curr_sha) === nothing
+                @test AutoMerge.format_github_diff_url("https://gitlab.com/owner/repo.git", prev_sha, curr_sha) === nothing
             end
         end
 
@@ -1096,8 +1096,8 @@ end
 
             result = AutoMerge._version_diff_section(2, diff_info)
             @test occursin("## 2. Code changes since last version", result)
-            @test occursin("Since the last version (v1.0.0)", result)
-            @test occursin("[View diff](https://github.com/owner/repo/compare/abc123...def456)", result)
+            @test occursin("Code changes from v1.0.0", result)
+            @test occursin("[View full diff](https://github.com/owner/repo/compare/abc123...def456)", result)
         end
 
         @testset "Comment text pass with diff integration" begin
