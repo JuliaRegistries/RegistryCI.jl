@@ -93,6 +93,10 @@ function find_previous_semver_version(pkg::AbstractString, current_version::Vers
     return isempty(previous_versions) ? nothing : maximum(previous_versions)
 end
 
+function diff_stats(old_tree_sha::AbstractString, new_tree_sha::AbstractString; clone_dir::AbstractString)
+    readchomp(`git -C $clone_dir diff-tree --stat $old_tree_sha $new_tree_sha`)
+end
+
 """
     tree_sha_to_commit_sha(tree_sha::AbstractString, clone_dir::AbstractString; subdir::AbstractString="") -> Union{AbstractString, Nothing}
 
@@ -174,12 +178,12 @@ function extract_github_owner_repo(repo_url::AbstractString)
 end
 
 """
-    generate_github_diff_url(repo_url::AbstractString, previous_commit_sha::AbstractString, current_commit_sha::AbstractString) -> Union{AbstractString, Nothing}
+    format_github_diff_url(repo_url::AbstractString, previous_commit_sha::AbstractString, current_commit_sha::AbstractString) -> Union{AbstractString, Nothing}
 
 Generates a GitHub diff URL comparing two commits.
 Returns the URL AbstractString, or `nothing` if the repository is not on GitHub.
 """
-function generate_github_diff_url(repo_url::AbstractString, previous_commit_sha::AbstractString, current_commit_sha::AbstractString)
+function format_github_diff_url(repo_url::AbstractString, previous_commit_sha::AbstractString, current_commit_sha::AbstractString)
     if !is_github_repo(repo_url)
         return nothing
     end
@@ -197,11 +201,13 @@ end
     get_version_diff_info(data) -> Union{NamedTuple, Nothing}
 
 Gets diff information for a new version registration. Returns a NamedTuple with fields:
-- `diff_url`: GitHub diff URL
+
+- `diff_stats`: string summarizing the git diff between package versions
+- `diff_url`: GitHub diff URL, if available. Otherwise `nothing`.
 - `previous_version`: Previous version number
 - `current_version`: Current version number
 
-Returns `nothing` if no previous version exists or if the repository is not on GitHub.
+Returns `nothing` if no previous version exists or package is not a `NewVersion`.
 """
 function get_version_diff_info(data)
     # Only applicable for new versions
@@ -219,6 +225,22 @@ function get_version_diff_info(data)
     current_pkg_info = parse_registry_pkg_info(data.registry_head, data.pkg, data.version)
     previous_pkg_info = parse_registry_pkg_info(data.registry_master, data.pkg, previous_version)
 
+    # Get code diff stats
+    diff_stats = diff_stats(previous_pkg_info.tree_hash, current_pkg_info.tree_hash; clone_dir=data.pkg_clone_dir)
+
+    # GitHub diff link
+    diff_link = get_github_diff_link(data, previous_pkg_info, current_pkg_info)
+
+    return (;
+        diff_stats,
+        diff_url,
+        previous_version,
+        current_version=data.version,
+    )
+
+end
+
+function get_github_diff_link(data, previous_pkg_info, current_pkg_info)
     # Check if it's a GitHub repo
     if !is_github_repo(current_pkg_info.repo)
         return nothing
@@ -238,18 +260,7 @@ function get_version_diff_info(data)
         return nothing
     end
 
-    # Generate diff URL
-    diff_url = generate_github_diff_url(current_pkg_info.repo, previous_commit_sha, current_commit_sha)
-
-    if diff_url === nothing
-        return nothing
-    end
-
-    return (
-        diff_url=diff_url,
-        previous_version=previous_version,
-        current_version=data.version,
-    )
+    return format_github_diff_url(current_pkg_info.repo, previous_commit_sha, current_commit_sha)
 end
 
 #####
@@ -317,12 +328,17 @@ function _comment_noblock(n)
 end
 
 function _version_diff_section(n, diff_info)
-    return string(
+    str = string(
         "## $n. Code changes since last version\n\n",
-        "Since the last version (v$(diff_info.previous_version)), ",
-        "you can see the code changes here:\n\n",
-        "[View diff]($(diff_info.diff_url))\n\n",
+        "Since the last version (v$(diff_info.previous_version)): \n",
+        diff_info.diff_stats
     )
+    if diff_info.diff_url !== nothing
+        str = string(str,
+            "\n\n",
+            "[View diff]($(diff_info.diff_url))\n\n")
+    end
+    return str
 end
 
 function comment_text_pass(

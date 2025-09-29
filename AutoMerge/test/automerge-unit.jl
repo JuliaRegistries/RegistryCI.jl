@@ -962,6 +962,7 @@ end
         @testset "Comment generation with diff" begin
             # Test the _version_diff_section function
             diff_info = (
+                diff_stats = "diff stats",
                 diff_url="https://github.com/owner/repo/compare/abc123...def456",
                 previous_version=v"1.0.0",
                 current_version=v"1.1.0"
