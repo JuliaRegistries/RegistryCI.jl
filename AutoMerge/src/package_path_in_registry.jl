@@ -14,10 +14,7 @@ function get_package_relpath_in_registry(; package_name::String, registry_path::
             "multiple ($(num_indices)) packages found with the name $(package_name)"
         ),
     )
-    if length(matching_package_indices) != 1
-        error("`matching_package_indices` contains $(length(matching_package_indices)) items, expected 1")
-    end
-    single_matching_index = first(matching_package_indices)
+    single_matching_index = only(matching_package_indices)
     single_matching_package = all_package_names_and_paths[single_matching_index]
     _pkgname, _pkgrelpath = single_matching_package
     always_assert(_pkgname == package_name)
