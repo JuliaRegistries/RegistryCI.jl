@@ -116,9 +116,9 @@ function tree_sha_to_commit_sha(tree_sha::AbstractString, clone_dir::AbstractStr
         # Single pass: (commit_sha tree_sha) per line for all commits across all refs
         try
             for line in eachline(`git -C $(clone_dir) log --all --format="%H %T"`)
-                commit_sha_tree_sha = split(line, ' ')
-                if commit_sha_tree_sha[2] == full_tree
-                    return commit_sha_tree_sha[1]
+                commit_sha, tree_sha = split(line)
+                if tree_sha == full_tree
+                    return commit_sha
                 end
             end
         catch e
