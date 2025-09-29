@@ -89,7 +89,7 @@ or `nothing` if there are no previous versions.
 """
 function find_previous_semver_version(pkg::String, current_version::VersionNumber, registry_path::String)
     all_pkg_versions = all_versions(pkg, registry_path)
-    previous_versions = filter(v -> v < current_version, all_pkg_versions)
+    previous_versions = filter(<(current_version), all_pkg_versions)
     return isempty(previous_versions) ? nothing : maximum(previous_versions)
 end
 
@@ -104,8 +104,7 @@ function tree_sha_to_commit_sha(tree_sha::AbstractString, clone_dir::AbstractStr
     full_tree = try
         # --verify fails if not found; --quiet suppresses stderr noise
         sha_cmd = "$tree_sha^{tree}"
-        readchomp(Cmd(`git -c gc.auto=0 rev-parse --verify --quiet $sha_cmd`;
-                      dir=clone_dir, env=Dict("GIT_NO_REPLACE_OBJECTS"=>"1")))
+        readchomp(`git -C $(clone_dir) rev-parse --verify --quiet $sha_cmd`)
     catch e
         @warn e
         return nothing
@@ -113,13 +112,11 @@ function tree_sha_to_commit_sha(tree_sha::AbstractString, clone_dir::AbstractStr
     isempty(full_tree) && return nothing
 
     if isempty(subdir)
-        # Single pass: (commit_sha \0 tree_sha) per line for all commits across all refs
+        # Single pass: (commit_sha tree_sha) per line for all commits across all refs
         try
-            cmd = Cmd(`git -c gc.auto=0 log --all --format=%H%x00%T`;
-                     dir=clone_dir, env=Dict("GIT_NO_REPLACE_OBJECTS"=>"1"))
-            for line in eachline(cmd)
-                commit_sha_tree_sha = split(line, Char(0))
-                if length(commit_sha_tree_sha) == 2 && commit_sha_tree_sha[2] == full_tree
+            for line in eachline(`git -C $(clone_dir) log --all --format="%H %T"`)
+                commit_sha_tree_sha = split(line, ' ')
+                if commit_sha_tree_sha[2] == full_tree
                     return commit_sha_tree_sha[1]
                 end
             end
@@ -129,22 +126,18 @@ function tree_sha_to_commit_sha(tree_sha::AbstractString, clone_dir::AbstractStr
         return nothing
     else
         # Only commits that touched `subdir` (much smaller set)
-        commits_s = try
-            readchomp(Cmd(`git -c gc.auto=0 log --all --format=%H -- $subdir`;
-                          dir=clone_dir, env=Dict("GIT_NO_REPLACE_OBJECTS"=>"1")))
+        commits = try
+            readlines(`git -C $(clone_dir) log --all --format=%H -- $subdir`)
         catch e
             @warn e
             return nothing
         end
-        isempty(commits_s) && return nothing
-        commits = split(commits_s, '\n'; keepempty=false)
+        isempty(commits) && return nothing
 
         # Check subdir tree per candidate commit (fast enough in practice)
         for c in commits
-            isempty(c) && continue
             t = try
-                readchomp(Cmd(`git rev-parse $c:$subdir`;
-                              dir=clone_dir, env=Dict("GIT_NO_REPLACE_OBJECTS"=>"1")))
+                readchomp(`git -C $(clone_dir) rev-parse $c:$subdir`)
             catch
                 continue  # subdir may not exist at this commit
             end
@@ -210,11 +203,6 @@ Gets diff information for a new version registration. Returns a NamedTuple with 
 Returns `nothing` if no previous version exists or if the repository is not on GitHub.
 """
 function get_version_diff_info(data)
-    # Handle null input gracefully
-    if data === nothing
-        return nothing
-    end
-
     # Only applicable for new versions
     if !(data.registration_type isa NewVersion)
         return nothing

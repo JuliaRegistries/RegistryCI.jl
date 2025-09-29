@@ -117,8 +117,8 @@ end
 
 # Constructor that requires all fields (except `pkg_code_path` and `pkg_clone_dir`) as named arguments.
 function GitHubAutoMergeData(; kwargs...)
-    pkg_code_path = mktempdir(; cleanup=true)
-    pkg_clone_dir = mktempdir(; cleanup=true)
+    pkg_code_path = mktempdir()
+    pkg_clone_dir = mktempdir()
     kwargs = (; pkg_code_path=pkg_code_path, pkg_clone_dir=pkg_clone_dir, kwargs...)
     fields = fieldnames(GitHubAutoMergeData)
     always_assert(Set(keys(kwargs)) == Set(fields))
