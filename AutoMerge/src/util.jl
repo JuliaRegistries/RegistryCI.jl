@@ -355,8 +355,10 @@ function comment_text_pass(
     return result
 end
 
+# We allow passing `data` since the NewVersion method uses it.
+# This way `comment_text_pass` can be called generically.
 function comment_text_pass(
-    ::NewPackage, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool; new_package_waiting_period
+    ::NewPackage, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool; new_package_waiting_period, data = nothing
 )
     suggest_onepointzero &= version < v"1.0.0"
     if is_jll
