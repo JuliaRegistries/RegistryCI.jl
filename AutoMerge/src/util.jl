@@ -93,8 +93,14 @@ function find_previous_semver_version(pkg::AbstractString, current_version::Vers
     return isempty(previous_versions) ? nothing : maximum(previous_versions)
 end
 
-function diff_stats(old_tree_sha::AbstractString, new_tree_sha::AbstractString; clone_dir::AbstractString)
-    readchomp(`git -C $clone_dir diff-tree --stat $old_tree_sha $new_tree_sha`)
+function get_diff_stats(old_tree_sha::AbstractString, new_tree_sha::AbstractString; clone_dir::AbstractString)
+    stats = readchomp(`git -C $clone_dir diff-tree --stat $old_tree_sha $new_tree_sha --stat-count=10 --stat-width=80 --no-color`)
+    return """
+           ```sh
+           ❯ git diff-tree --stat $old_tree_sha $new_tree_sha
+           $(stats)
+           ```
+           """
 end
 
 """
@@ -226,10 +232,10 @@ function get_version_diff_info(data)
     previous_pkg_info = parse_registry_pkg_info(data.registry_master, data.pkg, previous_version)
 
     # Get code diff stats
-    diff_stats = diff_stats(previous_pkg_info.tree_hash, current_pkg_info.tree_hash; clone_dir=data.pkg_clone_dir)
+    diff_stats = get_diff_stats(previous_pkg_info.tree_hash, current_pkg_info.tree_hash; clone_dir=data.pkg_clone_dir)
 
     # GitHub diff link
-    diff_link = get_github_diff_link(data, previous_pkg_info, current_pkg_info)
+    diff_url = get_github_diff_link(data, previous_pkg_info, current_pkg_info)
 
     return (;
         diff_stats,
@@ -330,13 +336,13 @@ end
 function _version_diff_section(n, diff_info)
     str = string(
         "## $n. Code changes since last version\n\n",
-        "Since the last version (v$(diff_info.previous_version)): \n",
+        "Code changes from v$(diff_info.previous_version): \n\n",
         diff_info.diff_stats
-    )
+        )
     if diff_info.diff_url !== nothing
         str = string(str,
-            "\n\n",
-            "[View diff]($(diff_info.diff_url))\n\n")
+            "\n",
+            "[View full diff]($(diff_info.diff_url))\n\n")
     end
     return str
 end
