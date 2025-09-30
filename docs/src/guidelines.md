@@ -6,7 +6,7 @@ CurrentModule = RegistryCI
 
 These are the guidelines that a pull request must pass in order to be automatically merged.
 
-All of those guidelines are enabled on the General registry.
+All of those guidelines are enabled on the General registry (see [`AutoMerge.general_registry_config`](@ref) for the precise configuration of AutoMerge used by General).
 
 For other registries, some of these guidelines can be disabled.
 

@@ -995,4 +995,140 @@ end
             @test result_with_data == result_no_data
         end
     end
+    
+    @testset "Config TOML functionality" begin
+        @testset "general_registry_config" begin
+            config = AutoMerge.general_registry_config()
+            @test config isa AutoMerge.AutoMergeConfiguration
+            @test config.registry_config isa AutoMerge.RegistryConfiguration
+            @test config.check_pr_config isa AutoMerge.CheckPRConfiguration
+            @test config.merge_prs_config isa AutoMerge.MergePRsConfiguration
+
+            @test config.registry_config.registry == "JuliaRegistries/General"
+            @test "JuliaRegistrator" in config.registry_config.authorized_authors
+            @test config.registry_config.master_branch == "master"
+            @test config.registry_config.api_url == "https://api.github.com"
+            @test !config.registry_config.read_only
+        end
+
+        @testset "write_config and read_config roundtrip" begin
+            mktempdir() do tmpdir
+                test_config = AutoMerge.AutoMergeConfiguration(
+                    registry_config = AutoMerge.RegistryConfiguration(
+                        registry = "TestUser/TestRegistry",
+                        authorized_authors = ["testuser", "anotheruser"],
+                        authorized_authors_special_jll_exceptions = ["jllbuild"],
+                        new_package_waiting_minutes = Dates.Minute(60),
+                        new_jll_package_waiting_minutes = Dates.Minute(30),
+                        new_version_waiting_minutes = Dates.Minute(15),
+                        new_jll_version_waiting_minutes = Dates.Minute(5),
+                        master_branch = "main",
+                        error_exit_if_automerge_not_applicable = true,
+                        api_url = "https://api.example.com",
+                        read_only = true
+                    ),
+                    check_pr_config = AutoMerge.CheckPRConfiguration(
+                        master_branch_is_default_branch = false,
+                        public_registries = ["https://github.com/TestOrg/TestRegistry"],
+                        environment_variables_to_pass = ["TEST_VAR"],
+                        commit_status_token_name = "TEST_TOKEN",
+                        check_license = true,
+                        suggest_onepointzero = true,
+                        registry_deps = ["General"],
+                        point_to_slack = false,
+                        check_breaking_explanation = true
+                    ),
+                    merge_prs_config = AutoMerge.MergePRsConfiguration(
+                        additional_statuses = ["test-status"],
+                        merge_new_packages = false,
+                        additional_check_runs = ["test-check"],
+                        merge_token_name = "MERGE_TOKEN",
+                        merge_new_versions = true
+                    )
+                )
+
+                config_path = joinpath(tmpdir, "test_config.toml")
+
+                # Test write_config
+                AutoMerge.write_config(config_path, test_config)
+                @test isfile(config_path)
+
+                # Test read_config
+                loaded_config = AutoMerge.read_config(config_path)
+                @test loaded_config isa AutoMerge.AutoMergeConfiguration
+
+                # Test that all fields are preserved using introspection
+                function test_configs_equal(original, loaded)
+                    for field in propertynames(original)
+                        original_val = getproperty(original, field)
+                        loaded_val = getproperty(loaded, field)
+                        if original_val isa AutoMerge.AbstractConfiguration
+                            test_configs_equal(original_val, loaded_val)
+                        else
+                            @test original_val == loaded_val
+                        end
+                    end
+                end
+                test_configs_equal(test_config, loaded_config)
+            end
+        end
+
+        @testset "serialization/deserialization of Dates.Minute" begin
+            test_config = AutoMerge.RegistryConfiguration(
+                registry = "Test/Registry",
+                authorized_authors = ["test"],
+                authorized_authors_special_jll_exceptions = String[],
+                new_package_waiting_minutes = Dates.Minute(120),
+                new_jll_package_waiting_minutes = Dates.Minute(30),
+                new_version_waiting_minutes = Dates.Minute(15),
+                new_jll_version_waiting_minutes = Dates.Minute(5)
+            )
+
+            # Test serialization and deserialization roundtrip
+            dict = AutoMerge.to_dict(test_config)
+            recreated_config = AutoMerge.from_dict(AutoMerge.RegistryConfiguration, dict)
+
+            # Verify minute fields are properly serialized/deserialized
+            minute_fields = filter(f -> endswith(string(f), "_minutes"), propertynames(test_config))
+            for field in minute_fields
+                original_val = getproperty(test_config, field)
+                serialized_val = dict[string(field)]
+                recreated_val = getproperty(recreated_config, field)
+
+                @test serialized_val == Dates.value(original_val)  # Serialized as integer
+                @test recreated_val == original_val  # Roundtrip preserves type and value
+            end
+        end
+
+        @testset "invalid serialization error" begin
+            struct TestStruct
+                invalid_field::Dates.Minute
+            end
+
+            @test_throws ErrorException AutoMerge._serialize(:invalid_field, Dates.Minute(10))
+        end
+
+        @testset "TOML file format validation" begin
+            mktempdir() do tmpdir
+                config = AutoMerge.general_registry_config()
+                config_path = joinpath(tmpdir, "test.toml")
+
+                AutoMerge.write_config(config_path, config)
+
+                # Read the TOML file as text and verify structure
+                toml_content = read(config_path, String)
+                @test occursin("[registry_config]", toml_content)
+                @test occursin("[check_pr_config]", toml_content)
+                @test occursin("[merge_prs_config]", toml_content)
+                @test occursin("registry = \"JuliaRegistries/General\"", toml_content)
+                @test occursin("authorized_authors = [\"JuliaRegistrator\"]", toml_content)
+
+                # Verify minute fields are serialized as integers
+                @test occursin("new_package_waiting_minutes = 4320", toml_content)
+                @test occursin("new_jll_package_waiting_minutes = 20", toml_content)
+                @test occursin("new_version_waiting_minutes = 10", toml_content)
+                @test occursin("new_jll_version_waiting_minutes = 10", toml_content)
+            end
+        end
+    end
 end

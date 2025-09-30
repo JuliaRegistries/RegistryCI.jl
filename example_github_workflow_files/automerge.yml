@@ -30,9 +30,12 @@ jobs:
           version: ${{ matrix.julia-version }}
       - name: Install dependencies by running Pkg.instantiate()
         run: julia --project=.ci/ -e 'using Pkg; Pkg.instantiate()'
-      - name: AutoMerge.run
+      - name: AutoMerge.pr_check
         env:
           AUTOMERGE_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          AUTOMERGE_TAGBOT_TOKEN: ${{ secrets.TAGBOT_TOKEN }}
+          AUTOMERGE_MERGE_TOKEN: ${{ secrets.TAGBOT_TOKEN }}
           JULIA_DEBUG: AutoMerge
-        run: julia --project=.ci/ -e 'using AutoMerge; using Dates; AutoMerge.run(merge_new_packages = true, merge_new_versions = true, new_package_waiting_period = Day(3), new_jll_package_waiting_period = Minute(15), new_version_waiting_period = Minute(15), new_jll_version_waiting_period = Minute(15), registry = "JuliaRegistries/General", tagbot_enabled=true, authorized_authors = String["JuliaRegistrator"], authorized_authors_special_jll_exceptions = String["jlbuild"], suggest_onepointzero = false, additional_statuses = String[], additional_check_runs = String["Travis CI - Pull Request"], check_breaking_explanation = true)'
+        run: |
+          config = AutoMerge.general_registry_config()
+          AutoMerge.pr_check(config.registry_config, config.check_pr_config)
+        shell: julia --color=yes --project=.ci/ {0}
