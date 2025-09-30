@@ -93,11 +93,10 @@ function find_previous_semver_version(pkg::AbstractString, current_version::Vers
     return isempty(previous_versions) ? nothing : maximum(previous_versions)
 end
 
-function get_diff_stats(old_tree_sha::AbstractString, new_tree_sha::AbstractString; clone_dir::AbstractString)
+function format_diff_stats(full_diff::AbstractString, stat::AbstractString, shortstat::AbstractString)
     # We want to give the most information we can in ~12 lines + optionally a detail block
     # The detail block should only be present if we can't fit the full diff inline AND the full diff will fit in the comment in the block. Comments can be 65,536 characters, but we will stop after 50k to allow room for other parts of the comment.
     # Note the full diff includes text from the package itself, so it is "attacker-controlled" in some sense.
-    full_diff = readchomp(`git -C $clone_dir diff-tree --patch $old_tree_sha $new_tree_sha --no-color`)
     full_diff_valid = isvalid(String, full_diff)
     full_diff_n_chars = length(full_diff)
     full_diff_n_lines = countlines(IOBuffer(full_diff))
@@ -109,10 +108,7 @@ function get_diff_stats(old_tree_sha::AbstractString, new_tree_sha::AbstractStri
         full_diff_fences = nothing
     end
 
-    stat = readchomp(`git -C $clone_dir diff-tree --stat $old_tree_sha $new_tree_sha --stat-width=80 --no-color`)
     stat_n_lines = countlines(IOBuffer(stat))
-
-    shortstat = readchomp(`git -C $clone_dir diff-tree --shortstat $old_tree_sha $new_tree_sha --no-color`)
 
     max_lines = 12
     if full_diff_valid && full_diff_n_lines <= max_lines && full_diff_n_chars < max_lines*200
@@ -160,6 +156,13 @@ function get_diff_stats(old_tree_sha::AbstractString, new_tree_sha::AbstractStri
         str *= "Full diff is not valid UTF-8, so is omitted here."
     end
     return str
+end
+
+function get_diff_stats(old_tree_sha::AbstractString, new_tree_sha::AbstractString; clone_dir::AbstractString)
+    full_diff = readchomp(`git -C $clone_dir diff-tree --patch $old_tree_sha $new_tree_sha --no-color`)
+    stat = readchomp(`git -C $clone_dir diff-tree --stat $old_tree_sha $new_tree_sha --stat-width=80 --no-color`)
+    shortstat = readchomp(`git -C $clone_dir diff-tree --shortstat $old_tree_sha $new_tree_sha --no-color`)
+    return format_diff_stats(full_diff, stat, shortstat)
 end
 
 """
