@@ -17,11 +17,7 @@ using RegistryTools: RegistryTools
 using Tar: Tar
 using RegistryCI: RegistryCI
 
-if VERSION >= v"1.11.0-DEV.469"
-    eval(Meta.parse("""
-    public check_pr, merge_prs, TagBot
-    """))
-end
+VERSION >= v"1.11" && eval(Meta.parse("public check_pr, merge_prs, TagBot"))
 
 include("TagBot/TagBot.jl")
 
