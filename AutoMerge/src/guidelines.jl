@@ -363,11 +363,11 @@ function find_and_parse_project_toml(code_path::AbstractString)
             return (false, "Project file $selected_proj_name missing required field `$field`.")
         end
     end
-    uuid = tryparse(UUID, toml["uuid"]),
+    uuid = tryparse(UUID, toml["uuid"])
     if uuid === nothing
         return (false, "Project file $selected_proj_name's uuid field `$(toml["uuid"]))` could not be parsed as a UUID.")
     end
-    version = tryparse(VersionNumber, toml["version"]),
+    version = tryparse(VersionNumber, toml["version"])
     if version === nothing
         return (false, "Project file $selected_proj_name's version field `$(toml["version"]))` could not be parsed as a VersionNumber.")
     end

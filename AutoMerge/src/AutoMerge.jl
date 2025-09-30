@@ -16,6 +16,7 @@ using Printf: Printf
 using RegistryTools: RegistryTools
 using Tar: Tar
 using RegistryCI: RegistryCI
+using UUIDs: UUID
 
 include("TagBot/TagBot.jl")
 

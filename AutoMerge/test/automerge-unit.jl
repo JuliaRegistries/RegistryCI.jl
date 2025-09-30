@@ -240,10 +240,22 @@ end
         @test "Logging" ∈ packages_no_jll
         @test "Poppler_jll" ∉ packages_no_jll
 
-        packages = AutoMerge.get_all_pkg_names(registry_path; keep_jll=false)
+        packages = AutoMerge.get_all_pkg_names(registry_path; keep_jll=true)
         @test "RegistryCI" ∈ packages
         @test "Logging" ∈ packages
-        @test "Poppler_jll" ∈ packages_no_jll
+        @test "Poppler_jll" ∈ packages
+    end
+    @testset "`get_all_pkg_name_uuids`" begin
+        registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
+        name_uuids = AutoMerge.get_all_pkg_name_uuids(registry_path)
+        @test all(haskey(x, :name) && haskey(x, :uuid) for x in name_uuids)
+        @test any(x.name == "RegistryCI" for x in name_uuids)
+        @test any(x.name == "Logging" for x in name_uuids)
+        # Verify UUIDs are of UUID type
+        @test all(x.uuid isa UUID for x in name_uuids)
+        # Verify sorted by name
+        names = [x.name for x in name_uuids]
+        @test issorted(names)
     end
     @testset "Standard initial version number" begin
         @test AutoMerge.meets_standard_initial_version_number(v"0.0.1")[1]
@@ -276,6 +288,116 @@ end
         @test !AutoMerge.url_has_correct_ending(
             "https://github.com/FluxML/Zygote.jl", "Flux"
         )[1]
+    end
+    @testset "`find_and_parse_project_toml`" begin
+        mktempdir() do tmp
+            # Valid Project.toml
+            proj_path = joinpath(tmp, "Project.toml")
+            write(proj_path, """
+                name = "TestPkg"
+                uuid = "12345678-1234-1234-1234-123456789abc"
+                version = "1.2.3"
+                """)
+            result, err = AutoMerge.find_and_parse_project_toml(tmp)
+            @test result isa AutoMerge.ProjectInfo
+            @test result.pkg_name == "TestPkg"
+            @test result.uuid == UUID("12345678-1234-1234-1234-123456789abc")
+            @test result.version == v"1.2.3"
+            @test err == ""
+            rm(proj_path)
+
+            # Valid JuliaProject.toml
+            julia_proj_path = joinpath(tmp, "JuliaProject.toml")
+            write(julia_proj_path, """
+                name = "TestPkg2"
+                uuid = "87654321-4321-4321-4321-cba987654321"
+                version = "0.1.0"
+                """)
+            result, err = AutoMerge.find_and_parse_project_toml(tmp)
+            @test result isa AutoMerge.ProjectInfo
+            @test result.pkg_name == "TestPkg2"
+            rm(julia_proj_path)
+
+            # Both files exist
+            write(proj_path, """
+                name = "TestPkg"
+                uuid = "12345678-1234-1234-1234-123456789abc"
+                version = "1.2.3"
+                """)
+            write(julia_proj_path, """
+                name = "TestPkg2"
+                uuid = "87654321-4321-4321-4321-cba987654321"
+                version = "0.1.0"
+                """)
+            result, err = AutoMerge.find_and_parse_project_toml(tmp)
+            @test result === false
+            @test occursin("Both Project.toml and JuliaProject.toml", err)
+            rm(proj_path)
+            rm(julia_proj_path)
+
+            # Neither file exists
+            result, err = AutoMerge.find_and_parse_project_toml(tmp)
+            @test result === false
+            @test occursin("Neither Project.toml nor JuliaProject.toml", err)
+
+            # Missing uuid field
+            write(proj_path, """
+                name = "TestPkg"
+                version = "1.2.3"
+                """)
+            result, err = AutoMerge.find_and_parse_project_toml(tmp)
+            @test result === false
+            @test occursin("missing required field `uuid`", err)
+            rm(proj_path)
+
+            # Invalid UUID
+            write(proj_path, """
+                name = "TestPkg"
+                uuid = "not-a-uuid"
+                version = "1.2.3"
+                """)
+            result, err = AutoMerge.find_and_parse_project_toml(tmp)
+            @test result === false
+            @test occursin("could not be parsed as a UUID", err)
+            rm(proj_path)
+
+            # Invalid version
+            write(proj_path, """
+                name = "TestPkg"
+                uuid = "12345678-1234-1234-1234-123456789abc"
+                version = "not-a-version"
+                """)
+            result, err = AutoMerge.find_and_parse_project_toml(tmp)
+            @test result === false
+            @test occursin("could not be parsed as a VersionNumber", err)
+            rm(proj_path)
+
+            # TOML parse error
+            write(proj_path, "this is not valid toml {{{{")
+            result, err = AutoMerge.find_and_parse_project_toml(tmp)
+            @test result === false
+            @test occursin("could not be parsed", err)
+        end
+    end
+    @testset "`meets_uuid_match_check`" begin
+        # UUID not in list - should pass
+        test_uuid = UUID("00000000-0000-0000-0000-000000000000")
+        name_uuids = [(name="PackageA", uuid=UUID("11111111-1111-1111-1111-111111111111")),
+                      (name="PackageB", uuid=UUID("22222222-2222-2222-2222-222222222222"))]
+        @test AutoMerge.meets_uuid_match_check(test_uuid, name_uuids)[1]
+
+        # UUID already exists - should fail
+        existing_uuid = UUID("11111111-1111-1111-1111-111111111111")
+        result, msg = AutoMerge.meets_uuid_match_check(existing_uuid, name_uuids)
+        @test !result
+        @test occursin("PackageA", msg)
+        @test occursin("already has UUID", msg)
+
+        # Nothing passed as project info - should fail
+        registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
+        result, msg = AutoMerge.meets_uuid_match_check(nothing, registry_path)
+        @test !result
+        @test occursin("Project.toml checks failed", msg)
     end
 end
 

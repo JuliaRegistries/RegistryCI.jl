@@ -496,7 +496,7 @@ function get_all_pkg_name_uuids(registry_dir::AbstractString)
     # Mimic the structure of a RegistryInstance
     list = parse_registry_toml(registry_dir, "Registry.toml")["packages"]
     registry = (; pkgs=Dict(k => (; name=v["name"], uuid=UUID(v["uuid"])) for (k,v) in pairs(list)))
-    return get_all_pkg_name_uuids(registry; keep_jll)
+    return get_all_pkg_name_uuids(registry)
 end
 
 # Generic method intended for RegistryInstance (without taking on the dependency,
