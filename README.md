@@ -23,8 +23,8 @@
 
 This repository contains two Julia packages:
 
-- **RegistryCI.jl** - Registry consistency testing tools for Julia package registries
-- **AutoMerge.jl** - Automatic merging (automerge) of pull requests and TagBot functionality for Julia package registries
+- **RegistryCI** - Registry consistency testing tools for Julia package registries
+- **AutoMerge** - Automatic merging (automerge) of pull requests and TagBot functionality for Julia package registries
 
 Starting with RegistryCI v11.0, the automerge and TagBot functionality has been moved to the separate AutoMerge.jl package. RegistryCI.jl now focuses solely on registry testing.
 
