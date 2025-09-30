@@ -93,7 +93,7 @@ function find_previous_semver_version(pkg::AbstractString, current_version::Vers
     return isempty(previous_versions) ? nothing : maximum(previous_versions)
 end
 
-function format_diff_stats(full_diff::AbstractString, stat::AbstractString, shortstat::AbstractString)
+function format_diff_stats(full_diff::AbstractString, stat::AbstractString, shortstat::AbstractString; old_tree_sha::AbstractString, new_tree_sha::AbstractString)
     # We want to give the most information we can in ~12 lines + optionally a detail block
     # The detail block should only be present if we can't fit the full diff inline AND the full diff will fit in the comment in the block. Comments can be 65,536 characters, but we will stop after 50k to allow room for other parts of the comment.
     # Note the full diff includes text from the package itself, so it is "attacker-controlled" in some sense.
@@ -102,7 +102,7 @@ function format_diff_stats(full_diff::AbstractString, stat::AbstractString, shor
     full_diff_n_lines = countlines(IOBuffer(full_diff))
 
     if full_diff_valid
-        n_full_diff_fences = maximum(x->length(x.captures[1])+1, eachmatch(r"(`+)$", full_diff), init=3)
+        n_full_diff_fences = maximum(x->length(x.captures[1])+1, eachmatch(r"(`+)", full_diff), init=3)
         full_diff_fences = "`"^n_full_diff_fences
     else
         full_diff_fences = nothing
@@ -124,7 +124,7 @@ function format_diff_stats(full_diff::AbstractString, stat::AbstractString, shor
         """
         ```sh
         ❯ git diff-tree --stat $old_tree_sha $new_tree_sha
-        $(stats)
+        $(stat)
         ```
         """
     else
@@ -139,7 +139,7 @@ function format_diff_stats(full_diff::AbstractString, stat::AbstractString, shor
     if full_diff_valid
         # only use details block if fewer than 50k chars
         if full_diff_n_chars <= 50_000
-            str *= """
+            str *= """\n
             <details><summary>Click to expand full patch diff</summary>
 
             $(full_diff_fences)diff
@@ -162,7 +162,7 @@ function get_diff_stats(old_tree_sha::AbstractString, new_tree_sha::AbstractStri
     full_diff = readchomp(`git -C $clone_dir diff-tree --patch $old_tree_sha $new_tree_sha --no-color`)
     stat = readchomp(`git -C $clone_dir diff-tree --stat $old_tree_sha $new_tree_sha --stat-width=80 --no-color`)
     shortstat = readchomp(`git -C $clone_dir diff-tree --shortstat $old_tree_sha $new_tree_sha --no-color`)
-    return format_diff_stats(full_diff, stat, shortstat)
+    return format_diff_stats(full_diff, stat, shortstat; old_tree_sha, new_tree_sha)
 end
 
 """

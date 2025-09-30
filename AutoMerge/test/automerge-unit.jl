@@ -122,6 +122,9 @@ end
     @testset "comment_reference_test" begin
         comment_reference_test()
     end
+    @testset "Format diff stats" begin
+        include("format-diff-stats.jl")
+    end
     @testset "Customized `new_package_waiting_period` in AutoMerge comment " begin
         text = AutoMerge.comment_text_pass(AutoMerge.NewPackage(), false, v"1", false; new_package_waiting_period=Minute(45))
         @test occursin("(45 minutes)", text)
@@ -1097,7 +1100,7 @@ end
             result = AutoMerge._version_diff_section(2, diff_info)
             @test occursin("## 2. Code changes since last version", result)
             @test occursin("Code changes from v1.0.0", result)
-            @test occursin("[View full diff](https://github.com/owner/repo/compare/abc123...def456)", result)
+            @test occursin("[View full patch diff on GitHub](https://github.com/owner/repo/compare/abc123...def456)", result)
         end
 
         @testset "Comment text pass with diff integration" begin
