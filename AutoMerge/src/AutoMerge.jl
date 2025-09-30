@@ -17,6 +17,8 @@ using RegistryTools: RegistryTools
 using Tar: Tar
 using RegistryCI: RegistryCI
 
+VERSION >= v"1.11" && eval(Meta.parse("public check_pr, merge_prs, TagBot"))
+
 include("TagBot/TagBot.jl")
 
 include("types.jl")

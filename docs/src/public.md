@@ -17,7 +17,8 @@ CurrentModule = AutoMerge
 ```
 
 ```@docs
-AutoMerge.run
+AutoMerge.check_pr
+AutoMerge.merge_prs
 ```
 
 ```@autodocs
