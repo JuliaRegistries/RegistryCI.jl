@@ -59,7 +59,7 @@ function comment_reference_test()
                 name = string("comment", "_pass_", pass, "_type_", type_name,
                 "_suggest_onepointzero_", suggest_onepointzero,
                 "_version_", version, "_is_jll_", is_jll)
-                @test_reference "reference_comments/$name.md" AutoMerge.comment_text_pass(type, suggest_onepointzero, version, is_jll, new_package_waiting_period=Day(3)) by=strip_equal
+                @test_reference "reference_comments/$name.md" AutoMerge.comment_text_pass(type, suggest_onepointzero, version, is_jll, new_package_waiting_minutes=convert(Minute, Day(3))) by=strip_equal
             end
         else
             for point_to_slack in (true, false)
@@ -88,8 +88,8 @@ end
     @testset "comment_reference_test" begin
         comment_reference_test()
     end
-    @testset "Customized `new_package_waiting_period` in AutoMerge comment " begin
-        text = AutoMerge.comment_text_pass(AutoMerge.NewPackage(), false, v"1", false; new_package_waiting_period=Minute(45))
+    @testset "Customized `new_package_waiting_minutes` in AutoMerge comment " begin
+        text = AutoMerge.comment_text_pass(AutoMerge.NewPackage(), false, v"1", false; new_package_waiting_minutes=Minute(45))
         @test occursin("(45 minutes)", text)
     end
     @testset "`AutoMerge.parse_registry_pkg_info`" begin
@@ -981,7 +981,7 @@ end
             # Test comment generation with no data (should work as before)
             result_no_data = AutoMerge.comment_text_pass(
                 AutoMerge.NewVersion(), false, v"1.1.0", false;
-                new_package_waiting_period=Day(3)
+                new_package_waiting_minutes=Day(3),
             )
             @test occursin("## 1.", result_no_data)  # More flexible test
             @test occursin("To pause or stop registration", result_no_data)
@@ -990,7 +990,7 @@ end
             # Test that with data=nothing, we get the same result
             result_with_data = AutoMerge.comment_text_pass(
                 AutoMerge.NewVersion(), false, v"1.1.0", false;
-                new_package_waiting_period=Day(3), data=nothing
+                new_package_waiting_minutes=Day(3), data=nothing
             )
             @test result_with_data == result_no_data
         end

@@ -79,10 +79,10 @@ function pr_is_old_enough(
     pr_type::Symbol,
     pr_age::Dates.Period;
     pkg::AbstractString,
-    new_package_waiting_period::Dates.Period,
-    new_jll_package_waiting_period::Dates.Period,
-    new_version_waiting_period::Dates.Period,
-    new_jll_version_waiting_period::Dates.Period,
+    new_package_waiting_minutes::Dates.Minute,
+    new_jll_package_waiting_minutes::Dates.Minute,
+    new_version_waiting_minutes::Dates.Minute,
+    new_jll_version_waiting_minutes::Dates.Minute,
     pr_author,
     authorized_authors,
     authorized_authors_special_jll_exceptions,
@@ -101,17 +101,17 @@ function pr_is_old_enough(
 
     if this_pr_can_use_special_jll_exceptions
         if pr_type == :NewPackage
-            return pr_age > new_jll_package_waiting_period
+            return pr_age > new_jll_package_waiting_minutes
         elseif pr_type == :NewVersion
-            return pr_age > new_jll_version_waiting_period
+            return pr_age > new_jll_version_waiting_minutes
         else
             throw(ArgumentError("pr_type must be either :NewPackage or :NewVersion"))
         end
     else
         if pr_type == :NewPackage
-            return pr_age > new_package_waiting_period
+            return pr_age > new_package_waiting_minutes
         elseif pr_type == :NewVersion
-            return pr_age > new_version_waiting_period
+            return pr_age > new_version_waiting_minutes
         else
             throw(ArgumentError("pr_type must be either :NewPackage or :NewVersion"))
         end
@@ -180,32 +180,41 @@ end
 
 function cron_or_api_build(
     api::GitHub.GitHubAPI,
-    registry::GitHub.Repo;
-    auth::GitHub.Authorization,
+    registry_repo::GitHub.Repo;
+    # Registry config args
+    registry::String,
     authorized_authors::Vector{String},
     authorized_authors_special_jll_exceptions::Vector{String},
+    new_package_waiting_minutes::Dates.Minute,
+    new_jll_package_waiting_minutes::Dates.Minute,
+    new_version_waiting_minutes::Dates.Minute,
+    new_jll_version_waiting_minutes::Dates.Minute,
+    master_branch::String,
+    error_exit_if_automerge_not_applicable::Bool,
+    api_url::String,
+    read_only::Bool,
+    # Merge config args
     merge_new_packages::Bool,
     merge_new_versions::Bool,
-    new_package_waiting_period,
-    new_jll_package_waiting_period,
-    new_version_waiting_period,
-    new_jll_version_waiting_period,
+    additional_statuses::AbstractVector{<:AbstractString},
+    additional_check_runs::AbstractVector{<:AbstractString},
+    merge_token_name::String,
+    auth::GitHub.Authorization,
     whoami::String,
     all_statuses::AbstractVector{<:AbstractString},
     all_check_runs::AbstractVector{<:AbstractString},
-    read_only::Bool,
 )
 
     if !read_only
         # first, create `BLOCKED_LABEL` as a label in the repo if it doesn't
         # already exist. This way we can add it to PRs as needed.
-        maybe_create_blocked_label(api, registry; auth=auth)
+        maybe_create_blocked_label(api, registry_repo; auth=auth)
     end
 
     # next, get a list of ALL open pull requests on this repository
     # then, loop through each of them.
     all_currently_open_pull_requests = my_retry(
-        () -> get_all_pull_requests(api, registry, "open"; auth=auth)
+        () -> get_all_pull_requests(api, registry_repo, "open"; auth=auth)
     )
     reverse!(all_currently_open_pull_requests)
     at_least_one_exception_was_thrown = false
@@ -218,20 +227,29 @@ function cron_or_api_build(
                     cron_or_api_build(
                         api,
                         pr,
-                        registry;
-                        auth=auth,
+                        registry_repo;
+                        # Registry config args
+                        registry=registry,
                         authorized_authors=authorized_authors,
                         authorized_authors_special_jll_exceptions=authorized_authors_special_jll_exceptions,
+                        new_package_waiting_minutes=new_package_waiting_minutes,
+                        new_jll_package_waiting_minutes=new_jll_package_waiting_minutes,
+                        new_version_waiting_minutes=new_version_waiting_minutes,
+                        new_jll_version_waiting_minutes=new_jll_version_waiting_minutes,
+                        master_branch=master_branch,
+                        error_exit_if_automerge_not_applicable=error_exit_if_automerge_not_applicable,
+                        api_url=api_url,
+                        read_only=read_only,
+                        # Merge config args
                         merge_new_packages=merge_new_packages,
                         merge_new_versions=merge_new_versions,
-                        new_package_waiting_period=new_package_waiting_period,
-                        new_jll_package_waiting_period=new_jll_package_waiting_period,
-                        new_version_waiting_period=new_version_waiting_period,
-                        new_jll_version_waiting_period=new_jll_version_waiting_period,
+                        additional_statuses=additional_statuses,
+                        additional_check_runs=additional_check_runs,
+                        merge_token_name=merge_token_name,
+                        auth=auth,
                         whoami=whoami,
                         all_statuses=all_statuses,
                         all_check_runs=all_check_runs,
-                        read_only=read_only,
                     )
                 end
             catch ex
@@ -255,20 +273,29 @@ end
 function cron_or_api_build(
     api::GitHub.GitHubAPI,
     pr::GitHub.PullRequest,
-    registry::GitHub.Repo;
-    auth::GitHub.Authorization,
+    registry_repo::GitHub.Repo;
+    # Registry config args
+    registry::String,
     authorized_authors::Vector{String},
     authorized_authors_special_jll_exceptions::Vector{String},
+    new_package_waiting_minutes::Dates.Minute,
+    new_jll_package_waiting_minutes::Dates.Minute,
+    new_version_waiting_minutes::Dates.Minute,
+    new_jll_version_waiting_minutes::Dates.Minute,
+    master_branch::String,
+    error_exit_if_automerge_not_applicable::Bool,
+    api_url::String,
+    read_only::Bool,
+    # Merge config args
     merge_new_packages::Bool,
     merge_new_versions::Bool,
-    new_package_waiting_period,
-    new_jll_package_waiting_period,
-    new_version_waiting_period,
-    new_jll_version_waiting_period,
+    additional_statuses::AbstractVector{<:AbstractString},
+    additional_check_runs::AbstractVector{<:AbstractString},
+    merge_token_name::String,
+    auth::GitHub.Authorization,
     whoami::String,
     all_statuses::AbstractVector{<:AbstractString},
     all_check_runs::AbstractVector{<:AbstractString},
-    read_only::Bool,
 )
     #       first, see if the author is an authorized author. if not, then skip.
     #       next, see if the title matches either the "New Version" regex or
@@ -312,12 +339,12 @@ function cron_or_api_build(
     # (as opposed to some other kind of PR).
     # This way we can update the labels now, regardless of the current status
     # of the other steps (e.g. automerge passing, waiting period, etc).
-    blocked = pr_has_blocking_comments(api, registry, pr; auth=auth) && !has_label(pr.labels, OVERRIDE_BLOCKS_LABEL)
+    blocked = pr_has_blocking_comments(api, registry_repo, pr; auth=auth) && !has_label(pr.labels, OVERRIDE_BLOCKS_LABEL)
     if blocked
         if !read_only && !has_label(pr.labels, BLOCKED_LABEL)
             # add `BLOCKED_LABEL` to communicate to users that the PR is blocked
             # from automerging, unless the label is already there.
-            GitHub.add_labels(api, registry.full_name, pr_number, [BLOCKED_LABEL]; auth=auth)
+            GitHub.add_labels(api, registry_repo.full_name, pr_number, [BLOCKED_LABEL]; auth=auth)
         end
         @info(
             string(
@@ -333,7 +360,7 @@ function cron_or_api_build(
         # if there is some race condition or manual intervention
         # and the blocked label was removed at some point between
         # when the `pr` object was created and now.
-        try_remove_label(api, registry.full_name, pr_number, BLOCKED_LABEL; auth=auth)
+        try_remove_label(api, registry_repo.full_name, pr_number, BLOCKED_LABEL; auth=auth)
     end
 
     if is_new_package(pr) # it is a new package
@@ -347,14 +374,14 @@ function cron_or_api_build(
     this_pr_is_old_enough = pr_is_old_enough(
         pr_type,
         pr_age;
-        pkg=pkg,
-        new_package_waiting_period=new_package_waiting_period,
-        new_jll_package_waiting_period=new_jll_package_waiting_period,
-        new_version_waiting_period=new_version_waiting_period,
-        new_jll_version_waiting_period=new_jll_version_waiting_period,
-        pr_author=pr_author,
-        authorized_authors=authorized_authors,
-        authorized_authors_special_jll_exceptions=authorized_authors_special_jll_exceptions,
+        pkg,
+        new_package_waiting_minutes,
+        new_jll_package_waiting_minutes,
+        new_version_waiting_minutes,
+        new_jll_version_waiting_minutes,
+        pr_author,
+        authorized_authors,
+        authorized_authors_special_jll_exceptions,
     )
     if !this_pr_is_old_enough
         @info(
@@ -369,14 +396,14 @@ function cron_or_api_build(
             _canonicalize_period(pr_age),
             pkg,
             is_jll_name(pkg),
-            new_package_waiting_period,
-            _canonicalize_period(new_package_waiting_period),
-            new_jll_package_waiting_period,
-            _canonicalize_period(new_jll_package_waiting_period),
-            new_version_waiting_period,
-            _canonicalize_period(new_version_waiting_period),
-            new_jll_version_waiting_period,
-            _canonicalize_period(new_jll_version_waiting_period),
+            new_package_waiting_minutes,
+            _canonicalize_period(new_package_waiting_minutes),
+            new_jll_package_waiting_minutes,
+            _canonicalize_period(new_jll_package_waiting_minutes),
+            new_version_waiting_minutes,
+            _canonicalize_period(new_version_waiting_minutes),
+            new_jll_version_waiting_minutes,
+            _canonicalize_period(new_jll_version_waiting_minutes),
             pr_author,
             authorized_authors,
             authorized_authors_special_jll_exceptions
@@ -385,7 +412,7 @@ function cron_or_api_build(
     end
 
     i_passed_this_pr, passed_pkg_name, passed_pr_head_sha, status_pr_type = pr_has_passing_automerge_decision_status(
-        api, registry, pr; auth=auth, whoami=whoami
+        api, registry_repo, pr; auth=auth, whoami=whoami
     )
     if !i_passed_this_pr
         @info(
@@ -403,10 +430,10 @@ function cron_or_api_build(
     always_assert(pkg == passed_pkg_name)
     always_assert(pr.head.sha == passed_pr_head_sha)
     _statuses_good = all_specified_statuses_passed(
-        api, registry, pr, passed_pr_head_sha, all_statuses; auth=auth
+        api, registry_repo, pr, passed_pr_head_sha, all_statuses; auth=auth
     )
     _checkruns_good = all_specified_check_runs_passed(
-        api, registry, pr, passed_pr_head_sha, all_check_runs; auth=auth
+        api, registry_repo, pr, passed_pr_head_sha, all_check_runs; auth=auth
     )
     if !(_statuses_good && _checkruns_good)
         @error(
@@ -436,7 +463,7 @@ function cron_or_api_build(
             if read_only
                 @info "`read_only` mode on; skipping merge"
             else
-                my_retry(() -> merge!(api, registry, pr, passed_pr_head_sha; auth=auth))
+                my_retry(() -> merge!(api, registry_repo, pr, passed_pr_head_sha; auth=auth))
             end
         else
             @info(
@@ -470,7 +497,7 @@ function cron_or_api_build(
             if read_only
                 @info "`read_only` mode on; skipping merge"
             else
-                my_retry(() -> merge!(api, registry, pr, passed_pr_head_sha; auth=auth))
+                my_retry(() -> merge!(api, registry_repo, pr, passed_pr_head_sha; auth=auth))
             end
         else
             @info(
