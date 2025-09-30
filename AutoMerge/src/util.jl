@@ -480,8 +480,8 @@ function time_is_already_in_utc(dt::Dates.DateTime)
 end
 
 """
-    get_all_non_jll_package_names(registry_dir::AbstractString) -> Vector{String}
-    get_all_non_jll_package_names(registry::RegistryInstance) -> Vector{String}
+    get_all_pkg_name_uuids(registry_dir::AbstractString) -> Vector{String}
+    get_all_pkg_name_uuids(registry::RegistryInstance) -> Vector{String}
 
 Given either:
 
@@ -491,27 +491,34 @@ or
 
 - a `RegistryInstance` object (from [RegistryInstances.jl](https://github.com/GunnarFarneback/RegistryInstances.jl)) associated to a registry,
 
-returns a sorted list of the names of Julia's standard libraries
-and all the non-JLL packages defined in that registry.
+returns a sorted list of the names and UUIDs of Julia's standard libraries
+and packages defined in that registry.
 """
-function get_all_non_jll_package_names(registry_dir::AbstractString)
+function get_all_pkg_name_uuids(registry_dir::AbstractString)
     # Mimic the structure of a RegistryInstance
     list = parse_registry_toml(registry_dir, "Registry.toml")["packages"]
     registry = (; pkgs=Dict(k => (; name=v["name"]) for (k,v) in pairs(list)))
-    return get_all_non_jll_package_names(registry)
+    return get_all_pkg_name_uuids(registry)
 end
 
 # Generic method intended for RegistryInstance (without taking on the dependency,
 # which is only valid on Julia 1.7+)
-function get_all_non_jll_package_names(registry)
-    packages = [entry.name for entry in values(registry.pkgs)]
-    append!(packages, (RegistryTools.get_stdlib_name(x) for x in values(RegistryTools.stdlibs())))
-    sort!(packages)
-    filter!(x -> !endswith(x, "_jll"), packages)
+function get_all_pkg_name_uuids(registry)
+    packages = [(; entry.name, uuid=UUID(uuid)) for (uuid, entry) in pairs(registry.pkgs)]
+    append!(packages, ((; name = RegistryTools.get_stdlib_name(x), uuid=k) for (k,x) in pairs(RegistryTools.stdlibs())))
+    sort!(packages; by=x->x.name)
     unique!(packages)
     return packages
 end
 
+function get_all_pkg_names(registry; keep_jll=true)
+    named_tuples = get_all_pkg_name_uuids(registry)
+    packages = [x.name for x in named_tuples]
+    if !keep_jll
+        filter!(!endswith("_jll"), packages)
+    end
+    return packages
+end
 
 function has_label(labels, target)
     # No labels? Then no
