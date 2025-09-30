@@ -495,14 +495,14 @@ and packages defined in that registry.
 function get_all_pkg_name_uuids(registry_dir::AbstractString)
     # Mimic the structure of a RegistryInstance
     list = parse_registry_toml(registry_dir, "Registry.toml")["packages"]
-    registry = (; pkgs=Dict(k => (; name=v["name"], uuid=UUID(v["uuid"])) for (k,v) in pairs(list)))
+    registry = (; pkgs=Dict(k => (; name=v["name"]) for (k,v) in pairs(list)))
     return get_all_pkg_name_uuids(registry)
 end
 
 # Generic method intended for RegistryInstance (without taking on the dependency,
 # which is only valid on Julia 1.7+)
 function get_all_pkg_name_uuids(registry)
-    packages = [(; entry.name, entry.uuid) for entry in values(registry.pkgs)]
+    packages = [(; entry.name, uuid=UUID(uuid)) for (uuid, entry) in pairs(registry.pkgs)]
     append!(packages, ((; name = RegistryTools.get_stdlib_name(x), uuid=k) for (k,x) in pairs(RegistryTools.stdlibs())))
     sort!(packages; by=x->x.name)
     unique!(packages)
