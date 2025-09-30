@@ -400,9 +400,9 @@ function meets_uuid_match_check(
     pkg_uuid::UUID,
     name_uuids::Vector;
 )
-    for nt in name_uuids
-        if pkg_uuid == nt.uuid
-            return (false, "Registered package (or stdlib) $(nt.name) already has UUID $(nt.uuid).")
+    for (; name, uuid) in name_uuids
+        if pkg_uuid == uuid
+            return (false, "Registered package (or stdlib) $name already has UUID $uuid.")
         end
     end
     return (true, "")
