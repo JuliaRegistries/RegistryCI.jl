@@ -54,7 +54,7 @@ function check_properties(result, props::TestProps)
     return true, ""
 end
 
-@testset "format_diff_stats (table-driven)" begin
+@testset "format_diff_stats" begin
     old_sha = "abc123"
     new_sha = "def456"
 
@@ -182,10 +182,6 @@ end
     @testset "$(tc.name)" for tc in test_cases
         result = AutoMerge.format_diff_stats(tc.full_diff, tc.stat, tc.shortstat;
                                              old_tree_sha=old_sha, new_tree_sha=new_sha)
-        if length(result) < 1000
-        println("--------$(tc.name)--------")
-        println(result)
-        end
         success, msg = check_properties(result, tc.props)
 
         @test success || error(msg)

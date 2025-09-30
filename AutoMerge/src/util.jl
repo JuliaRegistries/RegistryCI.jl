@@ -120,7 +120,7 @@ function format_diff_stats(full_diff::AbstractString, stat::AbstractString, shor
                """
     end
 
-    str = if stat_n_lines <= 12
+    str = if stat_n_lines <= max_lines
         """
         ```sh
         ❯ git diff-tree --stat $old_tree_sha $new_tree_sha
