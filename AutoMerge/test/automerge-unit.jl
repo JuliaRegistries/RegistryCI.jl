@@ -120,6 +120,10 @@ end
 end
 
 @testset "juliaup" begin
+    # Note: Available versions are platform dependent and on less well
+    # supported platforms or future platforms these tests might
+    # fail. We'll have to revise them if it becomes a problem in
+    # practice.
     compat = [Pkg.Types.VersionRange("1.0-1.8")]
     binaries = AutoMerge.get_compatible_julia_binaries(compat, v"1.1")
     @test length(binaries) == 2

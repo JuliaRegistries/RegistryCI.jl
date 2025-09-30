@@ -31,8 +31,8 @@ function find_available_julia_versions()
             end
         end
         # The number of available julia versions is assumed to be
-        # monotonically increasing. On 2025-09-23, when 1.12.0-rc2 was
-        # the highest available version, there were 125 available
+        # monotonically increasing. On 2025-09-30, when 1.12.0-rc3 was
+        # the highest available version, there were 126 available
         # versions by this count. Should this number ever decrease,
         # the only explanations are that either juliaup printing has
         # changed so that we misinterpret the output or that juliaup
@@ -41,9 +41,15 @@ function find_available_julia_versions()
         # everything but at least provides a simple sanity check. Feel
         # free to increase this threshold over time.)
         #
+        # However, this version count is platform dependent. The
+        # number above is for 64-bit Linux. Since this is run in
+        # production for the General registry on that platform, we
+        # only perform the sanity check in that case rather than
+        # trying to adapt the threshold per platform.
+        #
         # Note: In case an emergency fix or workaround is needed, it
         # might help to pin juliaup_jll to an earlier version.
-        if length(available_julia_versions) < 125
+        if Sys.MACHINE == "x86_64-linux-gnu" && length(available_julia_versions) < 126
             error("Internal error. Parsing of juliaup output might be outdated.")
         end
     end
