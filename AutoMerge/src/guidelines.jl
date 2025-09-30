@@ -337,7 +337,7 @@ function meets_project_toml_check(data)
         return false, "Package version from parsing the project file ($(val.version)) does not match version from registration PR ($(data.version))"
     end
     # store the parsed ProjectInfo
-    data.parsed_project_info[] = val
+    data.parsed_project_info = val
     return true, ""
 end
 
@@ -385,7 +385,7 @@ end
 const guideline_uuid_match_check = Guideline(;
     info = "UUID does not match the UUID of any existing package UUIDs",
     docs = "Packages must not match the UUID of an existing package or stdlib.",
-    check=data -> meets_uuid_match_check(data.parsed_project_info[], data.registry_master))
+    check=data -> meets_uuid_match_check(data.parsed_project_info, data.registry_master))
 
 function meets_uuid_match_check(maybe_project_info::Union{Nothing,ProjectInfo}, registry_master::AbstractString)
     if maybe_project_info === nothing
