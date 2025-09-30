@@ -43,7 +43,7 @@ TOML = "<0.0.1, 1"
 Tar = "<0.0.1, 1"
 TimeZones = "1"
 VisualStringDistances = "0.1"
-julia = "1.6"
+julia = "1.10"
 juliaup_jll = "1.17.19"
 
 [extras]
