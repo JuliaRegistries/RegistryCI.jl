@@ -33,38 +33,6 @@ function temp_git_dir(src::String; email="test@example.com", name="Test User")
 end
 
 """
-    detect_package_info(package_path::String) -> (pkg::String, version::VersionNumber, uuid::String)
-
-Extract package name, version, and UUID from Project.toml in the given package directory.
-"""
-function detect_package_info(package_path::String)
-    project_file = joinpath(package_path, "Project.toml")
-    if !isfile(project_file)
-        throw(ArgumentError("Project.toml not found in $package_path"))
-    end
-
-    project = TOML.parsefile(project_file)
-
-    pkg = get(project, "name", nothing)
-    if pkg === nothing
-        throw(ArgumentError("Package name not found in Project.toml"))
-    end
-
-    version_str = get(project, "version", nothing)
-    if version_str === nothing
-        throw(ArgumentError("Package version not found in Project.toml"))
-    end
-    version = VersionNumber(version_str)
-
-    uuid = get(project, "uuid", nothing)
-    if uuid === nothing
-        throw(ArgumentError("Package UUID not found in Project.toml"))
-    end
-
-    return pkg, version, uuid
-end
-
-"""
     get_current_commit_info(package_path::String) -> (commit_sha::String, tree_hash::String)
 
 Get the current commit SHA and tree hash from the git repository in the package directory.
@@ -98,7 +66,7 @@ function create_simulated_registry_with_package(
     package_path::String,
     registry_path::String
 )
-    # Create temporary directory for the simulated registry
+    # Create temporary directory for the simulated registry, which is a copy of the passed-in registry
     temp_registry = temp_git_dir(registry_path; email="automerge@local", name="AutoMerge Local")
 
     # Use RegistryTools.register to properly add the package
@@ -108,9 +76,8 @@ function create_simulated_registry_with_package(
     temp_pkg_repo = temp_git_dir(package_path)
     local result
     try
-
         # Get the actual git tree hash
-        actual_tree_hash = read(Cmd(`git rev-parse "HEAD^{tree}"`; dir=temp_pkg_repo), String) |> strip
+        actual_tree_hash = readchomp(Cmd(`git rev-parse "HEAD^{tree}"`; dir=temp_pkg_repo), String)
 
         # Use RegistryTools.register with file:// URLs
         registry_url = "file://" * temp_registry
@@ -127,10 +94,6 @@ function create_simulated_registry_with_package(
             force_reset=true,
         )
 
-        # Extract package info from Project.toml for verification
-        project_data = TOML.parsefile(joinpath(temp_pkg_repo, "Project.toml"))
-        pkg_uuid = project_data["uuid"]
-
         # Merge the registration branch that RegistryTools created
         if isnothing(result) || !hasfield(typeof(result), :branch)
             error("RegistryTools.register did not return a valid result with branch information")
@@ -144,12 +107,6 @@ function create_simulated_registry_with_package(
         Base.run(Cmd(`git checkout $registration_branch`; dir=temp_registry))
         Base.run(Cmd(`git checkout main`; dir=temp_registry))
         Base.run(Cmd(`git merge $registration_branch --no-edit`; dir=temp_registry))
-
-        # Verify registration was successful
-        registry_toml = TOML.parsefile(joinpath(temp_registry, "Registry.toml"))
-        if !haskey(registry_toml, "packages") || !haskey(registry_toml["packages"], pkg_uuid)
-            error("RegistryTools.register completed but package not found in registry")
-        end
 
     finally
         # Clean up temporary package repo

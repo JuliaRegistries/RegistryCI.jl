@@ -194,10 +194,6 @@ end
 function local_check(
     package_path::String,
     registry_path::String;
-    # Auto-detected parameters
-    pkg::Union{String, Nothing} = nothing,
-    version::Union{VersionNumber, Nothing} = nothing,
-    registration_type::Union{Union{NewPackage,NewVersion}, Nothing} = nothing,
 
     # Registry settings
     registry_deps::Vector{String} = String[],
@@ -218,10 +214,13 @@ function local_check(
         throw(ArgumentError("Registry path does not exist: $registry_path"))
     end
 
-    # Auto-detect package information
-    detected_pkg, detected_version, uuid = detect_package_info(package_path)
-    pkg = something(pkg, detected_pkg)
-    version = something(version, detected_version)
+    info, err = find_and_parse_project_toml(package_path)
+    if info === false
+        error(err)
+    end
+    pkg = info.pkg_name
+    version = info.version
+    uuid = info.uuid
 
     # Get git information
     commit_sha, tree_hash = get_current_commit_info(package_path)
