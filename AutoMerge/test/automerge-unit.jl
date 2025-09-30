@@ -233,12 +233,17 @@ end
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]hi"))
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[merge approved] abc"))
     end
-    @testset "`get_all_non_jll_package_names`" begin
+    @testset "`get_all_pkg_names`" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
-        packages = AutoMerge.get_all_non_jll_package_names(registry_path)
+        packages_no_jll = AutoMerge.get_all_pkg_names(registry_path; keep_jll=false)
+        @test "RegistryCI" ∈ packages_no_jll
+        @test "Logging" ∈ packages_no_jll
+        @test "Poppler_jll" ∉ packages_no_jll
+
+        packages = AutoMerge.get_all_pkg_names(registry_path; keep_jll=false)
         @test "RegistryCI" ∈ packages
         @test "Logging" ∈ packages
-        @test "Poppler_jll" ∉ packages
+        @test "Poppler_jll" ∈ packages_no_jll
     end
     @testset "Standard initial version number" begin
         @test AutoMerge.meets_standard_initial_version_number(v"0.0.1")[1]

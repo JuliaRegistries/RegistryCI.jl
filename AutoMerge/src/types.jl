@@ -39,6 +39,13 @@ struct ErrorCannotComputeVersionDifference
     msg::String
 end
 
+Base.@kwdef struct ProjectInfo
+    local_path::String
+    pkg_name::String
+    uuid::UUID
+    version::VersionNumber
+end
+
 struct GitHubAutoMergeData
     # Handle to the GitHub API. Used to query the PR and update
     # comments and status.
@@ -113,6 +120,9 @@ struct GitHubAutoMergeData
 
     # Environment variables to pass to the subprocess that does `Pkg.add("Foo")` and `import Foo`
     environment_variables_to_pass::Vector{String}
+
+    # after the code is downloaded, we parse the Project.toml and populate this
+    parsed_project_info::Base.RefValue{Union{Nothing,ProjectInfo}}
 end
 
 # Constructor that requires all fields (except `pkg_code_path` and `pkg_clone_dir`) as named arguments.

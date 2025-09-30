@@ -133,7 +133,7 @@ to your Julia environment):
 using RegistryCI, RegistryInstances
 using AutoMerge
 path_to_registry = joinpath(DEPOT_PATH[1], "registries", "General.toml")
-all_pkg_names = AutoMerge.get_all_non_jll_package_names(RegistryInstance(path_to_registry))
+all_pkg_names = AutoMerge.get_all_pkg_names(RegistryInstance(path_to_registry); keep_jll=false)
 AutoMerge.meets_distance_check("MyPackage123", all_pkg_names)
 ```
 
