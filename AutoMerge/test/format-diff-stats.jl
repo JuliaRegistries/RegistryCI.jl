@@ -25,7 +25,7 @@ has_stat(r) = occursin("❯ git diff-tree --stat", r)
 has_shortstat(r) = occursin("❯ git diff-tree --shortstat", r)
 has_omitted_msg(r) = occursin("over limit of 50k", r)
 has_utf8_msg(r) = occursin("not valid UTF-8", r)
-uses_fences(r, n) = occursin("`"^n * "diff", r)
+uses_fences(r, n) = occursin("`"^n * "diff", r) && !occursin("`"^(n+1) * "diff", r)
 
 # Test case runner
 function check_properties(result, props::TestProps)
@@ -145,7 +145,7 @@ end
          full_diff = "has ` backtick",
          stat = default_stat,
          shortstat = default_shortstat,
-         props = TestProps(has_inline_diff=true, fence_count=2)),
+         props = TestProps(has_inline_diff=true, fence_count=3)),
 
         (name = "Triple backticks → ````",
          full_diff = "```code```",
