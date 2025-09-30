@@ -981,7 +981,7 @@ end
             # Test comment generation with no data (should work as before)
             result_no_data = AutoMerge.comment_text_pass(
                 AutoMerge.NewVersion(), false, v"1.1.0", false;
-                new_package_waiting_period=Day(3)
+                new_package_waiting_minutes=Day(3),
             )
             @test occursin("## 1.", result_no_data)  # More flexible test
             @test occursin("To pause or stop registration", result_no_data)
@@ -990,7 +990,7 @@ end
             # Test that with data=nothing, we get the same result
             result_with_data = AutoMerge.comment_text_pass(
                 AutoMerge.NewVersion(), false, v"1.1.0", false;
-                new_package_waiting_period=Day(3), data=nothing
+                new_package_waiting_minutes=Day(3), data=nothing
             )
             @test result_with_data == result_no_data
         end
