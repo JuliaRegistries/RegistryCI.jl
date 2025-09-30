@@ -94,13 +94,72 @@ function find_previous_semver_version(pkg::AbstractString, current_version::Vers
 end
 
 function get_diff_stats(old_tree_sha::AbstractString, new_tree_sha::AbstractString; clone_dir::AbstractString)
-    stats = readchomp(`git -C $clone_dir diff-tree --stat $old_tree_sha $new_tree_sha --stat-count=10 --stat-width=80 --no-color`)
-    return """
-           ```sh
-           ❯ git diff-tree --stat $old_tree_sha $new_tree_sha
-           $(stats)
-           ```
-           """
+    # We want to give the most information we can in ~12 lines + optionally a detail block
+    # The detail block should only be present if we can't fit the full diff inline AND the full diff will fit in the comment in the block. Comments can be 65,536 characters, but we will stop after 50k to allow room for other parts of the comment.
+    # Note the full diff includes text from the package itself, so it is "attacker-controlled" in some sense.
+    full_diff = readchomp(`git -C $clone_dir diff-tree --patch $old_tree_sha $new_tree_sha --no-color`)
+    full_diff_valid = isvalid(String, full_diff)
+    full_diff_n_chars = length(full_diff)
+    full_diff_n_lines = countlines(IOBuffer(full_diff))
+
+    if full_diff_valid
+        n_full_diff_fences = maximum(x->length(x.captures[1])+1, eachmatch(r"(`+)$", full_diff), init=3)
+        full_diff_fences = "`"^n_full_diff_fences
+    else
+        full_diff_fences = nothing
+    end
+
+    stat = readchomp(`git -C $clone_dir diff-tree --stat $old_tree_sha $new_tree_sha --stat-width=80 --no-color`)
+    stat_n_lines = countlines(IOBuffer(stat))
+
+    shortstat = readchomp(`git -C $clone_dir diff-tree --shortstat $old_tree_sha $new_tree_sha --no-color`)
+
+    max_lines = 12
+    if full_diff_valid && full_diff_n_lines <= max_lines && full_diff_n_chars < max_lines*200
+        return """
+               $(full_diff_fences)diff
+               ❯ git diff-tree --patch $old_tree_sha $new_tree_sha
+               $(full_diff)
+               $(full_diff_fences)
+               """
+    end
+
+    str = if stat_n_lines <= 12
+        """
+        ```sh
+        ❯ git diff-tree --stat $old_tree_sha $new_tree_sha
+        $(stats)
+        ```
+        """
+    else
+        """
+        ```sh
+        ❯ git diff-tree --shortstat $old_tree_sha $new_tree_sha
+        $(shortstat)
+        ```
+        """
+    end
+
+    if full_diff_valid
+        # only use details block if fewer than 50k chars
+        if full_diff_n_chars <= 50_000
+            str *= """
+            <details><summary>Click to expand full patch diff</summary>
+
+            $(full_diff_fences)diff
+            ❯ git diff-tree --patch $old_tree_sha $new_tree_sha
+            $(full_diff)
+            $(full_diff_fences)
+
+            </details>
+            """
+        else
+            str *= "Full diff has $(full_diff_n_chars) characters (over limit of 50k), so is omitted here."
+        end
+    else
+        str *= "Full diff is not valid UTF-8, so is omitted here."
+    end
+    return str
 end
 
 """
@@ -342,7 +401,7 @@ function _version_diff_section(n, diff_info)
     if diff_info.diff_url !== nothing
         str = string(str,
             "\n",
-            "[View full diff]($(diff_info.diff_url))\n\n")
+            "[View full patch diff on GitHub]($(diff_info.diff_url))\n\n")
     end
     return str
 end
