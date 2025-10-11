@@ -65,7 +65,7 @@ jobs:
         os:
           - ubuntu-latest
         version:
-          - '1.10' # earliest supported version
+          - 'min' # earliest supported version
           - '1'
           - 'nightly'
     steps:
