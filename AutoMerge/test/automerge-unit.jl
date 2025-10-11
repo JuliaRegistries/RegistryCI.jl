@@ -18,7 +18,7 @@ function setup_global_depot()::String
     end
     tmp_depot = mktempdir()
     env1 = copy(ENV)
-    env1["JULIA_DEPOT_PATH"] = tmp_depot
+    env1["JULIA_DEPOT_PATH"] = tmp_depot * (Sys.iswindows() ? ";" : ":")
     delete!(env1, "JULIA_LOAD_PATH")
     delete!(env1, "JULIA_PROJECT")
     env2 = copy(env1)
