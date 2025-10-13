@@ -39,7 +39,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         run: echo "Integration tests are required but only run from the merge queue or on push/workflow_dispatch."
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         if: ${{ github.event_name != 'pull_request' }}
 
       - uses: julia-actions/setup-julia@v2
