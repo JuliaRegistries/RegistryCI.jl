@@ -1186,7 +1186,9 @@ function _run_pkg_commands(
     # kwarg to the `AutoMerge.run` function.
 
     env = Dict(
-        "JULIA_DEPOT_PATH" => mktempdir(),
+        # Append trailing path separator to `JULIA_DEPOT_PATH` to be able to
+        # load Julia stdlibs from Julia's bundle.
+        "JULIA_DEPOT_PATH" => mktempdir() * (Sys.iswindows() ? ";" : ":"),
         "JULIA_PKG_PRECOMPILE_AUTO" => "0",
         "JULIA_REGISTRYCI_AUTOMERGE" => "true",
         "PYTHON" => "",
