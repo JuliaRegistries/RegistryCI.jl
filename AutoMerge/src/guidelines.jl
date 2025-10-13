@@ -735,6 +735,7 @@ const guideline_code_can_be_downloaded = Guideline(;
         data.version,
         data.pr;
         pkg_code_path=data.pkg_code_path,
+        pkg_clone_dir=data.pkg_clone_dir,
     ),
 )
 
@@ -801,7 +802,7 @@ const guideline_src_names_OK = Guideline(;
     check=data -> meets_src_names_ok(data.pkg_code_path),
 )
 
-function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_path)
+function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_path, pkg_clone_dir)
     uuid, package_repo, subdir, tree_hash_from_toml = parse_registry_pkg_info(
         registry_head, pkg, version
     )
@@ -814,7 +815,7 @@ function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_
 
     local tree_hash_from_commit, tree_hash_from_commit_success
     clone_success = load_files_from_url_and_tree_hash(
-        pkg_code_path, package_repo, tree_hash_from_toml
+        pkg_code_path, package_repo, tree_hash_from_toml, pkg_clone_dir
     ) do dir
         tree_hash_from_commit, tree_hash_from_commit_success = try
             readchomp(Cmd(`git rev-parse $(commit_hash):$(subdir)`; dir=dir)), true
@@ -1096,7 +1097,9 @@ function _run_pkg_commands(
     # in `[check_pr_config]` in the config TOML.
 
     env = Dict(
-        "JULIA_DEPOT_PATH" => mktempdir(),
+        # Append trailing path separator to `JULIA_DEPOT_PATH` to be able to
+        # load Julia stdlibs from Julia's bundle.
+        "JULIA_DEPOT_PATH" => mktempdir() * (Sys.iswindows() ? ";" : ":"),
         "JULIA_PKG_PRECOMPILE_AUTO" => "0",
         "JULIA_REGISTRYCI_AUTOMERGE" => "true",
         "PYTHON" => "",
