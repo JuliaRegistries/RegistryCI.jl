@@ -75,12 +75,12 @@ function pull_request_build(
     api::GitHub.GitHubAPI,
     pr_number::Integer,
     current_pr_head_commit_sha::String,
-    registry::GitHub.Repo,
+    registry_repo::GitHub.Repo,
     registry_head::String;
     whoami::String,
     auth::GitHub.Authorization,
 )::Nothing
-    pr = my_retry(() -> GitHub.pull_request(api, registry, pr_number; auth=auth))
+    pr = my_retry(() -> GitHub.pull_request(api, registry_repo, pr_number; auth=auth))
     _github_api_pr_head_commit_sha = pull_request_head_sha(pr)
     if current_pr_head_commit_sha != _github_api_pr_head_commit_sha
         throw(
@@ -131,7 +131,7 @@ function pull_request_build(
         return nothing
     end
 
-    registry_master = clone_repo(registry)
+    registry_master = clone_repo(registry_repo)
     if !pr_config.master_branch_is_default_branch
         checkout_branch(registry_master, registry_config.master_branch)
     end
@@ -142,7 +142,7 @@ function pull_request_build(
         pkg,
         version,
         current_pr_head_commit_sha,
-        registry,
+        registry=registry_repo,
         auth,
         authorization,
         registry_head,

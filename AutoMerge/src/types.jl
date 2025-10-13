@@ -206,7 +206,12 @@ Base.show(io::IO, ::MIME"text/plain", obj::AbstractConfiguration) = _full_show(i
 Base.show(io::IO, obj::AbstractConfiguration) = print(io, typeof(obj), "(…)")
 
 function general_registry_config()
-    return read_config(joinpath(pkgdir(AutoMerge), "configs", "General.AutoMerge.toml"))
+    p = pkgdir(AutoMerge)
+    if p === nothing # make JET happy
+        @error "AutoMerge was not imported from a package, cannot locate package directory"
+        return nothing
+    end
+    return read_config(joinpath(p, "configs", "General.AutoMerge.toml"))
 end
 
 @doc """

@@ -950,6 +950,7 @@ end
                 @test occursin("new_jll_version_waiting_minutes = 10", toml_content)
             end
         end
+    end
 
     @testset "Version diff functionality" begin
         @testset "find_previous_semver_version" begin
