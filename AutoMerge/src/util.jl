@@ -93,22 +93,28 @@ function find_previous_semver_version(pkg::AbstractString, current_version::Vers
     return isempty(previous_versions) ? nothing : maximum(previous_versions)
 end
 
+function get_fences(str)
+    n = maximum(x->length(x.captures[1])+1, eachmatch(r"(`+)", str), init=3)
+    return "`"^n
+end
+
 function format_diff_stats(full_diff::AbstractString, stat::AbstractString, shortstat::AbstractString; old_tree_sha::AbstractString, new_tree_sha::AbstractString)
     # We want to give the most information we can in ~12 lines + optionally a detail block
     # The detail block should only be present if we can't fit the full diff inline AND the full diff will fit in the comment in the block. Comments can be 65,536 characters, but we will stop after 50k to allow room for other parts of the comment.
     # Note the full diff includes text from the package itself, so it is "attacker-controlled" in some sense.
+    # Similarly, the output from `stat` includes filenames from the package, and is again "attacker-controlled".
     full_diff_valid = isvalid(String, full_diff)
     full_diff_n_chars = length(full_diff)
     full_diff_n_lines = countlines(IOBuffer(full_diff))
 
     if full_diff_valid
-        n_full_diff_fences = maximum(x->length(x.captures[1])+1, eachmatch(r"(`+)", full_diff), init=3)
-        full_diff_fences = "`"^n_full_diff_fences
+        full_diff_fences = get_fences(full_diff)
     else
         full_diff_fences = nothing
     end
 
     stat_n_lines = countlines(IOBuffer(stat))
+    stat_fences = get_fences(stat)
 
     max_lines = 12
     if full_diff_valid && full_diff_n_lines <= max_lines && full_diff_n_chars < max_lines*200
@@ -122,10 +128,10 @@ function format_diff_stats(full_diff::AbstractString, stat::AbstractString, shor
 
     str = if stat_n_lines <= max_lines
         """
-        ```sh
+        $(stat_fences)sh
         ❯ git diff-tree --stat $old_tree_sha $new_tree_sha
         $(stat)
-        ```
+        $(stat_fences)
         """
     else
         """
