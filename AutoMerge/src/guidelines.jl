@@ -605,7 +605,7 @@ function _valid_change(old_version::VersionNumber, new_version::VersionNumber)
             T = typeof(diff)
             old_msg = "Unknown diff type: $(T)"
         end
-        new_msg = "Error occured while trying to compute version bump. Message: $(old_msg)"
+        new_msg = "Error occurred while trying to compute version bump. Message: $(old_msg)"
         return _invalid_sequential_version(new_msg)
     end
     @debug("Difference between versions: ", old_version, new_version, diff)
@@ -1093,8 +1093,8 @@ function _run_pkg_commands(
     # 9. HOME. Lots of things need HOME.
     #
     # If registry maintainers need additional environment variables to be passed
-    # to the child process, they can do so by providing the `environment_variables_to_pass`
-    # kwarg to the `AutoMerge.run` function.
+    # to the child process, they can do so by configuring `environment_variables_to_pass`
+    # in `[check_pr_config]` in the config TOML.
 
     env = Dict(
         # Append trailing path separator to `JULIA_DEPOT_PATH` to be able to

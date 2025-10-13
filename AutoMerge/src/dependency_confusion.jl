@@ -43,7 +43,7 @@ function has_no_dependency_confusion(pkg, registry_head, public_registries)
         catch
             message = string(
                 "Failed to clone public registry $(repo) for a check against dependency confusion.\n",
-                "This is an internal issue with the AutoMerge process and has nothing to do with "."the package being registered but requires manual intervention before AutoMerge ",
+                "This is an internal issue with the AutoMerge process and has nothing to do with ", "the package being registered but requires manual intervention before AutoMerge ",
                 "can be resumed.",
             )
             return false, message
