@@ -326,7 +326,7 @@ function _version_diff_section(n, diff_info)
 end
 
 function comment_text_pass(
-    ::NewVersion, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool; new_package_waiting_period, data=nothing
+    ::NewVersion, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool; new_package_waiting_minutes, data=nothing
 )
     # Need to know this ahead of time to get the section numbers right
     suggest_onepointzero &= version < v"1.0.0"
@@ -358,7 +358,7 @@ end
 # We allow passing `data` since the NewVersion method uses it.
 # This way `comment_text_pass` can be called generically.
 function comment_text_pass(
-    ::NewPackage, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool; new_package_waiting_period, data = nothing
+    ::NewPackage, suggest_onepointzero::Bool, version::VersionNumber, is_jll::Bool; new_package_waiting_minutes, data = nothing
 )
     suggest_onepointzero &= version < v"1.0.0"
     if is_jll
@@ -373,13 +373,15 @@ function comment_text_pass(
             "<!-- [noblock] -->",
         )
     else
+        wait = Dates.canonicalize(new_package_waiting_minutes)
+
         result = string(
             _comment_bot_intro(),
             _new_package_section(1),
             _automerge_guidelines_passed_section_title(2),
             "Your new package registration met all of the ",
             "guidelines for auto-merging and is scheduled to ",
-            "be merged when the mandatory waiting period ($new_package_waiting_period) has elapsed.\n\n",
+            "be merged when the mandatory waiting period ($wait) has elapsed.\n\n",
             _onepointzero_suggestion(3, suggest_onepointzero, version),
             _comment_noblock(suggest_onepointzero ? 4 : 3),
             "<!-- [noblock] -->",
