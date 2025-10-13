@@ -331,6 +331,9 @@ function cron_or_api_build(
     blocked = pr_has_blocking_comments(api, registry, pr; auth=auth) && !has_label(pr.labels, OVERRIDE_BLOCKS_LABEL)
 
     # Set GitHub status check for blocked-by-comment state
+    # This sets the `automerge/comment` commit status which is distinct from the
+    # `automerge/decision` commit status used by the `check_pr` AutoMerge run to
+    # communicate with the `merge_prs` cron job (this code!).
     status_params = comment_block_status_params(blocked)
     if !read_only
         my_retry(() -> GitHub.create_status(
