@@ -8,6 +8,7 @@ using RegistryCI
 using Test
 using TimeZones
 using ReferenceTests
+using UUIDs
 
 # Starting with Julia 1.7, when you use the Pkg server registry, the registry tarball does
 # not get unpacked, and thus the registry files are not available. Of course, AutoMerge
