@@ -362,6 +362,20 @@ end
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]hi"))
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[merge approved] abc"))
     end
+    @testset "comment_block_status_params" begin
+        # Test blocked state returns failure status
+        blocked_params = AutoMerge.comment_block_status_params(true)
+        @test blocked_params.state == "failure"
+        @test blocked_params.context == "automerge/comments"
+        @test occursin("Blocked", blocked_params.description)
+        @test occursin("[noblock]", blocked_params.description)
+
+        # Test unblocked state returns success status
+        unblocked_params = AutoMerge.comment_block_status_params(false)
+        @test unblocked_params.state == "success"
+        @test unblocked_params.context == "automerge/comments"
+        @test occursin("No blocking", unblocked_params.description)
+    end
     @testset "`get_all_non_jll_package_names`" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
         packages = AutoMerge.get_all_non_jll_package_names(registry_path)

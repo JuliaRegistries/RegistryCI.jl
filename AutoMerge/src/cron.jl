@@ -75,6 +75,22 @@ function pr_has_blocking_comments(
     return any(pr_comment_is_blocking, all_pr_comments)
 end
 
+function comment_block_status_params(blocked::Bool)
+    if blocked
+        return (
+            state = "failure",
+            context = "automerge/comments",
+            description = "Blocked by one or more comments. Add [noblock] to comments or add label `$OVERRIDE_BLOCKS_LABEL`."
+        )
+    else
+        return (
+            state = "success",
+            context = "automerge/comments",
+            description = "No blocking comments"
+        )
+    end
+end
+
 function pr_is_old_enough(
     pr_type::Symbol,
     pr_age::Dates.Period;
@@ -313,6 +329,22 @@ function cron_or_api_build(
     # This way we can update the labels now, regardless of the current status
     # of the other steps (e.g. automerge passing, waiting period, etc).
     blocked = pr_has_blocking_comments(api, registry, pr; auth=auth) && !has_label(pr.labels, OVERRIDE_BLOCKS_LABEL)
+
+    # Set GitHub status check for blocked-by-comment state
+    # This sets the `automerge/comment` commit status which is distinct from the
+    # `automerge/decision` commit status used by the `check_pr` AutoMerge run to
+    # communicate with the `merge_prs` cron job (this code!).
+    status_params = comment_block_status_params(blocked)
+    if !read_only
+        my_retry(() -> GitHub.create_status(
+            api,
+            registry,
+            pr.head.sha;
+            auth=auth,
+            params=Dict(pairs(status_params)...)
+        ))
+    end
+
     if blocked
         if !read_only && !has_label(pr.labels, BLOCKED_LABEL)
             # add `BLOCKED_LABEL` to communicate to users that the PR is blocked
