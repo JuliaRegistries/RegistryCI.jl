@@ -1,4 +1,7 @@
 function update_automerge_comment!(data::GitHubAutoMergeData, body::AbstractString)::Nothing
+    @info """Creating or updating automerge comment with contents:
+
+    $body"""
     if data.read_only
         @info "`read_only` mode; skipping updating automerge comment."
         return nothing
