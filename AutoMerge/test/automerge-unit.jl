@@ -8,7 +8,7 @@ using AutoMerge
 using Test
 using TimeZones
 
-
+TEMPLATE_DIR = joinpath(pkgdir(AutoMerge), "test", "templates")
 TEMP_DEPOT_FOR_TESTING = nothing
 
 function setup_global_depot()::String
@@ -27,6 +27,39 @@ function setup_global_depot()::String
     run(setenv(`julia -e 'import Pkg; Pkg.add(["RegistryCI"])'`, env1))
     TEMP_DEPOT_FOR_TESTING = tmp_depot
     tmp_depot
+end
+
+# Helper function to create a mock GitHub.PullRequest with only essential fields
+function create_mock_pr(commit_sha::String)
+    # Create a minimal NamedTuple that mimics the essential fields needed
+    return GitHub.PullRequest(;
+        body="Commit: $commit_sha\nRepository: https://github.com/MikeInnes/Requires.jl.git\nVersion: v2.0.0",
+    )
+end
+
+REQUIRES_CLONE = mktempdir()
+# Clone the actual Requires.jl repository for diff operations
+run(`git clone https://github.com/MikeInnes/Requires.jl.git $(REQUIRES_CLONE)`)
+
+# Helper to get something similar to a GitHubAutoMergeData
+# for testing diffs and comments
+function get_requires_version_data()
+    master_registry = joinpath(TEMPLATE_DIR, "master_2")
+        feature_registry = joinpath(TEMPLATE_DIR, "feature_2")
+        pkg_clone_dir = REQUIRES_CLONE
+        # Create mock PR with a real commit SHA from Requires.jl
+        mock_pr = create_mock_pr("999513b7dea8ac17359ed50ae8ea089e4464e35e") # This should match the tree hash
+
+        data = (;
+            registration_type=AutoMerge.NewVersion(),
+            pkg="Requires",
+            version=v"2.0.0",
+            registry_master=master_registry,
+            registry_head=feature_registry,
+            pkg_clone_dir=pkg_clone_dir,
+            pr=mock_pr
+        )
+        return data
 end
 
 # helper for testing `AutoMerge.meets_version_has_osi_license`
@@ -48,18 +81,19 @@ strip_equal(x, y) = strip(x) == strip(y)
 # This allows us to see the diffs in PRs that change the AutoMerge comment.
 # You can set `ENV["JULIA_REFERENCETESTS_UPDATE"] = true` to easily update the reference tests.
 function comment_reference_test()
+    data = get_requires_version_data()
     for pass in (true, false),
         (type_name,type) in (("new_version", AutoMerge.NewVersion()), ("new_package", AutoMerge.NewPackage())),
         suggest_onepointzero in (true, false),
         # some code depends on above or below v"1"
         version in (v"0.1", v"1")
-
         if pass
             for is_jll in (true, false)
                 name = string("comment", "_pass_", pass, "_type_", type_name,
                 "_suggest_onepointzero_", suggest_onepointzero,
                 "_version_", version, "_is_jll_", is_jll)
-                @test_reference "reference_comments/$name.md" AutoMerge.comment_text_pass(type, suggest_onepointzero, version, is_jll, new_package_waiting_period=Day(3)) by=strip_equal
+                text = AutoMerge.comment_text_pass(type, suggest_onepointzero, version, is_jll; new_package_waiting_period=Day(3), data)
+                @test_reference "reference_comments/$name.md" text by=strip_equal
             end
         else
             for point_to_slack in (true, false)
@@ -87,6 +121,9 @@ end
 @testset "Utilities" begin
     @testset "comment_reference_test" begin
         comment_reference_test()
+    end
+    @testset "Format diff stats" begin
+        include("format-diff-stats.jl")
     end
     @testset "Customized `new_package_waiting_period` in AutoMerge comment " begin
         text = AutoMerge.comment_text_pass(AutoMerge.NewPackage(), false, v"1", false; new_package_waiting_period=Minute(45))
@@ -116,6 +153,98 @@ end
         @test result.uuid == "e2b509da-e806-4183-be48-004708413034"
         @test result.subdir == "SnoopCompileCore"
         @test result.tree_hash == "bb6d6df44d9aa3494c997aebdee85b713b92c0de"
+    end
+
+    @testset "`AutoMerge.get_version_diff_info`" begin
+        # Test case 1: Successful version diff (NewVersion from v1.0.0 to v2.0.0)
+        @testset "successful version diff case" begin
+            data = get_requires_version_data()
+
+            result = AutoMerge.get_version_diff_info(data)
+
+            @test result !== nothing
+            @test result.previous_version == v"1.0.0"
+            @test result.current_version == v"2.0.0"
+            @test result.diff_stats isa String
+            @test !isempty(result.diff_stats)
+            # diff_url might be nothing if commit SHAs don't match exactly
+            @test result.diff_url isa Union{String, Nothing}
+
+        end
+
+        # Test case 2: NewPackage registration should return nothing
+        @testset "NewPackage registration returns nothing" begin
+            master_registry = joinpath(TEMPLATE_DIR, "master_2")
+            feature_registry = joinpath(TEMPLATE_DIR, "feature_2")
+
+            data = (
+                registration_type=AutoMerge.NewPackage(),
+                pkg="Requires",
+                version=v"1.0.0",
+                registry_master=master_registry,
+                registry_head=feature_registry,
+                pkg_clone_dir=mktempdir(),
+                pr=create_mock_pr("999513b7dea8ac17359ed50ae8ea089e4464e35e")
+            )
+
+            result = AutoMerge.get_version_diff_info(data)
+            @test result === nothing
+        end
+
+        # Test case 3: No previous version case
+        @testset "no previous version case" begin
+            master_registry = joinpath(TEMPLATE_DIR, "master_2")
+            feature_registry = joinpath(TEMPLATE_DIR, "feature_2")
+
+            data = (
+                registration_type=AutoMerge.NewVersion(),
+                pkg="Requires",
+                version=v"0.5.0", # Version lower than any existing version
+                registry_master=master_registry,
+                registry_head=feature_registry,
+                pkg_clone_dir=mktempdir(),
+                pr=create_mock_pr("999513b7dea8ac17359ed50ae8ea089e4464e35e")
+            )
+
+            result = AutoMerge.get_version_diff_info(data)
+            @test result === nothing
+        end
+
+        # Test case 4: Test with different registry that doesn't have previous versions
+        @testset "registry without previous versions" begin
+            feature_registry = joinpath(TEMPLATE_DIR, "feature_2")
+            mktempdir() do empty_registry
+
+                # Create minimal empty registry structure
+                mkpath(joinpath(empty_registry, "R", "Requires"))
+
+                # Copy Registry.toml
+                cp(joinpath(feature_registry, "Registry.toml"), joinpath(empty_registry, "Registry.toml"))
+
+                # Copy Package.toml
+                cp(joinpath(feature_registry, "R", "Requires", "Package.toml"),
+                joinpath(empty_registry, "R", "Requires", "Package.toml"))
+
+                # Create empty Versions.toml (no previous versions)
+                open(joinpath(empty_registry, "R", "Requires", "Versions.toml"), "w") do io
+                    println(io, "[\"1.0.0\"]")
+                    println(io, "git-tree-sha1 = \"999513b7dea8ac17359ed50ae8ea089e4464e35e\"")
+                end
+
+                data = (
+                    registration_type=AutoMerge.NewVersion(),
+                    pkg="Requires",
+                    version=v"1.0.0",
+                    registry_master=empty_registry,
+                    registry_head=feature_registry,
+                    pkg_clone_dir=mktempdir(),
+                    pr=create_mock_pr("999513b7dea8ac17359ed50ae8ea089e4464e35e")
+                )
+
+                result = AutoMerge.get_version_diff_info(data)
+                @test result === nothing  # No previous version available
+            end
+        end
     end
 end
 
@@ -882,20 +1011,20 @@ end
                 @test AutoMerge.extract_github_owner_repo("invalid-url") === nothing
             end
 
-            @testset "generate_github_diff_url" begin
+            @testset "format_github_diff_url" begin
                 url = "https://github.com/owner/repo.git"
                 prev_sha = "abc123"
                 curr_sha = "def456"
                 expected = "https://github.com/owner/repo/compare/abc123...def456"
 
-                @test AutoMerge.generate_github_diff_url(url, prev_sha, curr_sha) == expected
+                @test AutoMerge.format_github_diff_url(url, prev_sha, curr_sha) == expected
 
                 # Test with SSH URL
                 ssh_url = "git@github.com:owner/repo.git"
-                @test AutoMerge.generate_github_diff_url(ssh_url, prev_sha, curr_sha) == expected
+                @test AutoMerge.format_github_diff_url(ssh_url, prev_sha, curr_sha) == expected
 
                 # Test with non-GitHub URL
-                @test AutoMerge.generate_github_diff_url("https://gitlab.com/owner/repo.git", prev_sha, curr_sha) === nothing
+                @test AutoMerge.format_github_diff_url("https://gitlab.com/owner/repo.git", prev_sha, curr_sha) === nothing
             end
         end
 
@@ -980,6 +1109,7 @@ end
         @testset "Comment generation with diff" begin
             # Test the _version_diff_section function
             diff_info = (
+                diff_stats = "diff stats",
                 diff_url="https://github.com/owner/repo/compare/abc123...def456",
                 previous_version=v"1.0.0",
                 current_version=v"1.1.0"
@@ -987,8 +1117,8 @@ end
 
             result = AutoMerge._version_diff_section(2, diff_info)
             @test occursin("## 2. Code changes since last version", result)
-            @test occursin("Since the last version (v1.0.0)", result)
-            @test occursin("[View diff](https://github.com/owner/repo/compare/abc123...def456)", result)
+            @test occursin("Code changes from v1.0.0", result)
+            @test occursin("[View full patch diff on GitHub](https://github.com/owner/repo/compare/abc123...def456)", result)
         end
 
         @testset "Comment text pass with diff integration" begin
