@@ -39,6 +39,7 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
+          project: RegistryCI
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
         with:
@@ -65,7 +66,7 @@ jobs:
         os:
           - ubuntu-latest
         version:
-          - '1.10' # earliest supported version
+          - 'min' # earliest supported version
           - '1'
           - 'nightly'
     steps:
@@ -74,6 +75,7 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
+          project: AutoMerge
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
         with:
