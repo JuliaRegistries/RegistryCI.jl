@@ -153,7 +153,11 @@ end
 
 function _deserialize(k::AbstractString, x::Any)
     if endswith(k, "_minutes")
-       return Dates.Minute(x)
+        val = Dates.Minute(x)
+        if val < Dates.Minute(0)
+            error("Configuration field '$k' must be non-negative, got $(Dates.value(val)) minutes. Please check your configuration file.")
+        end
+        return val
     elseif k == "registry_config"
         return from_dict(RegistryConfiguration, x)
     elseif k == "check_pr_config"
@@ -161,11 +165,26 @@ function _deserialize(k::AbstractString, x::Any)
     elseif k == "merge_prs_config"
         return from_dict(MergePRsConfiguration, x)
     else
+        # Validate Vector{String} arrays
+        if x isa Vector
+            if !all(elt -> elt isa String, x)
+                error("Configuration field '$k' must be a Vector{String}, but contains non-string elements. Please check your configuration file.")
+            end
+            return Vector{String}(x)
+        end
         return x
     end
 end
 function from_dict(::Type{Config}, dict::AbstractDict{String}) where {Config <: AbstractConfiguration}
-    Config(; (Symbol(k) => _deserialize(k, dict[k]) for k in keys(dict))...)
+    # Check for unknown keys and warn (forward compatibility)
+    expected_keys = Set(String(k) for k in fieldnames(Config))
+    dict_keys = Set(keys(dict))
+    unknown_keys = setdiff(dict_keys, expected_keys)
+    if !isempty(unknown_keys)
+        @warn "Configuration contains unknown keys: $(join(unknown_keys, ", ")). This may indicate the configuration was created with a newer version of AutoMerge. These keys will be ignored."
+    end
+
+    Config(; (Symbol(k) => _deserialize(k, dict[k]) for k in keys(dict) if k in expected_keys)...)
 end
 
 """

@@ -1079,6 +1079,108 @@ end
                 @test occursin("new_jll_version_waiting_minutes = 10", toml_content)
             end
         end
+
+        @testset "Unknown keys warning" begin
+            mktempdir() do tmpdir
+                config_path = joinpath(tmpdir, "unknown_keys.toml")
+                write(config_path, """
+                [registry_config]
+                registry = "Test/Registry"
+                authorized_authors = ["test"]
+                authorized_authors_special_jll_exceptions = []
+                new_package_waiting_minutes = 60
+                new_jll_package_waiting_minutes = 30
+                new_version_waiting_minutes = 15
+                new_jll_version_waiting_minutes = 5
+                unknown_registry_field = "value"
+
+                [check_pr_config]
+
+                [merge_prs_config]
+                """)
+                # Should warn but not error
+                @test_logs (:warn, r"unknown keys") match_mode=:any AutoMerge.read_config(config_path)
+            end
+        end
+
+        @testset "Negative wait times validation" begin
+            mktempdir() do tmpdir
+                # Negative wait times should error
+                config_path = joinpath(tmpdir, "negative_wait.toml")
+                write(config_path, """
+                [registry_config]
+                registry = "Test/Registry"
+                authorized_authors = ["test"]
+                authorized_authors_special_jll_exceptions = []
+                new_package_waiting_minutes = -10
+                new_jll_package_waiting_minutes = 30
+                new_version_waiting_minutes = 15
+                new_jll_version_waiting_minutes = 5
+
+                [check_pr_config]
+
+                [merge_prs_config]
+                """)
+                @test_throws ErrorException AutoMerge.read_config(config_path)
+
+                # Zero wait times should be allowed (for immediate merging)
+                config_path2 = joinpath(tmpdir, "zero_wait.toml")
+                write(config_path2, """
+                [registry_config]
+                registry = "Test/Registry"
+                authorized_authors = ["test"]
+                authorized_authors_special_jll_exceptions = []
+                new_package_waiting_minutes = 0
+                new_jll_package_waiting_minutes = 0
+                new_version_waiting_minutes = 0
+                new_jll_version_waiting_minutes = 0
+
+                [check_pr_config]
+
+                [merge_prs_config]
+                """)
+                config = AutoMerge.read_config(config_path2)
+                @test config.registry_config.new_package_waiting_minutes == Dates.Minute(0)
+            end
+        end
+
+        @testset "Required fields validation" begin
+            mktempdir() do tmpdir
+                # Missing registry field - should error during struct construction
+                config_path = joinpath(tmpdir, "missing_registry.toml")
+                write(config_path, """
+                [registry_config]
+                authorized_authors = ["test"]
+                authorized_authors_special_jll_exceptions = []
+                new_package_waiting_minutes = 60
+                new_jll_package_waiting_minutes = 30
+                new_version_waiting_minutes = 15
+                new_jll_version_waiting_minutes = 5
+
+                [check_pr_config]
+
+                [merge_prs_config]
+                """)
+                @test_throws Exception AutoMerge.read_config(config_path)
+
+                # Missing authorized_authors - should error during struct construction
+                config_path2 = joinpath(tmpdir, "missing_authors.toml")
+                write(config_path2, """
+                [registry_config]
+                registry = "Test/Registry"
+                authorized_authors_special_jll_exceptions = []
+                new_package_waiting_minutes = 60
+                new_jll_package_waiting_minutes = 30
+                new_version_waiting_minutes = 15
+                new_jll_version_waiting_minutes = 5
+
+                [check_pr_config]
+
+                [merge_prs_config]
+                """)
+                @test_throws Exception AutoMerge.read_config(config_path2)
+            end
+        end
     end
 
     @testset "Version diff functionality" begin
