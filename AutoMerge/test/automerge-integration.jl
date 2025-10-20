@@ -232,6 +232,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                 with_pr_merge_commit(pr, repo_url_without_auth; GIT=GIT) do build_dir
                     withenv(
                         "AUTOMERGE_GITHUB_TOKEN" => TEST_USER_GITHUB_TOKEN,
+                        "AUTOMERGE_MERGE_TOKEN" => TEST_USER_GITHUB_TOKEN,
                         "TRAVIS_BRANCH" => master,
                         "TRAVIS_BUILD_DIR" => build_dir,
                         "TRAVIS_EVENT_TYPE" => "pull_request",
@@ -268,6 +269,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                     end
                     withenv(
                         "AUTOMERGE_GITHUB_TOKEN" => TEST_USER_GITHUB_TOKEN,
+                        "AUTOMERGE_MERGE_TOKEN" => TEST_USER_GITHUB_TOKEN,
                         "TRAVIS_BRANCH" => master,
                         "TRAVIS_BUILD_DIR" => build_dir,
                         "TRAVIS_EVENT_TYPE" => "cron",
