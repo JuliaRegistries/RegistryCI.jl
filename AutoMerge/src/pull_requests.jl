@@ -149,7 +149,7 @@ function pull_request_build(
         return nothing
     end
 
-    registry_master = clone_repo(registry_repo.clone_url)
+    registry_master = clone_repo(registry_repo)
     if !master_branch_is_default_branch
         checkout_branch(registry_master, master_branch)
     end
