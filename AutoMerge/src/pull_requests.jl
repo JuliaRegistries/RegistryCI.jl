@@ -85,7 +85,6 @@ function pull_request_build(
     new_jll_version_waiting_minutes::Dates.Minute,
     master_branch::String,
     error_exit_if_automerge_not_applicable::Bool,
-    api_url::String,
     read_only::Bool,
     # PR config args
     master_branch_is_default_branch::Bool,
@@ -96,7 +95,6 @@ function pull_request_build(
     check_breaking_explanation::Bool,
     public_registries::Vector{<:AbstractString},
     environment_variables_to_pass::Vector{<:AbstractString},
-    commit_status_token_name::String,
     whoami::String,
     auth::GitHub.Authorization,
 )::Nothing

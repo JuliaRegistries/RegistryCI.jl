@@ -96,7 +96,6 @@ function check_pr(;
         new_jll_version_waiting_minutes=new_jll_version_waiting_minutes,
         master_branch=master_branch,
         error_exit_if_automerge_not_applicable=error_exit_if_automerge_not_applicable,
-        api_url=api_url,
         read_only=read_only,
         # PR config args
         master_branch_is_default_branch=master_branch_is_default_branch,
@@ -107,7 +106,6 @@ function check_pr(;
         check_breaking_explanation=check_breaking_explanation,
         public_registries=public_registries,
         environment_variables_to_pass=environment_variables_to_pass,
-        commit_status_token_name=commit_status_token_name,
         whoami=whoami,
         auth=auth,
     )
