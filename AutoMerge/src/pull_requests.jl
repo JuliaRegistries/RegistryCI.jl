@@ -73,26 +73,32 @@ function pull_request_build(
     api::GitHub.GitHubAPI,
     pr_number::Integer,
     current_pr_head_commit_sha::String,
-    registry::GitHub.Repo,
+    registry_repo::GitHub.Repo,
     registry_head::String;
-    whoami::String,
-    auth::GitHub.Authorization,
+    # Registry config args
+    registry::String,
     authorized_authors::Vector{String},
     authorized_authors_special_jll_exceptions::Vector{String},
-    error_exit_if_automerge_not_applicable=error_exit_if_automerge_not_applicable,
+    new_package_waiting_minutes::Dates.Minute,
+    new_jll_package_waiting_minutes::Dates.Minute,
+    new_version_waiting_minutes::Dates.Minute,
+    new_jll_version_waiting_minutes::Dates.Minute,
     master_branch::String,
+    error_exit_if_automerge_not_applicable::Bool,
+    read_only::Bool,
+    # PR config args
     master_branch_is_default_branch::Bool,
     suggest_onepointzero::Bool,
     point_to_slack::Bool,
-    registry_deps::Vector{<:AbstractString}=String[],
+    registry_deps::Vector{<:AbstractString},
     check_license::Bool,
     check_breaking_explanation::Bool,
-    public_registries::Vector{<:AbstractString}=String[],
-    read_only::Bool,
-    environment_variables_to_pass::Vector{<:AbstractString}=String[],
-    new_package_waiting_period=new_package_waiting_period,
+    public_registries::Vector{<:AbstractString},
+    environment_variables_to_pass::Vector{<:AbstractString},
+    whoami::String,
+    auth::GitHub.Authorization,
 )::Nothing
-    pr = my_retry(() -> GitHub.pull_request(api, registry, pr_number; auth=auth))
+    pr = my_retry(() -> GitHub.pull_request(api, registry_repo, pr_number; auth=auth))
     _github_api_pr_head_commit_sha = pull_request_head_sha(pr)
     if current_pr_head_commit_sha != _github_api_pr_head_commit_sha
         throw(
@@ -111,7 +117,7 @@ function pull_request_build(
         throw_not_automerge_applicable(
             AutoMergePullRequestNotOpen,
             "The pull request is not open. Exiting...";
-            error_exit_if_automerge_not_applicable=error_exit_if_automerge_not_applicable,
+            error_exit_if_automerge_not_applicable,
         )
         return nothing
     end
@@ -124,7 +130,7 @@ function pull_request_build(
         throw_not_automerge_applicable(
             AutoMergeNeitherNewPackageNorNewVersion,
             "Neither a new package nor a new version. Exiting...";
-            error_exit_if_automerge_not_applicable=error_exit_if_automerge_not_applicable,
+            error_exit_if_automerge_not_applicable,
         )
         return nothing
     end
@@ -143,36 +149,36 @@ function pull_request_build(
         return nothing
     end
 
-    registry_master = clone_repo(registry)
+    registry_master = clone_repo(registry_repo)
     if !master_branch_is_default_branch
         checkout_branch(registry_master, master_branch)
     end
     data = GitHubAutoMergeData(;
-        api=api,
-        registration_type=registration_type,
-        pr=pr,
-        pkg=pkg,
-        version=version,
-        current_pr_head_commit_sha=current_pr_head_commit_sha,
-        registry=registry,
-        auth=auth,
-        authorization=authorization,
-        registry_head=registry_head,
-        registry_master=registry_master,
-        suggest_onepointzero=suggest_onepointzero,
-        point_to_slack=point_to_slack,
-        whoami=whoami,
-        registry_deps=registry_deps,
-        public_registries=public_registries,
-        read_only=read_only,
-        environment_variables_to_pass=environment_variables_to_pass,
+        api,
+        registration_type,
+        pr,
+        pkg,
+        version,
+        current_pr_head_commit_sha,
+        registry=registry_repo,
+        auth,
+        authorization,
+        registry_head,
+        registry_master,
+        suggest_onepointzero,
+        point_to_slack,
+        whoami,
+        registry_deps,
+        public_registries,
+        read_only,
+        environment_variables_to_pass,
     )
-    pull_request_build(data; check_license=check_license, check_breaking_explanation=check_breaking_explanation, new_package_waiting_period=new_package_waiting_period)
+    pull_request_build(data; check_license, check_breaking_explanation, new_package_waiting_minutes)
     rm(registry_master; force=true, recursive=true)
     return nothing
 end
 
-function pull_request_build(data::GitHubAutoMergeData; check_license, check_breaking_explanation, new_package_waiting_period)::Nothing
+function pull_request_build(data::GitHubAutoMergeData; check_license, check_breaking_explanation, new_package_waiting_minutes)::Nothing
     kind = package_or_version(data.registration_type)
     this_is_jll_package = is_jll_name(data.pkg)
     @info(
@@ -237,7 +243,7 @@ function pull_request_build(data::GitHubAutoMergeData; check_license, check_brea
             data.suggest_onepointzero,
             data.version,
             this_pr_can_use_special_jll_exceptions;
-            new_package_waiting_period=new_package_waiting_period,
+            new_package_waiting_minutes,
             data=data
         )
         my_retry(() -> update_automerge_comment!(data, this_pr_comment_pass))
