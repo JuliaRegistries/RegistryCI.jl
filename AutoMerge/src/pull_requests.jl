@@ -160,7 +160,7 @@ function pull_request_build(
         pkg,
         version,
         current_pr_head_commit_sha,
-        registry_repo,
+        registry=registry_repo,
         auth,
         authorization,
         registry_head,
