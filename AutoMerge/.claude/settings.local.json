@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git fetch origin)",
+      "Bash(git merge origin/master)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
