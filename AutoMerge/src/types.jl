@@ -321,87 +321,98 @@ struct ErrorCannotComputeVersionDifference
     msg::String
 end
 
-struct GitHubAutoMergeData
+Base.@kwdef struct ProjectInfo
+    project_file::String
+    pkg_name::String
+    uuid::UUID
+    version::VersionNumber
+end
+
+mutable struct GitHubAutoMergeData
     # Handle to the GitHub API. Used to query the PR and update
     # comments and status.
-    api::GitHub.GitHubAPI
+    const api::GitHub.GitHubAPI
 
     # Whether the registry PR refers to a new package or a new version
     # of an existing package.
-    registration_type::Union{NewPackage,NewVersion}
+    const registration_type::Union{NewPackage,NewVersion}
 
     # The GitHub pull request data.
-    pr::GitHub.PullRequest
+    const pr::GitHub.PullRequest
 
     # Name of the package being registered.
-    pkg::String
+    const pkg::String
 
     # Version of the package being registered.
-    version::VersionNumber
+    const version::VersionNumber
 
     # Used for updating CI status.
-    current_pr_head_commit_sha::String
+    const current_pr_head_commit_sha::String
 
     # The GitHub repo data for the registry.
-    registry::GitHub.Repo
+    const registry::GitHub.Repo
 
     # GitHub authorization data.
-    auth::GitHub.Authorization
+    const auth::GitHub.Authorization
 
     # Type of authorization for automerge. This can be either:
     # :jll - special jll exceptions are allowed,
     # :normal - normal automerge rules.
-    authorization::Symbol
+    const authorization::Symbol
 
     # Directory of a registry clone that includes the PR.
-    registry_head::String
+    const registry_head::String
 
     # Directory of a registry clone that excludes the PR.
-    registry_master::String
+    const registry_master::String
 
     # Whether to add a comment suggesting bumping package version to
     # 1.0 if appropriate.
-    suggest_onepointzero::Bool
+    const suggest_onepointzero::Bool
 
     # Whether to add a comment suggesting to ask on the #pkg-registration
     # Julia-Slack channel when AutoMerge is not possible
-    point_to_slack::Bool
+    const point_to_slack::Bool
 
     # GitHub identity resulting from the use of an authentication token.
-    whoami::String
+    const whoami::String
 
     # List of dependent registries. Typically this would contain
     # "General" when running automerge for a private registry.
-    registry_deps::Vector{String}
+    const registry_deps::Vector{String}
 
     # Location of the directory where the package code
     # will be downloaded into. Populated at construction time
     # via `mktempdir`.
-    pkg_code_path::String
+    const pkg_code_path::String
 
     # Location of the directory where the package repository
     # is cloned for git operations. Populated at construction time
     # via `mktempdir`.
-    pkg_clone_dir::String
+    const pkg_clone_dir::String
 
     # A list of public Julia registries (repository URLs) which will
     # be checked for UUID collisions in order to mitigate the
     # dependency confusion vulnerability. See the
     # `dependency_confusion.jl` file for details.
-    public_registries::Vector{String}
+    const public_registries::Vector{String}
 
     # whether only read-only actions should be taken
-    read_only::Bool
+    const read_only::Bool
 
     # Environment variables to pass to the subprocess that does `Pkg.add("Foo")` and `import Foo`
-    environment_variables_to_pass::Vector{String}
+    const environment_variables_to_pass::Vector{String}
+
+    # after the code is downloaded, we parse the Project.toml and populate this
+    parsed_project_info::Union{Nothing,ProjectInfo}
 end
 
 # Constructor that requires all fields (except `pkg_code_path` and `pkg_clone_dir`) as named arguments.
 function GitHubAutoMergeData(; kwargs...)
     pkg_code_path = mktempdir()
     pkg_clone_dir = mktempdir()
-    kwargs = (; pkg_code_path=pkg_code_path, pkg_clone_dir=pkg_clone_dir, kwargs...)
+    parsed_project_info = nothing
+    kwargs = (; pkg_code_path, pkg_clone_dir, parsed_project_info, kwargs...)
     fields = fieldnames(GitHubAutoMergeData)
     always_assert(Set(keys(kwargs)) == Set(fields))
     always_assert(kwargs[:authorization] ∈ (:normal, :jll))

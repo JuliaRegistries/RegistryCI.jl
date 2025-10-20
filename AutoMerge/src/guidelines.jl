@@ -300,7 +300,7 @@ const guideline_name_match_check = Guideline(;
     check=data -> meets_name_match_check(data.pkg, data.registry_master))
 
 function meets_name_match_check(pkg_name::AbstractString, registry_master::AbstractString)
-    other_packages = get_all_non_jll_package_names(registry_master)
+    other_packages = get_all_pkg_names(registry_master)
     return meets_name_match_check(pkg_name, other_packages)
 end
 
@@ -314,6 +314,95 @@ function meets_name_match_check(
             return (false, "Package name already exists in the registry.")
         elseif lowercase(pkg_name) == lowercase(other_pkg)
             return (false, "Package name matches existing package name $(other_pkg) up-to-case.")
+        end
+    end
+    return (true, "")
+end
+
+
+const guideline_project_toml_check = Guideline(;
+    info = "Project.toml (or JuliaProject.toml) either does not exist, cannot be parsed, or is not consistent with registration PR.",
+    docs = "Checks that the package's Project.toml (or JuliaProject.toml) exists, can be parsed, and is consistent with registration PR.",
+    check=data -> meets_project_toml_check(data))
+
+function meets_project_toml_check(data)
+    val, err = find_and_parse_project_toml(data.pkg_code_path)
+    if val === false
+        return val, err
+    end
+    if data.pkg != val.pkg_name
+        return false, "Package name from parsing the project file ($(val.pkg_name)) does not match package name from registration PR ($(data.pkg))"
+    end
+    if data.version != val.version
+        return false, "Package version from parsing the project file ($(val.version)) does not match version from registration PR ($(data.version))"
+    end
+    # store the parsed ProjectInfo
+    data.parsed_project_info = val
+    return true, ""
+end
+
+function find_and_parse_project_toml(code_path::AbstractString)
+    proj_path = joinpath(code_path, "Project.toml")
+    julia_proj_path = joinpath(code_path, "JuliaProject.toml")
+    if isfile(proj_path) && isfile(julia_proj_path)
+        return (false, "Both Project.toml and JuliaProject.toml files exist in package directory.")
+    end
+    if !isfile(proj_path) && !isfile(julia_proj_path)
+        return (false, "Neither Project.toml nor JuliaProject.toml found in package directory.")
+    end
+    selected_proj_path = isfile(proj_path) ? proj_path : julia_proj_path
+    selected_proj_name = basename(selected_proj_path)
+    toml = TOML.tryparsefile(selected_proj_path)
+    if toml isa TOML.ParserError
+        return (false, "Project file $selected_proj_name could not be parsed: $toml.")
+    end
+    req_fields = ["uuid", "name", "version"]
+    for field in req_fields
+        val = get(toml, field, nothing)
+        if val === nothing
+            return (false, "Project file $selected_proj_name missing required field `$field`.")
+        end
+    end
+    uuid = tryparse(UUID, toml["uuid"])
+    if uuid === nothing
+        return (false, "Project file $selected_proj_name's uuid field `$(toml["uuid"])` could not be parsed as a UUID.")
+    end
+    version = tryparse(VersionNumber, toml["version"])
+    if version === nothing
+        return (false, "Project file $selected_proj_name's version field `$(toml["version"])` could not be parsed as a VersionNumber.")
+    end
+    info = ProjectInfo(;
+        project_file=selected_proj_path,
+        pkg_name=toml["name"],
+        uuid=uuid,
+        version=version
+    )
+    return (info, "")
+end
+
+
+# This check cannot be overridden, since it's important for registry integrity
+const guideline_uuid_match_check = Guideline(;
+    info = "UUID does not collide with existing package or stdlib UUID",
+    docs = "Packages must not match the UUID of an existing package or stdlib.",
+    check=data -> meets_uuid_match_check(data.parsed_project_info, data.registry_master))
+
+function meets_uuid_match_check(maybe_project_info::Union{Nothing,ProjectInfo}, registry_master::AbstractString)
+    if maybe_project_info === nothing
+        return false, "Could not check package UUID as Project.toml checks failed"
+    end
+    pkg_uuid = maybe_project_info.uuid
+    name_uuids = get_all_pkg_name_uuids(registry_master)
+    return meets_uuid_match_check(pkg_uuid, name_uuids)
+end
+
+function meets_uuid_match_check(
+    pkg_uuid::UUID,
+    name_uuids::Vector;
+)
+    for (; name, uuid) in name_uuids
+        if pkg_uuid == uuid
+            return (false, "Registered package (or stdlib) $name already has UUID $uuid.")
         end
     end
     return (true, "")
@@ -416,7 +505,7 @@ These checks can be overridden by applying a label `Override AutoMerge: name sim
 function meets_distance_check(
     pkg_name::AbstractString, registry_master::AbstractString; kwargs...
 )
-    other_packages = get_all_non_jll_package_names(registry_master)
+    other_packages = get_all_pkg_names(registry_master; keep_jll=false)
     return meets_distance_check(pkg_name, other_packages; kwargs...)
 end
 
@@ -1196,6 +1285,10 @@ function get_automerge_guidelines(
         (guideline_version_can_be_imported, true),
         (:update_status, true),
         (guideline_dependency_confusion, true),
+        # toml check must run after guideline_code_can_be_downloaded
+        (guideline_project_toml_check, true),
+        # uuid check must run after `guideline_project_toml_check`
+        (guideline_uuid_match_check, true),
         # this is the non-optional part of name checking
         (guideline_name_match_check, true),
         # We always run the `guideline_distance_check`
@@ -1237,6 +1330,8 @@ function get_automerge_guidelines(
         # after `guideline_code_can_be_downloaded` so
         # that it can use the downloaded code!
         (guideline_version_has_osi_license, check_license),
+        # toml check must run after guideline_code_can_be_downloaded
+        (guideline_project_toml_check, true),
         (guideline_src_names_OK, true),
         (guideline_version_can_be_imported, true),
         (guideline_breaking_explanation, check_breaking_explanation && !this_is_jll_package),

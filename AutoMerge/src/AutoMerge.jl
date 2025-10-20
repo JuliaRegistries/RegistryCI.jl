@@ -16,6 +16,7 @@ using Printf: Printf
 using RegistryTools: RegistryTools
 using Tar: Tar
 using RegistryCI: RegistryCI
+using UUIDs: UUID
 
 if VERSION >= v"1.11"
     eval(Meta.parse("""

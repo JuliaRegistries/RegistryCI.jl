@@ -75,10 +75,10 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             "New version: Requires v2.0.0",
             false,  # point_to_slack
             false,  # check_license
-            true,   # pass
+            false,  # pass
             requires_commit,
             false,  # create_blocking_comment
-        ),            # OK: new version
+        ),            # FAIL: version mismatch (Project.toml has 1.0.0, PR says 2.0.0)
         (
             "master_1",
             "feature_3",
