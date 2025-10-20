@@ -1144,6 +1144,26 @@ end
             end
         end
 
+        @testset "Config override constructors" begin
+            config = AutoMerge.general_registry_config()
+
+            # RegistryConfiguration override
+            rc = AutoMerge.RegistryConfiguration(config.registry_config; read_only=true)
+            @test rc.read_only && rc.registry == config.registry_config.registry
+
+            # CheckPRConfiguration override
+            cc = AutoMerge.CheckPRConfiguration(config.check_pr_config; check_license=false)
+            @test !cc.check_license && cc.suggest_onepointzero == config.check_pr_config.suggest_onepointzero
+
+            # MergePRsConfiguration override
+            mc = AutoMerge.MergePRsConfiguration(config.merge_prs_config; merge_new_packages=false)
+            @test !mc.merge_new_packages && mc.merge_new_versions
+
+            # AutoMergeConfiguration override
+            nc = AutoMerge.AutoMergeConfiguration(config; registry_config=rc)
+            @test nc.registry_config.read_only && nc.check_pr_config == config.check_pr_config
+        end
+
         @testset "Required fields validation" begin
             mktempdir() do tmpdir
                 # Missing registry field - should error during struct construction
