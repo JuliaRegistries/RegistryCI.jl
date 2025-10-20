@@ -128,7 +128,7 @@ This separation follows the principle of least privilege and reduces the attack 
 
 ```@eval
 import Markdown
-str ="```yaml\n" * 
+str ="```yaml\n" *
     read("../../example_github_workflow_files/automerge.yml", String) *
     "\n```"
 @eval Markdown.@md_str($str)
