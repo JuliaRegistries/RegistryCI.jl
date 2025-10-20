@@ -70,31 +70,13 @@ function parse_pull_request_title(::NewPackage, pull_request::GitHub.PullRequest
 end
 
 function pull_request_build(
+    registry_config::RegistryConfiguration,
+    pr_config::CheckPRConfiguration,
     api::GitHub.GitHubAPI,
     pr_number::Integer,
     current_pr_head_commit_sha::String,
     registry_repo::GitHub.Repo,
     registry_head::String;
-    # Registry config args
-    registry::String,
-    authorized_authors::Vector{String},
-    authorized_authors_special_jll_exceptions::Vector{String},
-    new_package_waiting_minutes::Dates.Minute,
-    new_jll_package_waiting_minutes::Dates.Minute,
-    new_version_waiting_minutes::Dates.Minute,
-    new_jll_version_waiting_minutes::Dates.Minute,
-    master_branch::String,
-    error_exit_if_automerge_not_applicable::Bool,
-    read_only::Bool,
-    # PR config args
-    master_branch_is_default_branch::Bool,
-    suggest_onepointzero::Bool,
-    point_to_slack::Bool,
-    registry_deps::Vector{<:AbstractString},
-    check_license::Bool,
-    check_breaking_explanation::Bool,
-    public_registries::Vector{<:AbstractString},
-    environment_variables_to_pass::Vector{<:AbstractString},
     whoami::String,
     auth::GitHub.Authorization,
 )::Nothing
@@ -117,7 +99,7 @@ function pull_request_build(
         throw_not_automerge_applicable(
             AutoMergePullRequestNotOpen,
             "The pull request is not open. Exiting...";
-            error_exit_if_automerge_not_applicable,
+            registry_config.error_exit_if_automerge_not_applicable,
         )
         return nothing
     end
@@ -130,7 +112,7 @@ function pull_request_build(
         throw_not_automerge_applicable(
             AutoMergeNeitherNewPackageNorNewVersion,
             "Neither a new package nor a new version. Exiting...";
-            error_exit_if_automerge_not_applicable,
+            registry_config.error_exit_if_automerge_not_applicable,
         )
         return nothing
     end
@@ -140,9 +122,9 @@ function pull_request_build(
     authorization = check_authorization(
         pkg,
         pr_author_login,
-        authorized_authors,
-        authorized_authors_special_jll_exceptions,
-        error_exit_if_automerge_not_applicable,
+        registry_config.authorized_authors,
+        registry_config.authorized_authors_special_jll_exceptions,
+        registry_config.error_exit_if_automerge_not_applicable,
     )
 
     if authorization == :not_authorized
@@ -150,8 +132,8 @@ function pull_request_build(
     end
 
     registry_master = clone_repo(registry_repo)
-    if !master_branch_is_default_branch
-        checkout_branch(registry_master, master_branch)
+    if !pr_config.master_branch_is_default_branch
+        checkout_branch(registry_master, registry_config.master_branch)
     end
     data = GitHubAutoMergeData(;
         api,
@@ -165,15 +147,15 @@ function pull_request_build(
         authorization,
         registry_head,
         registry_master,
-        suggest_onepointzero,
-        point_to_slack,
+        pr_config.suggest_onepointzero,
+        pr_config.point_to_slack,
         whoami,
-        registry_deps,
-        public_registries,
-        read_only,
-        environment_variables_to_pass,
+        pr_config.registry_deps,
+        pr_config.public_registries,
+        registry_config.read_only,
+        pr_config.environment_variables_to_pass,
     )
-    pull_request_build(data; check_license, check_breaking_explanation, new_package_waiting_minutes)
+    pull_request_build(data; pr_config.check_license, pr_config.check_breaking_explanation, registry_config.new_package_waiting_minutes)
     rm(registry_master; force=true, recursive=true)
     return nothing
 end

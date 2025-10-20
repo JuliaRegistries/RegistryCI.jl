@@ -1,0 +1,30 @@
+[registry_config]
+authorized_authors = ["JuliaRegistrator"]
+registry = "JuliaRegistries/General"
+api_url = "https://api.github.com"
+new_package_waiting_minutes = 4320
+authorized_authors_special_jll_exceptions = ["jlbuild"]
+new_jll_version_waiting_minutes = 10
+read_only = false
+new_jll_package_waiting_minutes = 20
+master_branch = "master"
+error_exit_if_automerge_not_applicable = false
+new_version_waiting_minutes = 10
+
+[merge_prs_config]
+additional_statuses = []
+merge_new_packages = true
+additional_check_runs = []
+merge_token_name = "AUTOMERGE_MERGE_TOKEN"
+merge_new_versions = true
+
+[check_pr_config]
+master_branch_is_default_branch = true
+public_registries = ["https://github.com/HolyLab/HolyLabRegistry", "https://github.com/cossio/CossioJuliaRegistry"]
+environment_variables_to_pass = []
+commit_status_token_name = "AUTOMERGE_GITHUB_TOKEN"
+check_license = true
+suggest_onepointzero = false
+registry_deps = []
+point_to_slack = true
+check_breaking_explanation = true

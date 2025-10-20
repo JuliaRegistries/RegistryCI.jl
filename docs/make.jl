@@ -15,10 +15,12 @@ makedocs(;
     pages=[
         "Home" => "index.md",
         "Automatic merging guidelines" => "guidelines.md",
-        "Regexes" => "regexes.md",
+        "Configuration" => "configuration.md",
         "Using RegistryCI on your own package registry" => "private-registries.md",
         "Public API" => "public.md",
+        "Regexes" => "regexes.md",
         "Internals (Private)" => "internals.md",
+        "Migration Guide (AutoMerge v1)" => "migration-v1.md",
     ],
 )
 
