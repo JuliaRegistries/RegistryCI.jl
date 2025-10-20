@@ -8,7 +8,7 @@ using AutoMerge
 using Test
 using TimeZones
 
-
+TEMPLATE_DIR = joinpath(pkgdir(AutoMerge), "test", "templates")
 TEMP_DEPOT_FOR_TESTING = nothing
 
 function setup_global_depot()::String
@@ -27,6 +27,39 @@ function setup_global_depot()::String
     run(setenv(`julia -e 'import Pkg; Pkg.add(["RegistryCI"])'`, env1))
     TEMP_DEPOT_FOR_TESTING = tmp_depot
     tmp_depot
+end
+
+# Helper function to create a mock GitHub.PullRequest with only essential fields
+function create_mock_pr(commit_sha::String)
+    # Create a minimal NamedTuple that mimics the essential fields needed
+    return GitHub.PullRequest(;
+        body="Commit: $commit_sha\nRepository: https://github.com/MikeInnes/Requires.jl.git\nVersion: v2.0.0",
+    )
+end
+
+REQUIRES_CLONE = mktempdir()
+# Clone the actual Requires.jl repository for diff operations
+run(`git clone https://github.com/MikeInnes/Requires.jl.git $(REQUIRES_CLONE)`)
+
+# Helper to get something similar to a GitHubAutoMergeData
+# for testing diffs and comments
+function get_requires_version_data()
+    master_registry = joinpath(TEMPLATE_DIR, "master_2")
+        feature_registry = joinpath(TEMPLATE_DIR, "feature_2")
+        pkg_clone_dir = REQUIRES_CLONE
+        # Create mock PR with a real commit SHA from Requires.jl
+        mock_pr = create_mock_pr("999513b7dea8ac17359ed50ae8ea089e4464e35e") # This should match the tree hash
+
+        data = (;
+            registration_type=AutoMerge.NewVersion(),
+            pkg="Requires",
+            version=v"2.0.0",
+            registry_master=master_registry,
+            registry_head=feature_registry,
+            pkg_clone_dir=pkg_clone_dir,
+            pr=mock_pr
+        )
+        return data
 end
 
 # helper for testing `AutoMerge.meets_version_has_osi_license`
@@ -48,18 +81,19 @@ strip_equal(x, y) = strip(x) == strip(y)
 # This allows us to see the diffs in PRs that change the AutoMerge comment.
 # You can set `ENV["JULIA_REFERENCETESTS_UPDATE"] = true` to easily update the reference tests.
 function comment_reference_test()
+    data = get_requires_version_data()
     for pass in (true, false),
         (type_name,type) in (("new_version", AutoMerge.NewVersion()), ("new_package", AutoMerge.NewPackage())),
         suggest_onepointzero in (true, false),
         # some code depends on above or below v"1"
         version in (v"0.1", v"1")
-
         if pass
             for is_jll in (true, false)
                 name = string("comment", "_pass_", pass, "_type_", type_name,
                 "_suggest_onepointzero_", suggest_onepointzero,
                 "_version_", version, "_is_jll_", is_jll)
-                @test_reference "reference_comments/$name.md" AutoMerge.comment_text_pass(type, suggest_onepointzero, version, is_jll, new_package_waiting_period=Day(3)) by=strip_equal
+                text = AutoMerge.comment_text_pass(type, suggest_onepointzero, version, is_jll; new_package_waiting_minutes=convert(Minute, Day(3)), data)
+                @test_reference "reference_comments/$name.md" text by=strip_equal
             end
         else
             for point_to_slack in (true, false)
@@ -88,8 +122,11 @@ end
     @testset "comment_reference_test" begin
         comment_reference_test()
     end
-    @testset "Customized `new_package_waiting_period` in AutoMerge comment " begin
-        text = AutoMerge.comment_text_pass(AutoMerge.NewPackage(), false, v"1", false; new_package_waiting_period=Minute(45))
+    @testset "Format diff stats" begin
+        include("format-diff-stats.jl")
+    end
+    @testset "Customized `new_package_waiting_minutes` in AutoMerge comment " begin
+        text = AutoMerge.comment_text_pass(AutoMerge.NewPackage(), false, v"1", false; new_package_waiting_minutes=Minute(45))
         @test occursin("(45 minutes)", text)
     end
     @testset "`AutoMerge.parse_registry_pkg_info`" begin
@@ -116,6 +153,98 @@ end
         @test result.uuid == "e2b509da-e806-4183-be48-004708413034"
         @test result.subdir == "SnoopCompileCore"
         @test result.tree_hash == "bb6d6df44d9aa3494c997aebdee85b713b92c0de"
+    end
+
+    @testset "`AutoMerge.get_version_diff_info`" begin
+        # Test case 1: Successful version diff (NewVersion from v1.0.0 to v2.0.0)
+        @testset "successful version diff case" begin
+            data = get_requires_version_data()
+
+            result = AutoMerge.get_version_diff_info(data)
+
+            @test result !== nothing
+            @test result.previous_version == v"1.0.0"
+            @test result.current_version == v"2.0.0"
+            @test result.diff_stats isa String
+            @test !isempty(result.diff_stats)
+            # diff_url might be nothing if commit SHAs don't match exactly
+            @test result.diff_url isa Union{String, Nothing}
+
+        end
+
+        # Test case 2: NewPackage registration should return nothing
+        @testset "NewPackage registration returns nothing" begin
+            master_registry = joinpath(TEMPLATE_DIR, "master_2")
+            feature_registry = joinpath(TEMPLATE_DIR, "feature_2")
+
+            data = (
+                registration_type=AutoMerge.NewPackage(),
+                pkg="Requires",
+                version=v"1.0.0",
+                registry_master=master_registry,
+                registry_head=feature_registry,
+                pkg_clone_dir=mktempdir(),
+                pr=create_mock_pr("999513b7dea8ac17359ed50ae8ea089e4464e35e")
+            )
+
+            result = AutoMerge.get_version_diff_info(data)
+            @test result === nothing
+        end
+
+        # Test case 3: No previous version case
+        @testset "no previous version case" begin
+            master_registry = joinpath(TEMPLATE_DIR, "master_2")
+            feature_registry = joinpath(TEMPLATE_DIR, "feature_2")
+
+            data = (
+                registration_type=AutoMerge.NewVersion(),
+                pkg="Requires",
+                version=v"0.5.0", # Version lower than any existing version
+                registry_master=master_registry,
+                registry_head=feature_registry,
+                pkg_clone_dir=mktempdir(),
+                pr=create_mock_pr("999513b7dea8ac17359ed50ae8ea089e4464e35e")
+            )
+
+            result = AutoMerge.get_version_diff_info(data)
+            @test result === nothing
+        end
+
+        # Test case 4: Test with different registry that doesn't have previous versions
+        @testset "registry without previous versions" begin
+            feature_registry = joinpath(TEMPLATE_DIR, "feature_2")
+            mktempdir() do empty_registry
+
+                # Create minimal empty registry structure
+                mkpath(joinpath(empty_registry, "R", "Requires"))
+
+                # Copy Registry.toml
+                cp(joinpath(feature_registry, "Registry.toml"), joinpath(empty_registry, "Registry.toml"))
+
+                # Copy Package.toml
+                cp(joinpath(feature_registry, "R", "Requires", "Package.toml"),
+                joinpath(empty_registry, "R", "Requires", "Package.toml"))
+
+                # Create empty Versions.toml (no previous versions)
+                open(joinpath(empty_registry, "R", "Requires", "Versions.toml"), "w") do io
+                    println(io, "[\"1.0.0\"]")
+                    println(io, "git-tree-sha1 = \"999513b7dea8ac17359ed50ae8ea089e4464e35e\"")
+                end
+
+                data = (
+                    registration_type=AutoMerge.NewVersion(),
+                    pkg="Requires",
+                    version=v"1.0.0",
+                    registry_master=empty_registry,
+                    registry_head=feature_registry,
+                    pkg_clone_dir=mktempdir(),
+                    pr=create_mock_pr("999513b7dea8ac17359ed50ae8ea089e4464e35e")
+                )
+
+                result = AutoMerge.get_version_diff_info(data)
+                @test result === nothing  # No previous version available
+            end
+        end
     end
 end
 
@@ -943,6 +1072,243 @@ end
             @test !result[1]
         end
     end
+    @testset "Config TOML functionality" begin
+        @testset "general_registry_config" begin
+            config = AutoMerge.general_registry_config()
+            @test config isa AutoMerge.AutoMergeConfiguration
+            @test config.registry_config isa AutoMerge.RegistryConfiguration
+            @test config.check_pr_config isa AutoMerge.CheckPRConfiguration
+            @test config.merge_prs_config isa AutoMerge.MergePRsConfiguration
+
+            @test config.registry_config.registry == "JuliaRegistries/General"
+            @test "JuliaRegistrator" in config.registry_config.authorized_authors
+            @test config.registry_config.master_branch == "master"
+            @test config.registry_config.api_url == "https://api.github.com"
+            @test !config.registry_config.read_only
+        end
+
+        @testset "write_config and read_config roundtrip" begin
+            mktempdir() do tmpdir
+                test_config = AutoMerge.AutoMergeConfiguration(
+                    registry_config = AutoMerge.RegistryConfiguration(
+                        registry = "TestUser/TestRegistry",
+                        authorized_authors = ["testuser", "anotheruser"],
+                        authorized_authors_special_jll_exceptions = ["jllbuild"],
+                        new_package_waiting_minutes = Dates.Minute(60),
+                        new_jll_package_waiting_minutes = Dates.Minute(30),
+                        new_version_waiting_minutes = Dates.Minute(15),
+                        new_jll_version_waiting_minutes = Dates.Minute(5),
+                        master_branch = "main",
+                        error_exit_if_automerge_not_applicable = true,
+                        api_url = "https://api.example.com",
+                        read_only = true
+                    ),
+                    check_pr_config = AutoMerge.CheckPRConfiguration(
+                        master_branch_is_default_branch = false,
+                        public_registries = ["https://github.com/TestOrg/TestRegistry"],
+                        environment_variables_to_pass = ["TEST_VAR"],
+                        commit_status_token_name = "TEST_TOKEN",
+                        check_license = true,
+                        suggest_onepointzero = true,
+                        registry_deps = ["General"],
+                        point_to_slack = false,
+                        check_breaking_explanation = true
+                    ),
+                    merge_prs_config = AutoMerge.MergePRsConfiguration(
+                        additional_statuses = ["test-status"],
+                        merge_new_packages = false,
+                        additional_check_runs = ["test-check"],
+                        merge_token_name = "MERGE_TOKEN",
+                        merge_new_versions = true
+                    )
+                )
+
+                config_path = joinpath(tmpdir, "test_config.toml")
+
+                # Test write_config
+                AutoMerge.write_config(config_path, test_config)
+                @test isfile(config_path)
+
+                # Test read_config
+                loaded_config = AutoMerge.read_config(config_path)
+                @test loaded_config isa AutoMerge.AutoMergeConfiguration
+
+                # Test that all fields are preserved using introspection
+                function test_configs_equal(original, loaded)
+                    for field in propertynames(original)
+                        original_val = getproperty(original, field)
+                        loaded_val = getproperty(loaded, field)
+                        if original_val isa AutoMerge.AbstractConfiguration
+                            test_configs_equal(original_val, loaded_val)
+                        else
+                            @test original_val == loaded_val
+                        end
+                    end
+                end
+                test_configs_equal(test_config, loaded_config)
+            end
+        end
+
+        @testset "serialization/deserialization of Dates.Minute" begin
+            test_config = AutoMerge.RegistryConfiguration(
+                registry = "Test/Registry",
+                authorized_authors = ["test"],
+                authorized_authors_special_jll_exceptions = String[],
+                new_package_waiting_minutes = Dates.Minute(120),
+                new_jll_package_waiting_minutes = Dates.Minute(30),
+                new_version_waiting_minutes = Dates.Minute(15),
+                new_jll_version_waiting_minutes = Dates.Minute(5)
+            )
+
+            # Test serialization and deserialization roundtrip
+            dict = AutoMerge.to_dict(test_config)
+            recreated_config = AutoMerge.from_dict(AutoMerge.RegistryConfiguration, dict)
+
+            # Verify minute fields are properly serialized/deserialized
+            minute_fields = filter(f -> endswith(string(f), "_minutes"), propertynames(test_config))
+            for field in minute_fields
+                original_val = getproperty(test_config, field)
+                serialized_val = dict[string(field)]
+                recreated_val = getproperty(recreated_config, field)
+
+                @test serialized_val == Dates.value(original_val)  # Serialized as integer
+                @test recreated_val == original_val  # Roundtrip preserves type and value
+            end
+        end
+
+        @testset "invalid serialization error" begin
+            struct TestStruct
+                invalid_field::Dates.Minute
+            end
+
+            @test_throws ErrorException AutoMerge._serialize(:invalid_field, Dates.Minute(10))
+        end
+
+        @testset "TOML file format validation" begin
+            mktempdir() do tmpdir
+                config = AutoMerge.general_registry_config()
+                config_path = joinpath(tmpdir, "test.toml")
+
+                AutoMerge.write_config(config_path, config)
+
+                # Read the TOML file as text and verify structure
+                toml_content = read(config_path, String)
+                @test occursin("[registry_config]", toml_content)
+                @test occursin("[check_pr_config]", toml_content)
+                @test occursin("[merge_prs_config]", toml_content)
+                @test occursin("registry = \"JuliaRegistries/General\"", toml_content)
+                @test occursin("authorized_authors = [\"JuliaRegistrator\"]", toml_content)
+
+                # Verify minute fields are serialized as integers
+                @test occursin("new_package_waiting_minutes = 4320", toml_content)
+                @test occursin("new_jll_package_waiting_minutes = 20", toml_content)
+                @test occursin("new_version_waiting_minutes = 10", toml_content)
+                @test occursin("new_jll_version_waiting_minutes = 10", toml_content)
+            end
+        end
+
+        @testset "Unknown keys warning" begin
+            mktempdir() do tmpdir
+                config_path = joinpath(tmpdir, "unknown_keys.toml")
+                write(config_path, """
+                [registry_config]
+                registry = "Test/Registry"
+                authorized_authors = ["test"]
+                authorized_authors_special_jll_exceptions = []
+                new_package_waiting_minutes = 60
+                new_jll_package_waiting_minutes = 30
+                new_version_waiting_minutes = 15
+                new_jll_version_waiting_minutes = 5
+                unknown_registry_field = "value"
+
+                [check_pr_config]
+
+                [merge_prs_config]
+                """)
+                # Should warn but not error
+                @test_logs (:warn, r"unknown keys") match_mode=:any AutoMerge.read_config(config_path)
+            end
+        end
+
+        @testset "Negative wait times validation" begin
+            mktempdir() do tmpdir
+                # Negative wait times should error
+                config_path = joinpath(tmpdir, "negative_wait.toml")
+                write(config_path, """
+                [registry_config]
+                registry = "Test/Registry"
+                authorized_authors = ["test"]
+                authorized_authors_special_jll_exceptions = []
+                new_package_waiting_minutes = -10
+                new_jll_package_waiting_minutes = 30
+                new_version_waiting_minutes = 15
+                new_jll_version_waiting_minutes = 5
+
+                [check_pr_config]
+
+                [merge_prs_config]
+                """)
+                @test_throws ErrorException AutoMerge.read_config(config_path)
+
+                # Zero wait times should be allowed (for immediate merging)
+                config_path2 = joinpath(tmpdir, "zero_wait.toml")
+                write(config_path2, """
+                [registry_config]
+                registry = "Test/Registry"
+                authorized_authors = ["test"]
+                authorized_authors_special_jll_exceptions = []
+                new_package_waiting_minutes = 0
+                new_jll_package_waiting_minutes = 0
+                new_version_waiting_minutes = 0
+                new_jll_version_waiting_minutes = 0
+
+                [check_pr_config]
+
+                [merge_prs_config]
+                """)
+                config = AutoMerge.read_config(config_path2)
+                @test config.registry_config.new_package_waiting_minutes == Dates.Minute(0)
+            end
+        end
+
+        @testset "Required fields validation" begin
+            mktempdir() do tmpdir
+                # Missing registry field - should error during struct construction
+                config_path = joinpath(tmpdir, "missing_registry.toml")
+                write(config_path, """
+                [registry_config]
+                authorized_authors = ["test"]
+                authorized_authors_special_jll_exceptions = []
+                new_package_waiting_minutes = 60
+                new_jll_package_waiting_minutes = 30
+                new_version_waiting_minutes = 15
+                new_jll_version_waiting_minutes = 5
+
+                [check_pr_config]
+
+                [merge_prs_config]
+                """)
+                @test_throws Exception AutoMerge.read_config(config_path)
+
+                # Missing authorized_authors - should error during struct construction
+                config_path2 = joinpath(tmpdir, "missing_authors.toml")
+                write(config_path2, """
+                [registry_config]
+                registry = "Test/Registry"
+                authorized_authors_special_jll_exceptions = []
+                new_package_waiting_minutes = 60
+                new_jll_package_waiting_minutes = 30
+                new_version_waiting_minutes = 15
+                new_jll_version_waiting_minutes = 5
+
+                [check_pr_config]
+
+                [merge_prs_config]
+                """)
+                @test_throws Exception AutoMerge.read_config(config_path2)
+            end
+        end
+    end
 
     @testset "Version diff functionality" begin
         @testset "find_previous_semver_version" begin
@@ -1009,20 +1375,20 @@ end
                 @test AutoMerge.extract_github_owner_repo("invalid-url") === nothing
             end
 
-            @testset "generate_github_diff_url" begin
+            @testset "format_github_diff_url" begin
                 url = "https://github.com/owner/repo.git"
                 prev_sha = "abc123"
                 curr_sha = "def456"
                 expected = "https://github.com/owner/repo/compare/abc123...def456"
 
-                @test AutoMerge.generate_github_diff_url(url, prev_sha, curr_sha) == expected
+                @test AutoMerge.format_github_diff_url(url, prev_sha, curr_sha) == expected
 
                 # Test with SSH URL
                 ssh_url = "git@github.com:owner/repo.git"
-                @test AutoMerge.generate_github_diff_url(ssh_url, prev_sha, curr_sha) == expected
+                @test AutoMerge.format_github_diff_url(ssh_url, prev_sha, curr_sha) == expected
 
                 # Test with non-GitHub URL
-                @test AutoMerge.generate_github_diff_url("https://gitlab.com/owner/repo.git", prev_sha, curr_sha) === nothing
+                @test AutoMerge.format_github_diff_url("https://gitlab.com/owner/repo.git", prev_sha, curr_sha) === nothing
             end
         end
 
@@ -1107,6 +1473,7 @@ end
         @testset "Comment generation with diff" begin
             # Test the _version_diff_section function
             diff_info = (
+                diff_stats = "diff stats",
                 diff_url="https://github.com/owner/repo/compare/abc123...def456",
                 previous_version=v"1.0.0",
                 current_version=v"1.1.0"
@@ -1114,15 +1481,15 @@ end
 
             result = AutoMerge._version_diff_section(2, diff_info)
             @test occursin("## 2. Code changes since last version", result)
-            @test occursin("Since the last version (v1.0.0)", result)
-            @test occursin("[View diff](https://github.com/owner/repo/compare/abc123...def456)", result)
+            @test occursin("Code changes from v1.0.0", result)
+            @test occursin("[View full patch diff on GitHub](https://github.com/owner/repo/compare/abc123...def456)", result)
         end
 
         @testset "Comment text pass with diff integration" begin
             # Test comment generation with no data (should work as before)
             result_no_data = AutoMerge.comment_text_pass(
                 AutoMerge.NewVersion(), false, v"1.1.0", false;
-                new_package_waiting_period=Day(3)
+                new_package_waiting_minutes=Day(3),
             )
             @test occursin("## 1.", result_no_data)  # More flexible test
             @test occursin("To pause or stop registration", result_no_data)
@@ -1131,7 +1498,7 @@ end
             # Test that with data=nothing, we get the same result
             result_with_data = AutoMerge.comment_text_pass(
                 AutoMerge.NewVersion(), false, v"1.1.0", false;
-                new_package_waiting_period=Day(3), data=nothing
+                new_package_waiting_minutes=Day(3), data=nothing
             )
             @test result_with_data == result_no_data
         end

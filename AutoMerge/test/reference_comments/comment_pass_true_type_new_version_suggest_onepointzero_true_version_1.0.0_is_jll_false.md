@@ -4,7 +4,18 @@ Hello, I am an automated registration bot. I help manage the registration proces
 
 Your new version registration met all of the guidelines for auto-merging and is scheduled to be merged in the next round (~20 minutes).
 
-## 2. To pause or stop registration
+## 2. Code changes since last version
+
+Code changes from v1.0.0: 
+
+```diff
+❯ git diff-tree --patch 999513b7dea8ac17359ed50ae8ea089e4464e35e 999513b7dea8ac17359ed50ae8ea089e4464e35e
+
+```
+
+[View full patch diff on GitHub](https://github.com/MikeInnes/Requires.jl/compare/c5789cdabf3918ac058a4a469cee3fda163765f3...999513b7dea8ac17359ed50ae8ea089e4464e35e)
+
+## 3. To pause or stop registration
 
 If you want to prevent this pull request from being auto-merged, simply leave a comment. If you want to post a comment without blocking auto-merging, you must include the text `[noblock]` in your comment.
 
