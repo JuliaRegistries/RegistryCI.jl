@@ -1,4 +1,5 @@
 using HTTP: HTTP
+using UUIDs: uuid_version
 
 # TODO: change this value to `true` once we are ready to re-enable the
 # "Require `[compat]` for stdlib dependencies" feature.
@@ -406,6 +407,65 @@ function meets_uuid_match_check(
         end
     end
     return (true, "")
+end
+
+"""
+    uuid_passes_sanity_check(uuid::UUID) -> Bool
+
+Checks if a UUID conforms to RFC 4122 / RFC 9562 standards or is a historically
+buggy Julia version 1 UUID.
+
+Standards-compliant UUIDs must have:
+- Version field (bits 48-51): 1-8
+- Variant field (bits 64-65): 10 binary (making the hex character at position 19 one of 8, 9, a, or b)
+
+Julia's uuid1() implementation historically had a bug where it set the variant bits to 00
+instead of 10. We allow these for backward compatibility.
+
+Returns `true` if the UUID passes the sanity check, `false` otherwise.
+"""
+function uuid_passes_sanity_check(uuid::UUID)
+    version = uuid_version(uuid)
+    # Extract the variant bits (top 2 bits of the 9th byte, bits 64-65 of the UUID)
+    variant = Int((uuid.value >> 62) & 0x3)
+
+    # Standards-compliant: variant = 2 (binary 10) and version 1-8
+    # OR Julia's buggy v1: variant = 0 (binary 00) and version = 1
+    return (variant == 2 && 1 <= version <= 8) || (variant == 0 && version == 1)
+end
+
+# This check is only applied to new packages, not new versions
+const guideline_uuid_sanity_check = Guideline(;
+    info = "UUID passes sanity check (conforms to RFC 4122/RFC 9562 or is a legacy Julia v1 UUID)",
+    docs = string(
+        "The package's UUID must conform to RFC 4122 / RFC 9562 standards. ",
+        "This means:\n",
+        "- The version field (4 bits at positions 48-51) should be 1-8\n",
+        "- The variant field (2 bits at positions 64-65) should be binary `10` (hex character 8, 9, a, or b at position 19)\n\n",
+        "Exception: Julia's `uuid1()` function has historically generated UUIDs with incorrect variant bits (binary `00` instead of `10`). ",
+        "These UUIDs are accepted for backward compatibility with existing packages."
+    ),
+    check=data -> meets_uuid_sanity_check(data.parsed_project_info))
+
+function meets_uuid_sanity_check(maybe_project_info::Union{Nothing,ProjectInfo})
+    if maybe_project_info === nothing
+        return false, "Could not check package UUID as Project.toml checks failed"
+    end
+    pkg_uuid = maybe_project_info.uuid
+
+    if uuid_passes_sanity_check(pkg_uuid)
+        return true, ""
+    else
+        version = uuid_version(pkg_uuid)
+        variant = Int((pkg_uuid.value >> 62) & 0x3)
+        return false, string(
+            "The package's UUID ($pkg_uuid) does not conform to RFC 4122 / RFC 9562 standards. ",
+            "The UUID has version=$version and variant=$variant. ",
+            "Valid UUIDs must have version 1-8 with variant=2 (binary 10), ",
+            "or be a legacy Julia v1 UUID (version=1 with variant=0). ",
+            "Please generate a new standards-compliant UUID using `UUIDs.uuid4()`."
+        )
+    end
 end
 
 # This check checks for an explanation of why a breaking change is breaking
@@ -1287,8 +1347,9 @@ function get_automerge_guidelines(
         (guideline_dependency_confusion, true),
         # toml check must run after guideline_code_can_be_downloaded
         (guideline_project_toml_check, true),
-        # uuid check must run after `guideline_project_toml_check`
+        # uuid checks must run after `guideline_project_toml_check`
         (guideline_uuid_match_check, true),
+        (guideline_uuid_sanity_check, true),
         # this is the non-optional part of name checking
         (guideline_name_match_check, true),
         # We always run the `guideline_distance_check`

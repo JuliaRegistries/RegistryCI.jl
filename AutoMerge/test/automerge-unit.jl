@@ -542,6 +542,71 @@ end
         @test !result
         @test occursin("Project.toml checks failed", msg)
     end
+    @testset "`uuid_passes_sanity_check`" begin
+        # Test standards-compliant UUIDs (variant = 2, version 1-8)
+        # Version 4 UUID (random) with correct variant bits
+        @test AutoMerge.uuid_passes_sanity_check(UUID("550e8400-e29b-41d4-a716-446655440000"))
+
+        # Version 1 UUID (time-based) with correct variant bits
+        @test AutoMerge.uuid_passes_sanity_check(UUID("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"))
+
+        # Test Julia's buggy version 1 UUIDs (variant = 0, version = 1)
+        # This is what Julia's uuid1() has historically generated
+        @test AutoMerge.uuid_passes_sanity_check(UUID("00000000-0000-1000-0000-000000000000"))
+
+        # Test invalid UUIDs - wrong variant for non-v1
+        # Version 4 but variant = 0 (should fail)
+        @test !AutoMerge.uuid_passes_sanity_check(UUID("550e8400-e29b-41d4-0716-446655440000"))
+
+        # Test invalid UUIDs - wrong version
+        # Version 0 with variant 2 (should fail - version must be 1-8)
+        @test !AutoMerge.uuid_passes_sanity_check(UUID("550e8400-e29b-0000-a716-446655440000"))
+
+        # Version 9 with variant 2 (should fail - version must be 1-8)
+        @test !AutoMerge.uuid_passes_sanity_check(UUID("550e8400-e29b-91d4-a716-446655440000"))
+
+        # Test variant = 0 with version != 1 (should fail)
+        @test !AutoMerge.uuid_passes_sanity_check(UUID("550e8400-e29b-41d4-0716-446655440000"))
+    end
+    @testset "`meets_uuid_sanity_check`" begin
+        # Test with compliant UUID - should pass
+        compliant_uuid = UUID("550e8400-e29b-41d4-a716-446655440000")
+        project_info = AutoMerge.ProjectInfo(;
+            project_file="/tmp/Project.toml",
+            pkg_name="TestPkg",
+            uuid=compliant_uuid,
+            version=v"1.0.0"
+        )
+        @test AutoMerge.meets_uuid_sanity_check(project_info)[1]
+
+        # Test with Julia's buggy v1 UUID - should pass (allowed for compatibility)
+        buggy_v1_uuid = UUID("00000000-0000-1000-0000-000000000000")
+        project_info_buggy = AutoMerge.ProjectInfo(;
+            project_file="/tmp/Project.toml",
+            pkg_name="TestPkg",
+            uuid=buggy_v1_uuid,
+            version=v"1.0.0"
+        )
+        @test AutoMerge.meets_uuid_sanity_check(project_info_buggy)[1]
+
+        # Test with non-compliant UUID - should fail
+        bad_uuid = UUID("550e8400-e29b-0000-a716-446655440000") # version 0
+        project_info_bad = AutoMerge.ProjectInfo(;
+            project_file="/tmp/Project.toml",
+            pkg_name="TestPkg",
+            uuid=bad_uuid,
+            version=v"1.0.0"
+        )
+        result, msg = AutoMerge.meets_uuid_sanity_check(project_info_bad)
+        @test !result
+        @test occursin("UUID", msg)
+        @test occursin("RFC", msg)
+
+        # Test with nothing - should fail
+        result, msg = AutoMerge.meets_uuid_sanity_check(nothing)
+        @test !result
+        @test occursin("Project.toml checks failed", msg)
+    end
 end
 
 @testset "Guidelines for new versions" begin
