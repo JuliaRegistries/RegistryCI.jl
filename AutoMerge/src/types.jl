@@ -13,7 +13,10 @@ Shared configuration fields used by both PR checking and merging functionality.
 
 ```julia
 RegistryConfiguration(; kwargs...)
+RegistryConfiguration(config::RegistryConfiguration; kwargs...)  # Override constructor
 ```
+
+The second form creates a config with specified fields overridden, e.g., `RegistryConfiguration(config; read_only=true)`.
 
 !!! note
     New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
@@ -49,6 +52,10 @@ Base.@kwdef struct RegistryConfiguration <: AbstractConfiguration
     read_only::Bool = false
 end
 
+# Constructor for easy field overrides
+RegistryConfiguration(c::RegistryConfiguration; kw...) =
+    RegistryConfiguration(; (k => getproperty(c, k) for k in propertynames(c))..., kw...)
+
 """
     CheckPRConfiguration
 
@@ -56,7 +63,10 @@ Configuration struct for checking PR registration validity (security-isolated fu
 
 ```julia
 CheckPRConfiguration(; kwargs...)
+CheckPRConfiguration(config::CheckPRConfiguration; kwargs...)  # Override constructor
 ```
+
+The second form creates a config with specified fields overridden, e.g., `CheckPRConfiguration(config; check_license=false)`.
 
 !!! note
     New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
@@ -89,6 +99,10 @@ Base.@kwdef struct CheckPRConfiguration <: AbstractConfiguration
     commit_status_token_name::String = "AUTOMERGE_GITHUB_TOKEN"
 end
 
+# Constructor for easy field overrides
+CheckPRConfiguration(c::CheckPRConfiguration; kw...) =
+    CheckPRConfiguration(; (k => getproperty(c, k) for k in propertynames(c))..., kw...)
+
 """
     MergePRsConfiguration
 
@@ -96,7 +110,10 @@ Configuration struct for merging approved PRs (requires merge permissions).
 
 ```julia
 MergePRsConfiguration(; kwargs...)
+MergePRsConfiguration(config::MergePRsConfiguration; kwargs...)  # Override constructor
 ```
+
+The second form creates a config with specified fields overridden, e.g., `MergePRsConfiguration(config; merge_new_packages=false)`.
 
 !!! note
     New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
@@ -117,11 +134,22 @@ Base.@kwdef struct MergePRsConfiguration <: AbstractConfiguration
     merge_token_name::String = "AUTOMERGE_MERGE_TOKEN"
 end
 
+# Constructor for easy field overrides
+MergePRsConfiguration(c::MergePRsConfiguration; kw...) =
+    MergePRsConfiguration(; (k => getproperty(c, k) for k in propertynames(c))..., kw...)
+
 
 """
     AutoMergeConfiguration
 
 Combined configuration object containing registry, PR checking, and PR merging settings.
+
+```julia
+AutoMergeConfiguration(; registry_config, check_pr_config, merge_prs_config)
+AutoMergeConfiguration(config::AutoMergeConfiguration; kwargs...)  # Override constructor
+```
+
+The second form creates a config with specified sub-configs overridden, e.g., `AutoMergeConfiguration(config; registry_config=new_reg_config)`.
 
 !!! note
     New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
@@ -137,6 +165,10 @@ Base.@kwdef struct AutoMergeConfiguration <: AbstractConfiguration
     check_pr_config::CheckPRConfiguration
     merge_prs_config::MergePRsConfiguration
 end
+
+# Constructor for easy field overrides
+AutoMergeConfiguration(c::AutoMergeConfiguration; kw...) =
+    AutoMergeConfiguration(; (k => getproperty(c, k) for k in propertynames(c))..., kw...)
 
 _serialize(k, x::Any) = x
 function _serialize(k, x::Dates.Minute)
