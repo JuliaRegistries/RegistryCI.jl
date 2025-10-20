@@ -365,14 +365,14 @@ function find_and_parse_project_toml(code_path::AbstractString)
     end
     uuid = tryparse(UUID, toml["uuid"])
     if uuid === nothing
-        return (false, "Project file $selected_proj_name's uuid field `$(toml["uuid"]))` could not be parsed as a UUID.")
+        return (false, "Project file $selected_proj_name's uuid field `$(toml["uuid"])` could not be parsed as a UUID.")
     end
     version = tryparse(VersionNumber, toml["version"])
     if version === nothing
-        return (false, "Project file $selected_proj_name's version field `$(toml["version"]))` could not be parsed as a VersionNumber.")
+        return (false, "Project file $selected_proj_name's version field `$(toml["version"])` could not be parsed as a VersionNumber.")
     end
     info = ProjectInfo(;
-        local_path=selected_proj_path,
+        project_file=selected_proj_path,
         pkg_name=toml["name"],
         uuid=uuid,
         version=version
@@ -383,7 +383,7 @@ end
 
 # This check cannot be overridden, since it's important for registry integrity
 const guideline_uuid_match_check = Guideline(;
-    info = "UUID does not match the UUID of any existing package UUIDs",
+    info = "UUID does not collide with existing package or stdlib UUID",
     docs = "Packages must not match the UUID of an existing package or stdlib.",
     check=data -> meets_uuid_match_check(data.parsed_project_info, data.registry_master))
 

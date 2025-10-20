@@ -290,7 +290,7 @@ struct ErrorCannotComputeVersionDifference
 end
 
 Base.@kwdef struct ProjectInfo
-    local_path::String
+    project_file::String
     pkg_name::String
     uuid::UUID
     version::VersionNumber

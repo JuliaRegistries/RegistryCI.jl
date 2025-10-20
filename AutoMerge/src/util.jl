@@ -570,19 +570,13 @@ function time_is_already_in_utc(dt::Dates.DateTime)
 end
 
 """
-    get_all_pkg_name_uuids(registry_dir::AbstractString) -> Vector{String}
-    get_all_pkg_name_uuids(registry::RegistryInstance) -> Vector{String}
+    get_all_pkg_name_uuids(registry_dir::AbstractString)
+    get_all_pkg_name_uuids(registry::RegistryInstance)
 
-Given either:
-
-- a path to a directory holding an uncompressed registry
-
-or
-
-- a `RegistryInstance` object (from [RegistryInstances.jl](https://github.com/GunnarFarneback/RegistryInstances.jl)) associated to a registry,
-
-returns a sorted list of the names and UUIDs of Julia's standard libraries
-and packages defined in that registry.
+Given either a path to an uncompressed registry directory or a `RegistryInstance` object
+(from [RegistryInstances.jl](https://github.com/GunnarFarneback/RegistryInstances.jl)),
+returns a sorted vector of `NamedTuple`s with `name` and `uuid` fields for all packages
+in the registry and Julia's standard libraries.
 """
 function get_all_pkg_name_uuids(registry_dir::AbstractString)
     # Mimic the structure of a RegistryInstance
