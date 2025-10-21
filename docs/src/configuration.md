@@ -90,28 +90,22 @@ AutoMerge.merge_prs(config.registry_config, config.merge_prs_config)
 
 #### GitHub Token Configuration
 
-AutoMerge uses configurable GitHub tokens with different permission requirements:
+AutoMerge uses separate GitHub tokens with minimal required permissions:
 
-- **PR Checking Token** (`commit_status_token_name`): Requires `repo:status` permission to set commit statuses and read access to PRs. Does not need write access to the repository.
-- **Merge Token** (`merge_token_name`): Requires write access to the repository to merge PRs.
+| Token | Scopes Required | Used By | Purpose |
+|-------|----------------|---------|---------|
+| `commit_status_token_name` | `repo:status`, read PRs | `check_pr` | Set commit statuses during PR validation |
+| `merge_token_name` | `pull_request:write`, `contents:write` | `merge_prs` | Merge approved PRs |
 
-By default, both tokens use the environment variable `AUTOMERGE_GITHUB_TOKEN`, but they can be configured to use different tokens:
+**Default values:**
+- `commit_status_token_name = "AUTOMERGE_GITHUB_TOKEN"`
+- `merge_token_name = "AUTOMERGE_MERGE_TOKEN"`
 
-```julia
-# Use different tokens for different operations
-check_pr_config = AutoMerge.CheckPRConfiguration(
-    commit_status_token_name = "AUTOMERGE_CHECK_TOKEN",  # Token with repo:status permission
-    # ... other settings
-)
+For General registry, these tokens are separated to follow the principle of least privilege: the PR checking job (which runs untrusted code) never has access to the merge token.
 
-merge_prs_config = AutoMerge.MergePRsConfiguration(
-    merge_token_name = "AUTOMERGE_MERGE_TOKEN",  # Token with write permission
-    # ... other settings
-)
-```
 
 !!! warning "Token Security"
-    The `commit_status_token_name` and `merge_token_name` fields store the **names** of environment variables, not the actual token values. Never put actual GitHub tokens in configuration files!
+    These fields store environment variable **names**, not token values. Never put actual tokens in configuration files.
 
 #### Separation of Privileges
 
@@ -128,7 +122,7 @@ This separation follows the principle of least privilege and reduces the attack 
 
 ```@eval
 import Markdown
-str ="```yaml\n" * 
+str ="```yaml\n" *
     read("../../example_github_workflow_files/automerge.yml", String) *
     "\n```"
 @eval Markdown.@md_str($str)

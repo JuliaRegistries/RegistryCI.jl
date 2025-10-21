@@ -93,6 +93,84 @@ function find_previous_semver_version(pkg::AbstractString, current_version::Vers
     return isempty(previous_versions) ? nothing : maximum(previous_versions)
 end
 
+function get_fences(str)
+    n = maximum(x->length(x.captures[1])+1, eachmatch(r"(`+)", str), init=3)
+    return "`"^n
+end
+
+function format_diff_stats(full_diff::AbstractString, stat::AbstractString, shortstat::AbstractString; old_tree_sha::AbstractString, new_tree_sha::AbstractString)
+    # We want to give the most information we can in ~12 lines + optionally a detail block
+    # The detail block should only be present if we can't fit the full diff inline AND the full diff will fit in the comment in the block. Comments can be 65,536 characters, but we will stop after 50k to allow room for other parts of the comment.
+    # Note the full diff includes text from the package itself, so it is "attacker-controlled" in some sense.
+    # Similarly, the output from `stat` includes filenames from the package, and is again "attacker-controlled".
+    full_diff_valid = isvalid(String, full_diff)
+    full_diff_n_chars = length(full_diff)
+    full_diff_n_lines = countlines(IOBuffer(full_diff))
+
+    if full_diff_valid
+        full_diff_fences = get_fences(full_diff)
+    else
+        full_diff_fences = nothing
+    end
+
+    stat_n_lines = countlines(IOBuffer(stat))
+    stat_fences = get_fences(stat)
+
+    max_lines = 12
+    if full_diff_valid && full_diff_n_lines <= max_lines && full_diff_n_chars < max_lines*200
+        return """
+               $(full_diff_fences)diff
+               ❯ git diff-tree --patch $old_tree_sha $new_tree_sha
+               $(full_diff)
+               $(full_diff_fences)
+               """
+    end
+
+    str = if stat_n_lines <= max_lines
+        """
+        $(stat_fences)sh
+        ❯ git diff-tree --stat $old_tree_sha $new_tree_sha
+        $(stat)
+        $(stat_fences)
+        """
+    else
+        """
+        ```sh
+        ❯ git diff-tree --shortstat $old_tree_sha $new_tree_sha
+        $(shortstat)
+        ```
+        """
+    end
+
+    if full_diff_valid
+        # only use details block if fewer than 50k chars
+        if full_diff_n_chars <= 50_000
+            str *= """\n
+            <details><summary>Click to expand full patch diff</summary>
+
+            $(full_diff_fences)diff
+            ❯ git diff-tree --patch $old_tree_sha $new_tree_sha
+            $(full_diff)
+            $(full_diff_fences)
+
+            </details>
+            """
+        else
+            str *= "Full diff has $(full_diff_n_chars) characters (over limit of 50k), so is omitted here."
+        end
+    else
+        str *= "Full diff is not valid UTF-8, so is omitted here."
+    end
+    return str
+end
+
+function get_diff_stats(old_tree_sha::AbstractString, new_tree_sha::AbstractString; clone_dir::AbstractString)
+    full_diff = readchomp(`git -C $clone_dir diff-tree --patch $old_tree_sha $new_tree_sha --no-color`)
+    stat = readchomp(`git -C $clone_dir diff-tree --stat $old_tree_sha $new_tree_sha --stat-width=80 --no-color`)
+    shortstat = readchomp(`git -C $clone_dir diff-tree --shortstat $old_tree_sha $new_tree_sha --no-color`)
+    return format_diff_stats(full_diff, stat, shortstat; old_tree_sha, new_tree_sha)
+end
+
 """
     tree_sha_to_commit_sha(tree_sha::AbstractString, clone_dir::AbstractString; subdir::AbstractString="") -> Union{AbstractString, Nothing}
 
@@ -174,12 +252,12 @@ function extract_github_owner_repo(repo_url::AbstractString)
 end
 
 """
-    generate_github_diff_url(repo_url::AbstractString, previous_commit_sha::AbstractString, current_commit_sha::AbstractString) -> Union{AbstractString, Nothing}
+    format_github_diff_url(repo_url::AbstractString, previous_commit_sha::AbstractString, current_commit_sha::AbstractString) -> Union{AbstractString, Nothing}
 
 Generates a GitHub diff URL comparing two commits.
 Returns the URL AbstractString, or `nothing` if the repository is not on GitHub.
 """
-function generate_github_diff_url(repo_url::AbstractString, previous_commit_sha::AbstractString, current_commit_sha::AbstractString)
+function format_github_diff_url(repo_url::AbstractString, previous_commit_sha::AbstractString, current_commit_sha::AbstractString)
     if !is_github_repo(repo_url)
         return nothing
     end
@@ -197,11 +275,13 @@ end
     get_version_diff_info(data) -> Union{NamedTuple, Nothing}
 
 Gets diff information for a new version registration. Returns a NamedTuple with fields:
-- `diff_url`: GitHub diff URL
+
+- `diff_stats`: string summarizing the git diff between package versions
+- `diff_url`: GitHub diff URL, if available. Otherwise `nothing`.
 - `previous_version`: Previous version number
 - `current_version`: Current version number
 
-Returns `nothing` if no previous version exists or if the repository is not on GitHub.
+Returns `nothing` if no previous version exists or package is not a `NewVersion`.
 """
 function get_version_diff_info(data)
     # Only applicable for new versions
@@ -219,6 +299,22 @@ function get_version_diff_info(data)
     current_pkg_info = parse_registry_pkg_info(data.registry_head, data.pkg, data.version)
     previous_pkg_info = parse_registry_pkg_info(data.registry_master, data.pkg, previous_version)
 
+    # Get code diff stats
+    diff_stats = get_diff_stats(previous_pkg_info.tree_hash, current_pkg_info.tree_hash; clone_dir=data.pkg_clone_dir)
+
+    # GitHub diff link
+    diff_url = get_github_diff_link(data, previous_pkg_info, current_pkg_info)
+
+    return (;
+        diff_stats,
+        diff_url,
+        previous_version,
+        current_version=data.version,
+    )
+
+end
+
+function get_github_diff_link(data, previous_pkg_info, current_pkg_info)
     # Check if it's a GitHub repo
     if !is_github_repo(current_pkg_info.repo)
         return nothing
@@ -238,18 +334,7 @@ function get_version_diff_info(data)
         return nothing
     end
 
-    # Generate diff URL
-    diff_url = generate_github_diff_url(current_pkg_info.repo, previous_commit_sha, current_commit_sha)
-
-    if diff_url === nothing
-        return nothing
-    end
-
-    return (
-        diff_url=diff_url,
-        previous_version=previous_version,
-        current_version=data.version,
-    )
+    return format_github_diff_url(current_pkg_info.repo, previous_commit_sha, current_commit_sha)
 end
 
 #####
@@ -317,12 +402,17 @@ function _comment_noblock(n)
 end
 
 function _version_diff_section(n, diff_info)
-    return string(
+    str = string(
         "## $n. Code changes since last version\n\n",
-        "Since the last version (v$(diff_info.previous_version)), ",
-        "you can see the code changes here:\n\n",
-        "[View diff]($(diff_info.diff_url))\n\n",
-    )
+        "Code changes from v$(diff_info.previous_version): \n\n",
+        diff_info.diff_stats
+        )
+    if diff_info.diff_url !== nothing
+        str = string(str,
+            "\n",
+            "[View full patch diff on GitHub]($(diff_info.diff_url))\n\n")
+    end
+    return str
 end
 
 function comment_text_pass(
@@ -480,19 +570,13 @@ function time_is_already_in_utc(dt::Dates.DateTime)
 end
 
 """
-    get_all_pkg_name_uuids(registry_dir::AbstractString) -> Vector{String}
-    get_all_pkg_name_uuids(registry::RegistryInstance) -> Vector{String}
+    get_all_pkg_name_uuids(registry_dir::AbstractString)
+    get_all_pkg_name_uuids(registry::RegistryInstance)
 
-Given either:
-
-- a path to a directory holding an uncompressed registry
-
-or
-
-- a `RegistryInstance` object (from [RegistryInstances.jl](https://github.com/GunnarFarneback/RegistryInstances.jl)) associated to a registry,
-
-returns a sorted list of the names and UUIDs of Julia's standard libraries
-and packages defined in that registry.
+Given either a path to an uncompressed registry directory or a `RegistryInstance` object
+(from [RegistryInstances.jl](https://github.com/GunnarFarneback/RegistryInstances.jl)),
+returns a sorted vector of `NamedTuple`s with `name` and `uuid` fields for all packages
+in the registry and Julia's standard libraries.
 """
 function get_all_pkg_name_uuids(registry_dir::AbstractString)
     # Mimic the structure of a RegistryInstance

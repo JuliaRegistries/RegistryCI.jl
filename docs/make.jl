@@ -20,6 +20,7 @@ makedocs(;
         "Public API" => "public.md",
         "Regexes" => "regexes.md",
         "Internals (Private)" => "internals.md",
+        "Migration Guide (AutoMerge v1)" => "migration-v1.md",
     ],
 )
 

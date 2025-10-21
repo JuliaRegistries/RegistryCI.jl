@@ -19,7 +19,7 @@ const TagBot = MovedFunctionality("TagBot")
 function throw_error(a::MovedFunctionality)
     name = getfield(a, :name)
     if name == "AutoMerge"
-        throw(MovedFunctionalityException("RegistryCI.AutoMerge has been moved to its own package, AutoMerge.jl. The API of AutoMerge v1.0 matches that of RegistryCI.AutoMerge v10.10.4."))
+        throw(MovedFunctionalityException("RegistryCI.AutoMerge has been moved to its own package, AutoMerge.jl. See the migration guide at https://juliaregistries.github.io/RegistryCI.jl/dev/migration-v1/ for details on migrating to AutoMerge v1."))
     elseif name == "TagBot"
         throw(MovedFunctionalityException("RegistryCI.TagBot has been moved to a new package, AutoMerge.jl. The API of AutoMerge.TagBot v1.0 matches that of RegistryCI.TagBot v10.10.4."))
     else

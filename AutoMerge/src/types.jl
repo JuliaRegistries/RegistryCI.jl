@@ -13,7 +13,10 @@ Shared configuration fields used by both PR checking and merging functionality.
 
 ```julia
 RegistryConfiguration(; kwargs...)
+RegistryConfiguration(config::RegistryConfiguration; kwargs...)  # Override constructor
 ```
+
+The second form creates a config with specified fields overridden, e.g., `RegistryConfiguration(config; read_only=true)`.
 
 !!! note
     New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
@@ -49,6 +52,10 @@ Base.@kwdef struct RegistryConfiguration <: AbstractConfiguration
     read_only::Bool = false
 end
 
+# Constructor for easy field overrides
+RegistryConfiguration(c::RegistryConfiguration; kw...) =
+    RegistryConfiguration(; (k => getproperty(c, k) for k in propertynames(c))..., kw...)
+
 """
     CheckPRConfiguration
 
@@ -56,7 +63,10 @@ Configuration struct for checking PR registration validity (security-isolated fu
 
 ```julia
 CheckPRConfiguration(; kwargs...)
+CheckPRConfiguration(config::CheckPRConfiguration; kwargs...)  # Override constructor
 ```
+
+The second form creates a config with specified fields overridden, e.g., `CheckPRConfiguration(config; check_license=false)`.
 
 !!! note
     New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
@@ -89,6 +99,10 @@ Base.@kwdef struct CheckPRConfiguration <: AbstractConfiguration
     commit_status_token_name::String = "AUTOMERGE_GITHUB_TOKEN"
 end
 
+# Constructor for easy field overrides
+CheckPRConfiguration(c::CheckPRConfiguration; kw...) =
+    CheckPRConfiguration(; (k => getproperty(c, k) for k in propertynames(c))..., kw...)
+
 """
     MergePRsConfiguration
 
@@ -96,7 +110,10 @@ Configuration struct for merging approved PRs (requires merge permissions).
 
 ```julia
 MergePRsConfiguration(; kwargs...)
+MergePRsConfiguration(config::MergePRsConfiguration; kwargs...)  # Override constructor
 ```
+
+The second form creates a config with specified fields overridden, e.g., `MergePRsConfiguration(config; merge_new_packages=false)`.
 
 !!! note
     New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
@@ -117,11 +134,22 @@ Base.@kwdef struct MergePRsConfiguration <: AbstractConfiguration
     merge_token_name::String = "AUTOMERGE_MERGE_TOKEN"
 end
 
+# Constructor for easy field overrides
+MergePRsConfiguration(c::MergePRsConfiguration; kw...) =
+    MergePRsConfiguration(; (k => getproperty(c, k) for k in propertynames(c))..., kw...)
+
 
 """
     AutoMergeConfiguration
 
 Combined configuration object containing registry, PR checking, and PR merging settings.
+
+```julia
+AutoMergeConfiguration(; registry_config, check_pr_config, merge_prs_config)
+AutoMergeConfiguration(config::AutoMergeConfiguration; kwargs...)  # Override constructor
+```
+
+The second form creates a config with specified sub-configs overridden, e.g., `AutoMergeConfiguration(config; registry_config=new_reg_config)`.
 
 !!! note
     New keyword arguments with defaults may be added to this struct in _non-breaking_ releases of AutoMerge.jl. Default values and keyword argument names will not be removed or changed in non-breaking releases, however.
@@ -138,6 +166,10 @@ Base.@kwdef struct AutoMergeConfiguration <: AbstractConfiguration
     merge_prs_config::MergePRsConfiguration
 end
 
+# Constructor for easy field overrides
+AutoMergeConfiguration(c::AutoMergeConfiguration; kw...) =
+    AutoMergeConfiguration(; (k => getproperty(c, k) for k in propertynames(c))..., kw...)
+
 _serialize(k, x::Any) = x
 function _serialize(k, x::Dates.Minute)
     if !endswith(string(k), "_minutes")
@@ -153,7 +185,11 @@ end
 
 function _deserialize(k::AbstractString, x::Any)
     if endswith(k, "_minutes")
-       return Dates.Minute(x)
+        val = Dates.Minute(x)
+        if val < Dates.Minute(0)
+            error("Configuration field '$k' must be non-negative, got $(Dates.value(val)) minutes. Please check your configuration file.")
+        end
+        return val
     elseif k == "registry_config"
         return from_dict(RegistryConfiguration, x)
     elseif k == "check_pr_config"
@@ -161,11 +197,26 @@ function _deserialize(k::AbstractString, x::Any)
     elseif k == "merge_prs_config"
         return from_dict(MergePRsConfiguration, x)
     else
+        # Validate Vector{String} arrays
+        if x isa Vector
+            if !all(elt -> elt isa String, x)
+                error("Configuration field '$k' must be a Vector{String}, but contains non-string elements. Please check your configuration file.")
+            end
+            return Vector{String}(x)
+        end
         return x
     end
 end
 function from_dict(::Type{Config}, dict::AbstractDict{String}) where {Config <: AbstractConfiguration}
-    Config(; (Symbol(k) => _deserialize(k, dict[k]) for k in keys(dict))...)
+    # Check for unknown keys and warn (forward compatibility)
+    expected_keys = Set(String(k) for k in fieldnames(Config))
+    dict_keys = Set(keys(dict))
+    unknown_keys = setdiff(dict_keys, expected_keys)
+    if !isempty(unknown_keys)
+        @warn "Configuration contains unknown keys: $(join(unknown_keys, ", ")). This may indicate the configuration was created with a newer version of AutoMerge. These keys will be ignored."
+    end
+
+    Config(; (Symbol(k) => _deserialize(k, dict[k]) for k in keys(dict) if k in expected_keys)...)
 end
 
 """
@@ -206,7 +257,12 @@ Base.show(io::IO, ::MIME"text/plain", obj::AbstractConfiguration) = _full_show(i
 Base.show(io::IO, obj::AbstractConfiguration) = print(io, typeof(obj), "(…)")
 
 function general_registry_config()
-    return read_config(joinpath(pkgdir(AutoMerge), "configs", "General.AutoMerge.toml"))
+    p = pkgdir(AutoMerge)
+    if p === nothing # make JET happy
+        @error "AutoMerge was not imported from a package, cannot locate package directory"
+        return nothing
+    end
+    return read_config(joinpath(p, "configs", "General.AutoMerge.toml"))
 end
 
 @doc """
@@ -266,7 +322,7 @@ struct ErrorCannotComputeVersionDifference
 end
 
 Base.@kwdef struct ProjectInfo
-    local_path::String
+    project_file::String
     pkg_name::String
     uuid::UUID
     version::VersionNumber
@@ -363,46 +419,6 @@ function GitHubAutoMergeData(; kwargs...)
     return GitHubAutoMergeData(getindex.(Ref(kwargs), fields)...)
 end
 
-struct LocalAutoMergeData
-    # Whether the registration refers to a new package or a new version
-    # of an existing package.
-    registration_type::Union{NewPackage,NewVersion}
-
-    # Name of the package being registered.
-    pkg::String
-
-    # Version of the package being registered.
-    version::VersionNumber
-
-    # Current commit SHA of the package repository.
-    current_pr_head_commit_sha::String
-
-    # Directory of a registry clone that includes the simulated registration.
-    registry_head::String
-
-    # Directory of a registry clone that excludes the simulated registration.
-    registry_master::String
-
-    # Whether to add a comment suggesting bumping package version to
-    # 1.0 if appropriate.
-    suggest_onepointzero::Bool
-
-    # List of dependent registries. Typically this would contain
-    # "General" when running automerge for a private registry.
-    registry_deps::Vector{String}
-
-    # Location of the directory where the package code is located.
-    pkg_code_path::String
-
-    # A list of public Julia registries (repository URLs) which will
-    # be checked for UUID collisions in order to mitigate the
-    # dependency confusion vulnerability.
-    public_registries::Vector{String}
-
-    # Environment variables to pass to the subprocess that does `Pkg.add("Foo")` and `import Foo`
-    environment_variables_to_pass::Vector{String}
-end
-
 Base.@kwdef mutable struct Guideline
     # Short description of the guideline. Only used for logging.
     info::String
@@ -411,7 +427,7 @@ Base.@kwdef mutable struct Guideline
     docs::Union{String,Nothing} = info
 
     # Function that is run in order to determine whether a guideline
-    # is met. Input is an instance of `GitHubAutoMergeData` or `LocalAutoMergeData` and output
+    # is met. Input is an instance of `GitHubAutoMergeData` and output
     # is passed status plus a user facing message explaining the
     # guideline result.
     check::Function
@@ -427,57 +443,4 @@ passed(guideline::Guideline) = guideline.passed
 message(guideline::Guideline) = guideline.message
 function check!(guideline::Guideline, data::GitHubAutoMergeData)
     return guideline.passed, guideline.message = guideline.check(data)
-end
-function check!(guideline::Guideline, data::LocalAutoMergeData)
-    return guideline.passed, guideline.message = guideline.check(data)
-end
-
-struct LocalCheckResult
-    pkg::String
-    version::VersionNumber
-    registration_type::Union{NewPackage,NewVersion}
-    commit_sha::String
-    overall_pass::Bool
-    passed_guidelines::Vector{Guideline}
-    failed_guidelines::Vector{Guideline}
-    total_guidelines::Int
-end
-
-# Single-line show method
-function Base.show(io::IO, result::LocalCheckResult)
-    status = result.overall_pass ? "✓ PASS" : "✗ FAIL"
-    print(io, "LocalCheckResult: $(result.pkg) v$(result.version) ($status)")
-end
-
-# Multi-line show method
-function Base.show(io::IO, ::MIME"text/plain", result::LocalCheckResult)
-    println(io, "="^60)
-    println(io, "LOCAL AUTOMERGE CHECK RESULTS")
-    println(io, "="^60)
-    println(io, "Package: $(result.pkg) v$(result.version)")
-    println(io, "Registration type: $(typeof(result.registration_type))")
-    status = result.overall_pass ? "✓ PASS" : "✗ FAIL"
-    println(io, "Overall result: $status")
-    println(io)
-
-    if !isempty(result.passed_guidelines)
-        println(io, "✓ Passed guidelines ($(length(result.passed_guidelines))):")
-        for guideline in result.passed_guidelines
-            println(io, "  • $(guideline.info)")
-        end
-        println(io)
-    end
-
-    if !isempty(result.failed_guidelines)
-        println(io, "✗ Failed guidelines ($(length(result.failed_guidelines))):")
-        for guideline in result.failed_guidelines
-            println(io, "  • $(guideline.info)")
-            if !isempty(guideline.message)
-                println(io, "    $(guideline.message)")
-            end
-        end
-        println(io)
-    end
-
-    print(io, "="^60)
 end
