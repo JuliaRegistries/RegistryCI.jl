@@ -5,13 +5,20 @@ import Base: merge!
 # Get package info (repo, subdir, versions, compat, deps) by UUID or name
 function get_package_info(registry::RegistryInstance, pkg::Union{UUID, AbstractString})
     if pkg isa AbstractString
-        # Find UUID by name
+        # Find UUID by name - error if multiple packages with same name
+        found_uuid = nothing
         for (uuid, entry) in registry.pkgs
             if entry.name == pkg
-                return registry_info(registry.pkgs[uuid])
+                if found_uuid !== nothing
+                    error("Multiple packages found with name $pkg in registry $(registry.name)")
+                end
+                found_uuid = uuid
             end
         end
-        error("Package $pkg not found in registry $(registry.name)")
+        if found_uuid === nothing
+            error("Package $pkg not found in registry $(registry.name)")
+        end
+        return registry_info(registry.pkgs[found_uuid])
     else
         # pkg is UUID
         if !haskey(registry.pkgs, pkg)
@@ -31,7 +38,10 @@ function get_compat_for_version(
     result = Dict{String, Pkg.Versions.VersionSpec}()
     for (version_range, compat_dict) in info.compat
         if version in version_range
-            merge!(result, compat_dict)
+            # Error if overlapping ranges have conflicting compat entries
+            mergewith!(result, compat_dict) do old_val, new_val
+                error("Conflicting compat entries for version $version in overlapping version ranges: old=$old_val, new=$new_val")
+            end
         end
     end
     return result
@@ -47,7 +57,10 @@ function get_deps_for_version(
     result = Dict{String, UUID}()
     for (version_range, deps_dict) in info.deps
         if version in version_range
-            merge!(result, deps_dict)
+            # Error if overlapping ranges have conflicting dep entries
+            mergewith!(result, deps_dict) do old_val, new_val
+                error("Conflicting dependency entries for version $version in overlapping version ranges: old=$old_val, new=$new_val")
+            end
         end
     end
     return result

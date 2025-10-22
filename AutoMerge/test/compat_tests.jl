@@ -237,22 +237,14 @@ end
 
                     for ver in test_versions
                         # Test meets_compat_for_julia
-                        try
-                            old_julia = old_meets_compat_for_julia(general_path, pkg_name, ver)
-                            new_julia = AutoMerge.meets_compat_for_julia(general_path, pkg_name, ver)
-                            @test old_julia[1] == new_julia[1]
-                        catch e
-                            @test_broken false  # Mark as known issue if it fails
-                        end
+                        old_julia = old_meets_compat_for_julia(general_path, pkg_name, ver)
+                        new_julia = AutoMerge.meets_compat_for_julia(general_path, pkg_name, ver)
+                        @test old_julia[1] == new_julia[1]
 
                         # Test meets_compat_for_all_deps
-                        try
-                            old_deps = old_meets_compat_for_all_deps(general_path, pkg_name, ver)
-                            new_deps = AutoMerge.meets_compat_for_all_deps(general_path, pkg_name, ver)
-                            @test old_deps[1] == new_deps[1]
-                        catch e
-                            @test_broken false  # Mark as known issue if it fails
-                        end
+                        old_deps = old_meets_compat_for_all_deps(general_path, pkg_name, ver)
+                        new_deps = AutoMerge.meets_compat_for_all_deps(general_path, pkg_name, ver)
+                        @test old_deps[1] == new_deps[1]
                     end
                 catch e
                     @test_skip "Could not test $pkg_name: $e"
