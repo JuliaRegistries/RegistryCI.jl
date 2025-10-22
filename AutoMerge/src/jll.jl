@@ -10,8 +10,6 @@ function _get_all_dependencies_nonrecursive(registry::RegistryInstance, pkg, ver
     return collect(keys(deps_dict))
 end
 
-_get_all_dependencies_nonrecursive(registry::AbstractString, pkg, version) =
-    _get_all_dependencies_nonrecursive(RegistryInstance(registry), pkg, version)
 
 
 const guideline_allowed_jll_nonrecursive_dependencies = Guideline(;
@@ -46,4 +44,3 @@ function meets_allowed_jll_nonrecursive_dependencies(
 end
 
 meets_allowed_jll_nonrecursive_dependencies(registry::AbstractString, pkg, version) =
-    meets_allowed_jll_nonrecursive_dependencies(RegistryInstance(registry), pkg, version)

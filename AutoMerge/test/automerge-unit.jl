@@ -131,14 +131,15 @@ end
     end
     @testset "`AutoMerge.parse_registry_pkg_info`" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
-        result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI", "1.0.0")
+        registry = RegistryInstance(registry_path)
+        result = AutoMerge.parse_registry_pkg_info(registry, "RegistryCI", "1.0.0")
         @test result == (;
             uuid="0c95cc5f-2f7e-43fe-82dd-79dbcba86b32",
             repo="https://github.com/JuliaRegistries/RegistryCI.jl.git",
             subdir="",
             tree_hash="1036c9c4d600468785fbd9dae87587e59d2f66a9",
         )
-        result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI")
+        result = AutoMerge.parse_registry_pkg_info(registry, "RegistryCI")
         @test result == (;
             uuid="0c95cc5f-2f7e-43fe-82dd-79dbcba86b32",
             repo="https://github.com/JuliaRegistries/RegistryCI.jl.git",
@@ -147,7 +148,7 @@ end
         )
 
         result = AutoMerge.parse_registry_pkg_info(
-            registry_path, "SnoopCompileCore", "2.5.2"
+            registry, "SnoopCompileCore", "2.5.2"
         )
         # Don't test repo field since SnoopCompile.jl has moved repositories (and we don't control it)
         @test result.uuid == "e2b509da-e806-4183-be48-004708413034"
@@ -963,8 +964,9 @@ end
         if Base.VERSION >= v"1.4-"
             # We skip this test on Julia 1.3, because it requires `Base.only`.
             @testset "julia_compat" begin
-                registry_path = registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
-                @test AutoMerge.julia_compat("Example", v"0.5.3", registry_path) isa AbstractVector{<:Pkg.Types.VersionRange}
+                registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
+                registry = RegistryInstance(registry_path)
+                @test AutoMerge.julia_compat("Example", v"0.5.3", registry) isa AbstractVector{<:Pkg.Types.VersionRange}
             end
         end
     end

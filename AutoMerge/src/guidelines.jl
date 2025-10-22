@@ -710,12 +710,8 @@ const guideline_repo_url_requirement = Guideline(;
     check=data -> meets_repo_url_requirement(data.pkg; registry_head=data.registry_head),
 )
 
-function meets_repo_url_requirement(pkg::String; registry_head::Union{RegistryInstance, String})
-    # Convert string path to RegistryInstance if needed
-    registry = registry_head isa String ? RegistryInstance(registry_head) : registry_head
-
-    # Get package info using helper
-    pkg_info = get_package_info(registry, pkg)
+function meets_repo_url_requirement(pkg::String; registry_head::RegistryInstance)
+    pkg_info = get_package_info(registry_head, pkg)
 
     url = pkg_info.repo
     subdir = something(pkg_info.subdir, "")
@@ -1168,7 +1164,7 @@ function meets_version_can_be_added_or_imported(
             """
     end
 
-    jl_compat = julia_compat(pkg, version, working_directory)
+    jl_compat = julia_compat(pkg, version, RegistryInstance(working_directory))
     # The `code` defined above uses Pkg.Registry functionality, which
     # is not available in Julia 1.0. Thus 1.1.0 is the lowest Julia
     # version that can be considered for add/import testing.

@@ -97,9 +97,6 @@ function julia_compat(pkg::String, version::VersionNumber, registry::RegistryIns
     return isempty(julia_ranges) ? [Pkg.Versions.VersionRange("* - *")] : julia_ranges
 end
 
-julia_compat(pkg::String, version::VersionNumber, registry::AbstractString) =
-    julia_compat(pkg, version, RegistryInstance(registry))
-
 function _has_upper_bound(r::Pkg.Types.VersionRange)
     a = r.upper != Pkg.Types.VersionBound("*")
     b = r.upper != Pkg.Types.VersionBound("0")
