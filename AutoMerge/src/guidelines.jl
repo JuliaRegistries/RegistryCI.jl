@@ -128,6 +128,11 @@ function meets_compat_for_all_deps(registry::RegistryInstance, pkg, version)
     dep_has_compat_with_upper_bound = Dict{String,Bool}()
 
     for name in keys(deps_dict)
+        # Skip "julia" - it has its own separate check (meets_compat_for_julia)
+        if lowercase(name) == "julia"
+            continue
+        end
+
         if _AUTOMERGE_REQUIRE_STDLIB_COMPAT
             debug_msg = "Found a new (non-JLL) dependency: $(name)"
             apply_compat_requirement = !is_jll_name(name)

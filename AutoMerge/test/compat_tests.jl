@@ -169,6 +169,11 @@ end
         ("StaticArrays", v"1.5.0"),
         ("Distances", v"0.10.8"),
         ("Colors", v"0.12.10"),
+
+        # Packages that previously failed due to julia being in deps_dict
+        ("HighLevelTypes", v"0.0.2"),
+        ("DataArrays", v"0.7.0"),
+        ("ForestBiometrics", v"0.3.0"),
     ]
 
     @testset "meets_compat_for_julia comparison" begin
@@ -252,4 +257,5 @@ end
             end
         end
     end
+
 end
