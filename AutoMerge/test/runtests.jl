@@ -10,11 +10,9 @@ using TimeZones
 using ReferenceTests
 using UUIDs
 
-# Starting with Julia 1.7, when you use the Pkg server registry, the registry tarball does
-# not get unpacked, and thus the registry files are not available. Of course, AutoMerge
-# requires that the registry files are available. So for the AutoMerge test suite, we will
-# disable the Pkg server.
-ENV["JULIA_PKG_SERVER"] = ""
+# NOTE: AutoMerge now supports both packed (tarball) and unpacked registries via RegistryInstances.jl.
+# We enable the Pkg server to test packed registry support!
+# ENV["JULIA_PKG_SERVER"] = ""  # Disabled - we want to test with packed registries
 
 @static if v"1.6-" <= Base.VERSION < v"1.11-"
     # BrokenRecord fails to precompile on Julia 1.11
@@ -37,6 +35,16 @@ end
         else
             @warn("Skipping the TagBot.jl unit tests", VERSION)
         end
+    end
+
+    @testset "Registry Helpers tests" begin
+        @info("Running the Registry Helpers tests")
+        include("registry_helpers_test.jl")
+    end
+
+    @testset "Compat Guidelines Comparison tests" begin
+        @info("Running the Compat Guidelines Comparison tests")
+        include("compat_tests.jl")
     end
 
     @testset "AutoMerge.jl unit tests" begin

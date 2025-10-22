@@ -1,25 +1,13 @@
 # The actual relative path of the package as specified in the `Registry.toml` file.
 function get_package_relpath_in_registry(; package_name::String, registry_path::String)
-    registry_toml_parsed = parse_registry_toml(registry_path, "Registry.toml")
-    all_packages = registry_toml_parsed["packages"]
-    all_package_names_and_paths = map(x -> (x["name"], x["path"]), values(all_packages))
-    matching_package_indices = findall(
-        getindex.(all_package_names_and_paths, 1) .== package_name
-    )
-    num_indices = length(matching_package_indices)
-    (num_indices == 0) &&
-        throw(ErrorException("no package found with the name $(package_name)"))
-    (num_indices != 1) && throw(
-        ErrorException(
-            "multiple ($(num_indices)) packages found with the name $(package_name)"
-        ),
-    )
-    single_matching_index = only(matching_package_indices)
-    single_matching_package = all_package_names_and_paths[single_matching_index]
-    _pkgname, _pkgrelpath = single_matching_package
-    always_assert(_pkgname == package_name)
-    _pkgrelpath::String
-    return _pkgrelpath
+    registry = RegistryInstance(registry_path)
+    # Find the package entry by name and return its path
+    for (uuid, entry) in registry.pkgs
+        if entry.name == package_name
+            return entry.path
+        end
+    end
+    error("Package $package_name not found in registry $(registry.name)")
 end
 
 # What the relative path of the package *should* be, in theory.
