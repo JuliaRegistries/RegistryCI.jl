@@ -538,7 +538,8 @@ end
 
         # Nothing passed as project info - should fail
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
-        result, msg = AutoMerge.meets_uuid_match_check(nothing, registry_path)
+        registry = RegistryInstance(registry_path)
+        result, msg = AutoMerge.meets_uuid_match_check(nothing, registry)
         @test !result
         @test occursin("Project.toml checks failed", msg)
     end

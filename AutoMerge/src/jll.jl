@@ -13,6 +13,7 @@ end
 _get_all_dependencies_nonrecursive(registry::AbstractString, pkg, version) =
     _get_all_dependencies_nonrecursive(RegistryInstance(registry), pkg, version)
 
+
 const guideline_allowed_jll_nonrecursive_dependencies = Guideline(;
     info="If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
     docs=nothing,

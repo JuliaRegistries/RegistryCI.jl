@@ -150,6 +150,7 @@ end
 @testset "Compat Guidelines Comparison" begin
     # Get General registry
     general_path = joinpath(first(DEPOT_PATH), "registries", "General")
+    general_registry = RegistryInstance(general_path)
 
     # Test packages with various characteristics
     test_packages = [
@@ -182,7 +183,7 @@ end
                 # Try to run both old and new
                 try
                     old_result = old_meets_compat_for_julia(general_path, pkg, ver)
-                    new_result = AutoMerge.meets_compat_for_julia(general_path, pkg, ver)
+                    new_result = AutoMerge.meets_compat_for_julia(general_registry, pkg, ver)
 
                     @test old_result[1] == new_result[1]  # Check boolean result
                     # Message format might differ slightly, so just check they both return same success/failure
@@ -206,7 +207,7 @@ end
             @testset "$pkg v$ver" begin
                 try
                     old_result = old_meets_compat_for_all_deps(general_path, pkg, ver)
-                    new_result = AutoMerge.meets_compat_for_all_deps(general_path, pkg, ver)
+                    new_result = AutoMerge.meets_compat_for_all_deps(general_registry, pkg, ver)
 
                     @test old_result[1] == new_result[1]  # Check boolean result
                     if old_result[1] != new_result[1]
@@ -225,8 +226,8 @@ end
     end
 
     @testset "Exhaustive test on recent packages" begin
-        # Get a sample of recent package versions from General registry
-        registry = RegistryInstance(general_path)
+        # Get a sample of recent package versions from General registry (reuse existing one)
+        registry = general_registry
 
         # Sample some packages for exhaustive testing
         sample_packages = ["JSON", "HTTP", "DataFrames", "StaticArrays", "Colors"]
@@ -243,12 +244,12 @@ end
                     for ver in test_versions
                         # Test meets_compat_for_julia
                         old_julia = old_meets_compat_for_julia(general_path, pkg_name, ver)
-                        new_julia = AutoMerge.meets_compat_for_julia(general_path, pkg_name, ver)
+                        new_julia = AutoMerge.meets_compat_for_julia(general_registry, pkg_name, ver)
                         @test old_julia[1] == new_julia[1]
 
                         # Test meets_compat_for_all_deps
                         old_deps = old_meets_compat_for_all_deps(general_path, pkg_name, ver)
-                        new_deps = AutoMerge.meets_compat_for_all_deps(general_path, pkg_name, ver)
+                        new_deps = AutoMerge.meets_compat_for_all_deps(general_registry, pkg_name, ver)
                         @test old_deps[1] == new_deps[1]
                     end
                 catch e

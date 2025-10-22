@@ -79,6 +79,7 @@ end
 parse_registry_pkg_info(registry::AbstractString, pkg, version=nothing) =
     parse_registry_pkg_info(RegistryInstance(registry), pkg, version)
 
+
 #####
 ##### Version diff functionality
 #####

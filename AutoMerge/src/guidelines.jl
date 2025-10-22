@@ -16,10 +16,16 @@ const guideline_registry_consistency_tests_pass = Guideline(;
 )
 
 function meets_registry_consistency_tests_pass(
-    registry_head::String, registry_deps::Vector{String}
+    registry_head::RegistryInstance, registry_deps::Vector{String}
 )
+    # RegistryCI.test requires an unpacked registry directory
+    # Check if Registry.toml exists (unpacked registries have it at the root)
+    if !isfile(joinpath(registry_head.path, "Registry.toml"))
+        return false, "RegistryCI.test requires an unpacked registry, but the provided registry appears to be packed or invalid (Registry.toml not found at $(registry_head.path))"
+    end
+
     try
-        RegistryCI.test(registry_head; registry_deps=registry_deps)
+        RegistryCI.test(registry_head.path; registry_deps=registry_deps)
         return true, ""
     catch ex
         @error "" exception = (ex, catch_backtrace())
@@ -70,9 +76,6 @@ function meets_compat_for_julia(registry::RegistryInstance, pkg, version)
         return true, ""
     end
 end
-
-meets_compat_for_julia(registry::AbstractString, pkg, version) =
-    meets_compat_for_julia(RegistryInstance(registry), pkg, version)
 
 const guideline_compat_for_all_deps = Guideline(;
     info="Compat (with upper bound) for all dependencies",
@@ -181,9 +184,6 @@ function meets_compat_for_all_deps(registry::RegistryInstance, pkg, version)
     end
 end
 
-meets_compat_for_all_deps(registry::AbstractString, pkg, version) =
-    meets_compat_for_all_deps(RegistryInstance(registry), pkg, version)
-
 const guideline_patch_release_does_not_narrow_julia_compat = Guideline(;
     info="If it is a patch release on a post-1.0 package, then it does not narrow the `[compat]` range for `julia`.",
     check=data -> meets_patch_release_does_not_narrow_julia_compat(
@@ -195,7 +195,7 @@ const guideline_patch_release_does_not_narrow_julia_compat = Guideline(;
 )
 
 function meets_patch_release_does_not_narrow_julia_compat(
-    pkg::String, new_version::VersionNumber; registry_head::String, registry_master::String
+    pkg::String, new_version::VersionNumber; registry_head::RegistryInstance, registry_master::RegistryInstance
 )
     old_version = latest_version(pkg, registry_master)
     if old_version.major != new_version.major || old_version.minor != new_version.minor
@@ -291,7 +291,7 @@ const guideline_name_match_check = Guideline(;
     docs = "Packages must not match the name of existing package up-to-case, since on case-insensitive filesystems, this will break the registry.",
     check=data -> meets_name_match_check(data.pkg, data.registry_master))
 
-function meets_name_match_check(pkg_name::AbstractString, registry_master::AbstractString)
+function meets_name_match_check(pkg_name::AbstractString, registry_master::RegistryInstance)
     other_packages = get_all_pkg_names(registry_master)
     return meets_name_match_check(pkg_name, other_packages)
 end
@@ -379,7 +379,7 @@ const guideline_uuid_match_check = Guideline(;
     docs = "Packages must not match the UUID of an existing package or stdlib.",
     check=data -> meets_uuid_match_check(data.parsed_project_info, data.registry_master))
 
-function meets_uuid_match_check(maybe_project_info::Union{Nothing,ProjectInfo}, registry_master::AbstractString)
+function meets_uuid_match_check(maybe_project_info::Union{Nothing,ProjectInfo}, registry_master::RegistryInstance)
     if maybe_project_info === nothing
         return false, "Could not check package UUID as Project.toml checks failed"
     end
@@ -554,7 +554,7 @@ These checks can be overridden by applying a label `Override AutoMerge: name sim
 )
 
 function meets_distance_check(
-    pkg_name::AbstractString, registry_master::AbstractString; kwargs...
+    pkg_name::AbstractString, registry_master::RegistryInstance; kwargs...
 )
     other_packages = get_all_pkg_names(registry_master; keep_jll=false)
     return meets_distance_check(pkg_name, other_packages; kwargs...)
@@ -808,7 +808,7 @@ function meets_sequential_version_number(
 end
 
 function meets_sequential_version_number(
-    pkg::String, new_version::VersionNumber; registry_head::String, registry_master::String
+    pkg::String, new_version::VersionNumber; registry_head::RegistryInstance, registry_master::RegistryInstance
 )
     _all_versions = all_versions(pkg, registry_master)
     return meets_sequential_version_number(_all_versions, new_version)
@@ -1061,7 +1061,7 @@ const guideline_version_can_be_pkg_added = Guideline(;
     info="Version can be `Pkg.add`ed",
     docs="Package installation: The package should be installable (`Pkg.add(\"PackageName\")`).",
     check=data -> meets_version_can_be_pkg_added(
-        data.registry_head,
+        data.registry_head.path,
         data.pkg,
         data.version;
         registry_deps=data.registry_deps,
@@ -1097,7 +1097,7 @@ const guideline_version_can_be_imported = Guideline(;
     info="Version can be `import`ed",
     docs="Package loading: The package should be loadable (`import PackageName`).",
     check=data -> meets_version_can_be_imported(
-        data.registry_head,
+        data.registry_head.path,
         data.pkg,
         data.version;
         registry_deps=data.registry_deps,
