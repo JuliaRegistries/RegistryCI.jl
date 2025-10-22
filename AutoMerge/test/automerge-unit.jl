@@ -1402,7 +1402,8 @@ end
         @testset "find_previous_semver_version" begin
             # Create a temporary registry structure
             tmp_registry = mktempdir()
-            pkg_dir = joinpath(tmp_registry, "A", "ABC123")
+            test_uuid = "12345678-1234-1234-1234-123456789abc"
+            pkg_dir = joinpath(tmp_registry, "T", "TestPkg")
             mkpath(pkg_dir)
 
             # Create a mock Versions.toml
@@ -1410,16 +1411,26 @@ end
             open(versions_toml, "w") do io
                 write(io, """
                 ["0.1.0"]
-                git-tree-sha1 = "abc123"
+                git-tree-sha1 = "1234567890123456789012345678901234567890"
 
                 ["0.2.0"]
-                git-tree-sha1 = "def456"
+                git-tree-sha1 = "2234567890123456789012345678901234567890"
 
                 ["1.0.0"]
-                git-tree-sha1 = "ghi789"
+                git-tree-sha1 = "3234567890123456789012345678901234567890"
 
                 ["1.1.0"]
-                git-tree-sha1 = "jkl012"
+                git-tree-sha1 = "4234567890123456789012345678901234567890"
+                """)
+            end
+
+            # Create a mock Package.toml
+            package_toml = joinpath(pkg_dir, "Package.toml")
+            open(package_toml, "w") do io
+                write(io, """
+                name = "TestPkg"
+                uuid = "$test_uuid"
+                repo = "https://github.com/Test/TestPkg.jl.git"
                 """)
             end
 
@@ -1427,8 +1438,12 @@ end
             registry_toml = joinpath(tmp_registry, "Registry.toml")
             open(registry_toml, "w") do io
                 write(io, """
+                name = "TestRegistry"
+                uuid = "$(UUIDs.uuid4())"
+                repo = "https://github.com/Test/TestRegistry.git"
+
                 [packages]
-                ABC123 = { name = "TestPkg", path = "A/ABC123" }
+                $test_uuid = { name = "TestPkg", path = "T/TestPkg" }
                 """)
             end
 

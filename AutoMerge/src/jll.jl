@@ -10,8 +10,6 @@ function _get_all_dependencies_nonrecursive(registry::RegistryInstance, pkg, ver
     return collect(keys(deps_dict))
 end
 
-
-
 const guideline_allowed_jll_nonrecursive_dependencies = Guideline(;
     info="If this is a JLL package, only deps are Pkg, Libdl, and other JLL packages",
     docs=nothing,
@@ -42,5 +40,3 @@ function meets_allowed_jll_nonrecursive_dependencies(
     end
     return true, ""
 end
-
-meets_allowed_jll_nonrecursive_dependencies(registry::AbstractString, pkg, version) =
