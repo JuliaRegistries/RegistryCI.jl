@@ -16,6 +16,7 @@ using Printf: Printf
 using RegistryTools: RegistryTools
 using Tar: Tar
 using RegistryCI: RegistryCI
+using RegistryInstances: RegistryInstances, RegistryInstance, registry_info
 using UUIDs: UUID
 
 if VERSION >= v"1.11"
@@ -28,6 +29,7 @@ include("TagBot/TagBot.jl")
 
 include("types.jl")
 include("ciservice.jl")
+include("registry_helpers.jl")
 
 include("api_rate_limiting.jl")
 include("assert.jl")
@@ -45,7 +47,6 @@ include("package_path_in_registry.jl")
 include("public.jl")
 include("pull_requests.jl")
 include("semver.jl")
-include("toml.jl")
 include("update_status.jl")
 include("util.jl")
 

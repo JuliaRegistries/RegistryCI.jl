@@ -73,49 +73,28 @@ function is_breaking(a::VersionNumber, b::VersionNumber)::Bool
     end
 end
 
-function all_versions(pkg::String, registry_path::String)
-    package_relpath = get_package_relpath_in_registry(;
-        package_name=pkg, registry_path=registry_path
-    )
-    return VersionNumber.(
-        keys(parse_registry_toml(registry_path, package_relpath, "Versions.toml"))
-    )
+function all_versions(pkg::String, registry::RegistryInstance)
+    info = get_package_info(registry, pkg)
+    return collect(keys(info.version_info))
 end
 
-function latest_version(pkg::String, registry_path::String)
-    return maximum(all_versions(pkg, registry_path))
+all_versions(pkg::String, registry::AbstractString) = all_versions(pkg, RegistryInstance(registry))
+
+function latest_version(pkg::String, registry::RegistryInstance)
+    return maximum(all_versions(pkg, registry))
 end
 
-function julia_compat(pkg::String, version::VersionNumber, registry_path::String)
-    package_relpath = get_package_relpath_in_registry(;
-        package_name=pkg, registry_path=registry_path
-    )
-    all_compat_entries_for_julia = Pkg.Types.VersionRange[]
-    compat = parse_registry_toml(registry_path, package_relpath, "Compat.toml"; allow_missing = true)
-    for version_range in keys(compat)
-        if version in Pkg.Types.VersionRange(version_range)
-            for compat_entry in compat[version_range]
-                name = compat_entry[1]
-                if strip(lowercase(name)) == strip(lowercase("julia"))
-                    value = compat_entry[2]
-                    if value isa Vector
-                        for x in value
-                            x_range = Pkg.Types.VersionRange(x)
-                            push!(all_compat_entries_for_julia, x_range)
-                        end
-                    else
-                        value_range = Pkg.Types.VersionRange(value)
-                        push!(all_compat_entries_for_julia, value_range)
-                    end
-                end
-            end
+latest_version(pkg::String, registry::AbstractString) = latest_version(pkg, RegistryInstance(registry))
+
+function julia_compat(pkg::String, version::VersionNumber, registry::RegistryInstance)
+    compat = get_compat_for_version(registry, pkg, version)
+    julia_ranges = Pkg.Versions.VersionRange[]
+    for (name, spec) in compat
+        if lowercase(strip(name)) == "julia"
+            append!(julia_ranges, spec.ranges)
         end
     end
-    if length(all_compat_entries_for_julia) < 1
-        return Pkg.Types.VersionRange[Pkg.Types.VersionRange("* - *")]
-    else
-        return all_compat_entries_for_julia
-    end
+    return isempty(julia_ranges) ? [Pkg.Versions.VersionRange("* - *")] : julia_ranges
 end
 
 function _has_upper_bound(r::Pkg.Types.VersionRange)

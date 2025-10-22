@@ -16,10 +16,16 @@ const guideline_registry_consistency_tests_pass = Guideline(;
 )
 
 function meets_registry_consistency_tests_pass(
-    registry_head::String, registry_deps::Vector{String}
+    registry_head::RegistryInstance, registry_deps::Vector{String}
 )
+    # RegistryCI.test requires an unpacked registry directory
+    # Check if Registry.toml exists (unpacked registries have it at the root)
+    if !isfile(joinpath(registry_head.path, "Registry.toml"))
+        return false, "RegistryCI.test requires an unpacked registry, but the provided registry appears to be packed or invalid (Registry.toml not found at $(registry_head.path))"
+    end
+
     try
-        RegistryCI.test(registry_head; registry_deps=registry_deps)
+        RegistryCI.test(registry_head.path; registry_deps=registry_deps)
         return true, ""
     catch ex
         @error "" exception = (ex, catch_backtrace())
@@ -36,42 +42,39 @@ const guideline_compat_for_julia = Guideline(;
     check=data -> meets_compat_for_julia(data.registry_head, data.pkg, data.version),
 )
 
-function meets_compat_for_julia(working_directory::AbstractString, pkg, version)
-    package_relpath = get_package_relpath_in_registry(;
-        package_name=pkg, registry_path=working_directory
-    )
-    compat = parse_registry_toml(working_directory, package_relpath, "Compat.toml"; allow_missing = true)
-    # Go through all the compat entries looking for the julia compat
-    # of the new version. When found, test
+function meets_compat_for_julia(registry::RegistryInstance, pkg, version)
+    # Get compat for this version
+    compat_dict = get_compat_for_version(registry, pkg, version)
+
+    # Check if julia compat exists for this version
+    if !haskey(compat_dict, "julia")
+        return false, "There is no compat entry for `julia`."
+    end
+
+    # julia_compat is already a VersionSpec
+    julia_compat = compat_dict["julia"]
+
+    # Test:
     # 1. that it is a bounded range,
     # 2. that the upper bound is not 2 or higher,
     # 3. that the range includes at least one 1.x version.
-    for version_range in keys(compat)
-        if version in Pkg.Types.VersionRange(version_range)
-            if haskey(compat[version_range], "julia")
-                julia_compat = Pkg.Types.VersionSpec(compat[version_range]["julia"])
-                if !isempty(
-                    intersect(
-                        julia_compat, Pkg.Types.VersionSpec("$(typemax(Base.VInt))-*")
-                    ),
-                )
-                    return false, "The compat entry for `julia` is unbounded."
-                elseif !isempty(intersect(julia_compat, Pkg.Types.VersionSpec("2-*")))
-                    return false,
-                    "The compat entry for `julia` has an upper bound of 2 or higher."
-                elseif isempty(intersect(julia_compat, Pkg.Types.VersionSpec("1")))
-                    # For completeness, although this seems rather
-                    # unlikely to occur.
-                    return false,
-                    "The compat entry for `julia` doesn't include any 1.x version."
-                else
-                    return true, ""
-                end
-            end
-        end
+    if !isempty(
+        intersect(
+            julia_compat, Pkg.Types.VersionSpec("$(typemax(Base.VInt))-*")
+        ),
+    )
+        return false, "The compat entry for `julia` is unbounded."
+    elseif !isempty(intersect(julia_compat, Pkg.Types.VersionSpec("2-*")))
+        return false,
+        "The compat entry for `julia` has an upper bound of 2 or higher."
+    elseif isempty(intersect(julia_compat, Pkg.Types.VersionSpec("1")))
+        # For completeness, although this seems rather
+        # unlikely to occur.
+        return false,
+        "The compat entry for `julia` doesn't include any 1.x version."
+    else
+        return true, ""
     end
-
-    return false, "There is no compat entry for `julia`."
 end
 
 const guideline_compat_for_all_deps = Guideline(;
@@ -119,61 +122,49 @@ function compat_violation_message(bad_dependencies)
 
 end
 
-function meets_compat_for_all_deps(working_directory::AbstractString, pkg, version)
-    package_relpath = get_package_relpath_in_registry(;
-        package_name=pkg, registry_path=working_directory
-    )
-    compat = parse_registry_toml(working_directory, package_relpath, "Compat.toml"; allow_missing = true)
-    deps = parse_registry_toml(working_directory, package_relpath, "Deps.toml"; allow_missing = true)
-    # First, we construct a Dict in which the keys are the package's
-    # dependencies, and the value is always false.
+function meets_compat_for_all_deps(registry::RegistryInstance, pkg, version)
+    # Get dependencies and compat for this version using helpers
+    deps_dict = get_deps_for_version(registry, pkg, version)
+    compat_dict = get_compat_for_version(registry, pkg, version)
+
+    # First, construct a Dict tracking which deps need compat with upper bounds
     dep_has_compat_with_upper_bound = Dict{String,Bool}()
-    for version_range in keys(deps)
-        if version in Pkg.Types.VersionRange(version_range)
-            for name in keys(deps[version_range])
-                if _AUTOMERGE_REQUIRE_STDLIB_COMPAT
-                    debug_msg = "Found a new (non-JLL) dependency: $(name)"
-                    apply_compat_requirement = !is_jll_name(name)
-                else
-                    debug_msg = "Found a new (non-stdlib non-JLL) dependency: $(name)"
-                    apply_compat_requirement = !is_jll_name(name) && !is_julia_stdlib(name)
-                end
-                if apply_compat_requirement
-                    @debug debug_msg
-                    dep_has_compat_with_upper_bound[name] = false
+
+    for name in keys(deps_dict)
+        # Skip "julia" - it has its own separate check (meets_compat_for_julia)
+        if lowercase(name) == "julia"
+            continue
+        end
+
+        if _AUTOMERGE_REQUIRE_STDLIB_COMPAT
+            debug_msg = "Found a new (non-JLL) dependency: $(name)"
+            apply_compat_requirement = !is_jll_name(name)
+        else
+            debug_msg = "Found a new (non-stdlib non-JLL) dependency: $(name)"
+            apply_compat_requirement = !is_jll_name(name) && !is_julia_stdlib(name)
+        end
+        if apply_compat_requirement
+            @debug debug_msg
+            dep_has_compat_with_upper_bound[name] = false
+        end
+    end
+
+    # Now check compat entries for upper bounds
+    # compat_dict is Dict{String, VersionSpec}
+    for (name, spec) in compat_dict
+        if haskey(dep_has_compat_with_upper_bound, name)
+            # spec is a VersionSpec with .ranges field
+            # Check if all ranges have upper bounds
+            if !isempty(spec.ranges)
+                each_range_has_upper_bound = _has_upper_bound.(spec.ranges)
+                if all(each_range_has_upper_bound)
+                    @debug("Dependency \"$(name)\" has compat entries that all have upper bounds")
+                    dep_has_compat_with_upper_bound[name] = true
                 end
             end
         end
     end
-    # Now, we go through all the compat entries. If a dependency has a compat
-    # entry with an upper bound, we change the corresponding value in the Dict
-    # to true.
-    for version_range in keys(compat)
-        if version in Pkg.Types.VersionRange(version_range)
-            for (name, value) in compat[version_range]
-                if value isa Vector
-                    if !isempty(value)
-                        value_ranges = Pkg.Types.VersionRange.(value)
-                        each_range_has_upper_bound = _has_upper_bound.(value_ranges)
-                        if all(each_range_has_upper_bound)
-                            @debug(
-                                "Dependency \"$(name)\" has compat entries that all have upper bounds"
-                            )
-                            dep_has_compat_with_upper_bound[name] = true
-                        end
-                    end
-                else
-                    value_range = Pkg.Types.VersionRange(value)
-                    if _has_upper_bound(value_range)
-                        @debug(
-                            "Dependency \"$(name)\" has a compat entry with an upper bound"
-                        )
-                        dep_has_compat_with_upper_bound[name] = true
-                    end
-                end
-            end
-        end
-    end
+
     meets_this_guideline = all(values(dep_has_compat_with_upper_bound))
     if meets_this_guideline
         return true, ""
@@ -204,7 +195,7 @@ const guideline_patch_release_does_not_narrow_julia_compat = Guideline(;
 )
 
 function meets_patch_release_does_not_narrow_julia_compat(
-    pkg::String, new_version::VersionNumber; registry_head::String, registry_master::String
+    pkg::String, new_version::VersionNumber; registry_head::RegistryInstance, registry_master::RegistryInstance
 )
     old_version = latest_version(pkg, registry_master)
     if old_version.major != new_version.major || old_version.minor != new_version.minor
@@ -300,7 +291,7 @@ const guideline_name_match_check = Guideline(;
     docs = "Packages must not match the name of existing package up-to-case, since on case-insensitive filesystems, this will break the registry.",
     check=data -> meets_name_match_check(data.pkg, data.registry_master))
 
-function meets_name_match_check(pkg_name::AbstractString, registry_master::AbstractString)
+function meets_name_match_check(pkg_name::AbstractString, registry_master::RegistryInstance)
     other_packages = get_all_pkg_names(registry_master)
     return meets_name_match_check(pkg_name, other_packages)
 end
@@ -388,7 +379,7 @@ const guideline_uuid_match_check = Guideline(;
     docs = "Packages must not match the UUID of an existing package or stdlib.",
     check=data -> meets_uuid_match_check(data.parsed_project_info, data.registry_master))
 
-function meets_uuid_match_check(maybe_project_info::Union{Nothing,ProjectInfo}, registry_master::AbstractString)
+function meets_uuid_match_check(maybe_project_info::Union{Nothing,ProjectInfo}, registry_master::RegistryInstance)
     if maybe_project_info === nothing
         return false, "Could not check package UUID as Project.toml checks failed"
     end
@@ -563,7 +554,7 @@ These checks can be overridden by applying a label `Override AutoMerge: name sim
 )
 
 function meets_distance_check(
-    pkg_name::AbstractString, registry_master::AbstractString; kwargs...
+    pkg_name::AbstractString, registry_master::RegistryInstance; kwargs...
 )
     other_packages = get_all_pkg_names(registry_master; keep_jll=false)
     return meets_distance_check(pkg_name, other_packages; kwargs...)
@@ -719,16 +710,11 @@ const guideline_repo_url_requirement = Guideline(;
     check=data -> meets_repo_url_requirement(data.pkg; registry_head=data.registry_head),
 )
 
-function meets_repo_url_requirement(pkg::String; registry_head::String)
-    package_relpath = get_package_relpath_in_registry(;
-        package_name=pkg, registry_path=registry_head
-    )
-    package_toml_parsed = parse_registry_toml(
-        registry_head, package_relpath, "Package.toml"
-    )
+function meets_repo_url_requirement(pkg::String; registry_head::RegistryInstance)
+    pkg_info = get_package_info(registry_head, pkg)
 
-    url = package_toml_parsed["repo"]
-    subdir = get(package_toml_parsed, "subdir", "")
+    url = pkg_info.repo
+    subdir = something(pkg_info.subdir, "")
     is_subdirectory_package = occursin(r"[A-Za-z0-9]", subdir)
     meets_this_guideline = url_has_correct_ending(url, pkg)
 
@@ -818,7 +804,7 @@ function meets_sequential_version_number(
 end
 
 function meets_sequential_version_number(
-    pkg::String, new_version::VersionNumber; registry_head::String, registry_master::String
+    pkg::String, new_version::VersionNumber; registry_head::RegistryInstance, registry_master::RegistryInstance
 )
     _all_versions = all_versions(pkg, registry_master)
     return meets_sequential_version_number(_all_versions, new_version)
@@ -1071,7 +1057,7 @@ const guideline_version_can_be_pkg_added = Guideline(;
     info="Version can be `Pkg.add`ed",
     docs="Package installation: The package should be installable (`Pkg.add(\"PackageName\")`).",
     check=data -> meets_version_can_be_pkg_added(
-        data.registry_head,
+        data.registry_head.path,
         data.pkg,
         data.version;
         registry_deps=data.registry_deps,
@@ -1107,7 +1093,7 @@ const guideline_version_can_be_imported = Guideline(;
     info="Version can be `import`ed",
     docs="Package loading: The package should be loadable (`import PackageName`).",
     check=data -> meets_version_can_be_imported(
-        data.registry_head,
+        data.registry_head.path,
         data.pkg,
         data.version;
         registry_deps=data.registry_deps,
@@ -1178,7 +1164,7 @@ function meets_version_can_be_added_or_imported(
             """
     end
 
-    jl_compat = julia_compat(pkg, version, working_directory)
+    jl_compat = julia_compat(pkg, version, RegistryInstance(working_directory))
     # The `code` defined above uses Pkg.Registry functionality, which
     # is not available in Julia 1.0. Thus 1.1.0 is the lowest Julia
     # version that can be considered for add/import testing.
