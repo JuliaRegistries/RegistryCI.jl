@@ -716,15 +716,30 @@ const guideline_normal_capitalization = Guideline(;
 )
 
 function meets_normal_capitalization(pkg)
-    # We intentionally do not use `\w` in this regex.
-    # `\w` includes underscores, but we don't want to include underscores.
-    # So, instead of `\w`, we use `[A-Za-z0-9]`.
-    meets_this_guideline = occursin(r"^[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*[0-9]?$", pkg)
+    meets_this_guideline = occursin(r"^[A-Z]\w*[a-z]\w*[0-9]?$", pkg)
     if meets_this_guideline
         return true, ""
     else
         return false,
         "Name does not meet all of the following: starts with an upper-case letter, ASCII alphanumerics only, not all letters are upper-case."
+    end
+end
+
+const guideline_no_underscores = Guideline(;
+    info="Normal capitalization",
+    docs=string(
+        "The package name should not contain any underscores.",
+    ),
+    check=data -> meets_no_underscores(data.pkg),
+)
+
+function meets_no_underscores(pkg)
+    meets_this_guideline = !occursin("_", pkg)
+    if meets_this_guideline
+        return true, ""
+    else
+        return false,
+        "Name contains one or more underscores."
     end
 end
 
@@ -1339,6 +1354,7 @@ function get_automerge_guidelines(
         (guideline_pr_only_changes_allowed_files, true),
         # (guideline_only_changes_specified_package, true), # not yet implemented
         (guideline_normal_capitalization, !this_pr_can_use_special_jll_exceptions),
+        (guideline_no_underscores, !this_pr_can_use_special_jll_exceptions),        
         (guideline_name_length, !this_pr_can_use_special_jll_exceptions),
         (guideline_julia_name_check, true),
         (guideline_underscore_jll_name_check, !this_pr_can_use_special_jll_exceptions),
