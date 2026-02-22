@@ -289,6 +289,20 @@ function meets_julia_name_check(pkg)
     end
 end
 
+
+const guideline_underscore_jll_name_check = Guideline(;
+    info="Name does not end with _jll",
+    check=data -> meets_underscore_jll_name_check(data.pkg),
+)
+
+function meets_underscore_jll_name_check(pkg)
+    if endswith(strip(lowercase(pkg)), "_jll")
+        return false, "Lowercase package name $(lowercase(pkg)) ends with \"_jll\". This is reserved for packages that come from Yggdrasil."
+    else
+        return true, ""
+    end
+end
+
 damerau_levenshtein(name1, name2) = StringDistances.DamerauLevenshtein()(name1, name2)
 function sqrt_normalized_vd(name1, name2)
     return VisualStringDistances.visual_distance(name1, name2; normalize=x -> 5 + sqrt(x))
@@ -1327,6 +1341,7 @@ function get_automerge_guidelines(
         (guideline_normal_capitalization, !this_pr_can_use_special_jll_exceptions),
         (guideline_name_length, !this_pr_can_use_special_jll_exceptions),
         (guideline_julia_name_check, true),
+        (guideline_underscore_jll_name_check, !this_pr_can_use_special_jll_exceptions),
         (guideline_repo_url_requirement, true),
         (guideline_version_number_no_prerelease, true),
         (guideline_version_number_no_build, !this_pr_can_use_special_jll_exceptions),
