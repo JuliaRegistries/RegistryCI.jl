@@ -17,12 +17,12 @@ on:
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#permissions
 permissions: read-all
 
-concurrency:
-  # Use a unique group for our no-op PR runs (so they never contend),
-  # but use a shared lock for merge_group/push/workflow_dispatch which
-  # need exclusive access to the test registry.
-  group: ${{ github.event_name == 'pull_request' && format('integration-tests-noop-{0}', github.run_id) || 'integration-tests-global-lock' }}
-  cancel-in-progress: false
+# concurrency:
+#   # Use a unique group for our no-op PR runs (so they never contend),
+#   # but use a shared lock for merge_group/push/workflow_dispatch which
+#   # need exclusive access to the test registry.
+#   group: ${{ github.event_name == 'pull_request' && format('integration-tests-noop-{0}', github.run_id) || 'integration-tests-global-lock' }}
+#   cancel-in-progress: false
 
 env:
   JULIA_PKG_UNPACK_REGISTRY: 'true'
