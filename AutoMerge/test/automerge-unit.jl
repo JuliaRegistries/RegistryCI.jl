@@ -1452,8 +1452,7 @@ end
                     write(joinpath(repo_dir, "file1.txt"), "initial content")
                     run(Cmd(`git add file1.txt`; dir=repo_dir))
                     run(Cmd(`git commit -m "Initial commit"`; dir=repo_dir))
-                    tree_cmd = "HEAD^{tree}"
-                    existing_tree = readchomp(Cmd(`git rev-parse $tree_cmd`; dir=repo_dir))
+                    existing_tree = readchomp(Cmd(`git rev-parse 'HEAD^{tree}'`; dir=repo_dir))
                     missing_tree = "0000000000000000000000000000000000000000"
                     err = try
                         AutoMerge.get_diff_stats(missing_tree, existing_tree; clone_dir=repo_dir)
