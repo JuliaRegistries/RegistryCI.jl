@@ -1442,6 +1442,30 @@ end
         end
 
         @testset "GitHub URL handling" begin
+            @testset "get_diff_stats validates tree SHAs" begin
+                mktempdir() do tmpdir
+                    repo_dir = joinpath(tmpdir, "test_repo")
+                    mkdir(repo_dir)
+                    run(Cmd(`git init`; dir=repo_dir))
+                    run(Cmd(`git config user.name "Test User"`; dir=repo_dir))
+                    run(Cmd(`git config user.email "test@example.com"`; dir=repo_dir))
+                    write(joinpath(repo_dir, "file1.txt"), "initial content")
+                    run(Cmd(`git add file1.txt`; dir=repo_dir))
+                    run(Cmd(`git commit -m "Initial commit"`; dir=repo_dir))
+                    existing_tree = readchomp(Cmd(`git rev-parse 'HEAD^{tree}'`; dir=repo_dir))
+                    missing_tree = "0000000000000000000000000000000000000000"
+                    err = try
+                        AutoMerge.get_diff_stats(missing_tree, existing_tree; clone_dir=repo_dir)
+                        nothing
+                    catch e
+                        e
+                    end
+                    @test err isa ErrorException
+                    @test occursin("old_tree_sha=missing, new_tree_sha=present", sprint(showerror, err))
+                    @test occursin("Missing SHA(s): $missing_tree", sprint(showerror, err))
+                end
+            end
+
             @testset "is_github_repo" begin
                 @test AutoMerge.is_github_repo("https://github.com/owner/repo.git")
                 @test AutoMerge.is_github_repo("git@github.com:owner/repo.git")
