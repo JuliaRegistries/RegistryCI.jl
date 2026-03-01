@@ -360,11 +360,11 @@ mutable struct GitHubAutoMergeData
     # :normal - normal automerge rules.
     const authorization::Symbol
 
-    # Directory of a registry clone that includes the PR.
-    const registry_head::String
+    # Registry instance that includes the PR.
+    const registry_head::RegistryInstance
 
-    # Directory of a registry clone that excludes the PR.
-    const registry_master::String
+    # Registry instance that excludes the PR.
+    const registry_master::RegistryInstance
 
     # Whether to add a comment suggesting bumping package version to
     # 1.0 if appropriate.

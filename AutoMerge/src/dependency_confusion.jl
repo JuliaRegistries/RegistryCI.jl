@@ -14,28 +14,28 @@ const guideline_dependency_confusion = Guideline(;
 # offline. This could be implemented with the help of the Scratch
 # package, but requires Julia >= 1.5.
 function has_no_dependency_confusion(pkg, registry_head, public_registries)
-    uuid, package_repo = parse_registry_pkg_info(registry_head, pkg)
+    pkg_info = parse_registry_pkg_info(registry_head, pkg)
+    uuid = pkg_info.uuid
+    package_repo = pkg_info.repo
     for repo in public_registries
         try
-            registry = clone_repo(repo)
-            registry_toml = parse_registry_toml(registry, "Registry.toml")
-            packages = registry_toml["packages"]
-            if haskey(packages, uuid)
+            registry_path = clone_repo(repo)
+            registry = RegistryInstance(registry_path)
+            if haskey(registry.pkgs, uuid)
                 message = string(
                     "UUID $uuid conflicts with the package ",
-                    packages[uuid]["name"],
+                    registry.pkgs[uuid].name,
                     " in registry ",
-                    registry_toml["name"],
+                    registry.name,
                     " at $repo. ",
                     "This could be a dependency confusion attack.",
                 )
                 # Conflict detected. This is benign if the package name
                 # *and* the package URL matches.
-                if packages[uuid]["name"] != pkg
+                if registry.pkgs[uuid].name != pkg
                     return false, message
                 end
-                package_path = packages[uuid]["path"]
-                other_package_repo = parse_registry_toml(registry, package_path, "Package.toml")["repo"]
+                other_package_repo = get_package_info(registry, uuid).repo
                 if package_repo != other_package_repo
                     return false, message
                 end

@@ -131,14 +131,15 @@ end
     end
     @testset "`AutoMerge.parse_registry_pkg_info`" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
-        result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI", "1.0.0")
+        registry = RegistryInstance(registry_path)
+        result = AutoMerge.parse_registry_pkg_info(registry, "RegistryCI", "1.0.0")
         @test result == (;
             uuid="0c95cc5f-2f7e-43fe-82dd-79dbcba86b32",
             repo="https://github.com/JuliaRegistries/RegistryCI.jl.git",
             subdir="",
             tree_hash="1036c9c4d600468785fbd9dae87587e59d2f66a9",
         )
-        result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI")
+        result = AutoMerge.parse_registry_pkg_info(registry, "RegistryCI")
         @test result == (;
             uuid="0c95cc5f-2f7e-43fe-82dd-79dbcba86b32",
             repo="https://github.com/JuliaRegistries/RegistryCI.jl.git",
@@ -147,7 +148,7 @@ end
         )
 
         result = AutoMerge.parse_registry_pkg_info(
-            registry_path, "SnoopCompileCore", "2.5.2"
+            registry, "SnoopCompileCore", "2.5.2"
         )
         # Don't test repo field since SnoopCompile.jl has moved repositories (and we don't control it)
         @test result.uuid == "e2b509da-e806-4183-be48-004708413034"
@@ -538,7 +539,8 @@ end
 
         # Nothing passed as project info - should fail
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
-        result, msg = AutoMerge.meets_uuid_match_check(nothing, registry_path)
+        registry = RegistryInstance(registry_path)
+        result, msg = AutoMerge.meets_uuid_match_check(nothing, registry)
         @test !result
         @test occursin("Project.toml checks failed", msg)
     end
@@ -962,8 +964,9 @@ end
         if Base.VERSION >= v"1.4-"
             # We skip this test on Julia 1.3, because it requires `Base.only`.
             @testset "julia_compat" begin
-                registry_path = registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
-                @test AutoMerge.julia_compat("Example", v"0.5.3", registry_path) isa AbstractVector{<:Pkg.Types.VersionRange}
+                registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
+                registry = RegistryInstance(registry_path)
+                @test AutoMerge.julia_compat("Example", v"0.5.3", registry) isa AbstractVector{<:Pkg.Types.VersionRange}
             end
         end
     end
@@ -1399,7 +1402,8 @@ end
         @testset "find_previous_semver_version" begin
             # Create a temporary registry structure
             tmp_registry = mktempdir()
-            pkg_dir = joinpath(tmp_registry, "A", "ABC123")
+            test_uuid = "12345678-1234-1234-1234-123456789abc"
+            pkg_dir = joinpath(tmp_registry, "T", "TestPkg")
             mkpath(pkg_dir)
 
             # Create a mock Versions.toml
@@ -1407,16 +1411,26 @@ end
             open(versions_toml, "w") do io
                 write(io, """
                 ["0.1.0"]
-                git-tree-sha1 = "abc123"
+                git-tree-sha1 = "1234567890123456789012345678901234567890"
 
                 ["0.2.0"]
-                git-tree-sha1 = "def456"
+                git-tree-sha1 = "2234567890123456789012345678901234567890"
 
                 ["1.0.0"]
-                git-tree-sha1 = "ghi789"
+                git-tree-sha1 = "3234567890123456789012345678901234567890"
 
                 ["1.1.0"]
-                git-tree-sha1 = "jkl012"
+                git-tree-sha1 = "4234567890123456789012345678901234567890"
+                """)
+            end
+
+            # Create a mock Package.toml
+            package_toml = joinpath(pkg_dir, "Package.toml")
+            open(package_toml, "w") do io
+                write(io, """
+                name = "TestPkg"
+                uuid = "$test_uuid"
+                repo = "https://github.com/Test/TestPkg.jl.git"
                 """)
             end
 
@@ -1424,8 +1438,12 @@ end
             registry_toml = joinpath(tmp_registry, "Registry.toml")
             open(registry_toml, "w") do io
                 write(io, """
+                name = "TestRegistry"
+                uuid = "$(UUIDs.uuid4())"
+                repo = "https://github.com/Test/TestRegistry.git"
+
                 [packages]
-                ABC123 = { name = "TestPkg", path = "A/ABC123" }
+                $test_uuid = { name = "TestPkg", path = "T/TestPkg" }
                 """)
             end
 

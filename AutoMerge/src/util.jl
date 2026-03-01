@@ -59,23 +59,24 @@ it parses the associated `Package.toml` file and returns the UUID and repository
 
 If `version` is supplied, then the associated `tree_hash` will be returned. Otherwise, `tree_hash` will be `nothing`.
 """
-function parse_registry_pkg_info(registry_path, pkg, version=nothing)
-    # We know the name of this package but not its uuid. Look it up in
-    # the registry that includes the current PR.
-    packages = parse_registry_toml(registry_path, "Registry.toml")["packages"]
-    uuid = only((key for (key, value) in packages if value["name"] == pkg))
-    # Also need to find out the package repository.
-    package = parse_registry_toml(registry_path, packages[uuid]["path"], "Package.toml")
-    repo = package["repo"]
-    subdir = get(package, "subdir", "")
+function parse_registry_pkg_info(registry::RegistryInstance, pkg, version=nothing)
+    # Find UUID by name
+    uuid = first(k for (k, v) in registry.pkgs if v.name == pkg)
+    pkg_info = get_package_info(registry, uuid)
+    repo = pkg_info.repo
+    subdir = something(pkg_info.subdir, "")
+
     if version === nothing
         tree_hash = nothing
     else
-        versions = parse_registry_toml(registry_path, packages[uuid]["path"], "Versions.toml")
-        tree_hash = convert(String, versions[string(version)]["git-tree-sha1"])
+        ver = version isa AbstractString ? VersionNumber(version) : version
+        tree_hash = string(pkg_info.version_info[ver].git_tree_sha1)
     end
-    return (; uuid=uuid, repo=repo, subdir=subdir, tree_hash=tree_hash)
+
+    return (; uuid=string(uuid), repo=repo, subdir=subdir, tree_hash=tree_hash)
 end
+
+parse_registry_pkg_info(registry::AbstractString, pkg, version=nothing) = parse_registry_pkg_info(RegistryInstance(registry), pkg, version)
 
 #####
 ##### Version diff functionality
@@ -579,9 +580,8 @@ returns a sorted vector of `NamedTuple`s with `name` and `uuid` fields for all p
 in the registry and Julia's standard libraries.
 """
 function get_all_pkg_name_uuids(registry_dir::AbstractString)
-    # Mimic the structure of a RegistryInstance
-    list = parse_registry_toml(registry_dir, "Registry.toml")["packages"]
-    registry = (; pkgs=Dict(k => (; name=v["name"]) for (k,v) in pairs(list)))
+    # Convert to RegistryInstance and use generic method
+    registry = RegistryInstance(registry_dir)
     return get_all_pkg_name_uuids(registry)
 end
 
