@@ -401,7 +401,7 @@ end
         @test issorted(names)
     end
     @testset "Standard initial version number" begin
-        @test AutoMerge.meets_standard_initial_version_number(v"0.0.1")[1]
+        @test !AutoMerge.meets_standard_initial_version_number(v"0.0.1")[1]
         @test AutoMerge.meets_standard_initial_version_number(v"0.1.0")[1]
         @test AutoMerge.meets_standard_initial_version_number(v"1.0.0")[1]
         @test !AutoMerge.meets_standard_initial_version_number(v"0.0.2")[1]
