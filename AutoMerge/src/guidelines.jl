@@ -833,27 +833,18 @@ function meets_sequential_version_number(
     return meets_sequential_version_number(_all_versions, new_version)
 end
 
-const guideline_standard_initial_version_number = Guideline(;
-    info="Standard initial version number. Must be one of: `0.0.1`, `0.1.0`, `1.0.0`, or `X.0.0`.",
-    check=data -> meets_standard_initial_version_number(data.version),
+const guideline_no_zero_dot_zero_version_number = Guideline(;
+    info="Version number must not be of the form 0.0.x",
+    check=data -> meets_no_zero_dot_zero_version_number(data.version),
 )
 
-function meets_standard_initial_version_number(version)
-    meets_this_guideline =
-        version == v"0.0.1" ||
-        version == v"0.1.0" ||
-        version == v"1.0.0" ||
-        _is_x_0_0(version)
+function meets_no_zero_dot_zero_version_number(version)
+    meets_this_guideline = version.major != 0
     if meets_this_guideline
         return true, ""
     else
-        return false, "Version number is not 0.0.1, 0.1.0, 1.0.0, or X.0.0"
+        return false, "Version number must not be of the form 0.0.x"
     end
-end
-
-function _is_x_0_0(version::VersionNumber)
-    result = (version.major >= 1) && (version.minor == 0) && (version.patch == 0)
-    return result
 end
 
 const guideline_version_number_no_prerelease = Guideline(;
@@ -1343,6 +1334,7 @@ function get_automerge_guidelines(
             guideline_version_number_no_build,
             !this_pr_can_use_special_jll_exceptions && !allow_build_metadata,
         ),
+        (guideline_no_zero_dot_zero_version_number, !this_pr_can_use_special_jll_exceptions),
         (guideline_compat_for_julia, true),
         (guideline_compat_for_all_deps, true),
         (guideline_allowed_jll_nonrecursive_dependencies, this_is_jll_package),
@@ -1394,6 +1386,7 @@ function get_automerge_guidelines(
             guideline_version_number_no_build,
             !this_pr_can_use_special_jll_exceptions && !allow_build_metadata,
         ),
+        (guideline_no_zero_dot_zero_version_number, !this_pr_can_use_special_jll_exceptions),
         (guideline_compat_for_julia, true),
         (guideline_compat_for_all_deps, true),
         (
