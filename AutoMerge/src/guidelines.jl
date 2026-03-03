@@ -830,7 +830,7 @@ const guideline_no_zero_dot_zero_version_number = Guideline(;
 )
 
 function meets_no_zero_dot_zero_version_number(version)
-    meets_this_guideline = version.major != 0
+    meets_this_guideline = version >= "0.1.0"
     if meets_this_guideline
         return true, ""
     else
