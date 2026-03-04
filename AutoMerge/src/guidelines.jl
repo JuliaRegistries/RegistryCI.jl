@@ -825,7 +825,7 @@ function meets_sequential_version_number(
 end
 
 const guideline_no_zero_dot_zero_version_number = Guideline(;
-    info="Version number must not be of the form 0.0.x",
+    info="Version number must be ≥ 0.1.0",
     check=data -> meets_no_zero_dot_zero_version_number(data.version),
 )
 
@@ -834,7 +834,7 @@ function meets_no_zero_dot_zero_version_number(version)
     if meets_this_guideline
         return true, ""
     else
-        return false, "Version number must not be of the form 0.0.x"
+        return false, "Version number must be ≥ 0.1.0"
     end
 end
 
