@@ -471,7 +471,10 @@ function comment_text_pass(
             _automerge_guidelines_passed_section_title(2),
             "Your new package registration met all of the ",
             "guidelines for auto-merging and is scheduled to ",
-            "be merged when the mandatory waiting period ($wait) has elapsed.\n\n",
+            "be merged when the mandatory waiting period ($wait) has elapsed. ",
+            "Further approval (\"Review required\") is only necessary for "
+            "manual merges, not for auto-merge.",
+            "\n\n",
             _onepointzero_suggestion(3, suggest_onepointzero, version),
             _comment_noblock(suggest_onepointzero ? 4 : 3),
             "<!-- [noblock] -->",
