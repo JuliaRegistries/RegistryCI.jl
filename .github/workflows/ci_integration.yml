@@ -48,7 +48,7 @@ jobs:
           version: '1'
           arch: x64
 
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
         if: ${{ github.event_name != 'pull_request' }}
 
       - uses: julia-actions/julia-buildpkg@v1
