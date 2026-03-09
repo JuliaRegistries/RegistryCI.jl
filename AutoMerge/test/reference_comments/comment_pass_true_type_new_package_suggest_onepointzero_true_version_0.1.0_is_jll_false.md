@@ -6,7 +6,7 @@ Please make sure that you have read the [package naming guidelines](https://pkgd
 
 ## 2. [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) are all met! ✅
 
-Your new package registration met all of the guidelines for auto-merging and is scheduled to be merged when the mandatory waiting period (3 days) has elapsed.
+Your new package registration met all of the guidelines for auto-merging and is scheduled to be merged when the mandatory waiting period (3 days) has elapsed. Ignore when GitHub says "Review required": further approval is only necessary for manual merges, not for auto-merge.
 
 ## 3. Declare v1.0?
 
