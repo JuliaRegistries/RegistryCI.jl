@@ -396,7 +396,9 @@ function _comment_noblock(n)
         "auto-merging, you must include the text ",
         "`[noblock]` in your comment.",
         "\n\n_Tip: You can edit blocking comments to add `[noblock]` ",
-        "in order to unblock auto-merging._\n\n",
+        "in order to unblock auto-merging. Auto-merge runs periodically. ",
+        "After unblocking a comment you may have to wait up to 15 minutes._",
+        "\n\n",
     )
     return result
 end

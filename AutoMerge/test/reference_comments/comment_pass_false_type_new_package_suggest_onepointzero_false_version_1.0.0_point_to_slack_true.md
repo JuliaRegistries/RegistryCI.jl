@@ -86,6 +86,6 @@ If you need help fixing the AutoMerge issues, or want your pull request to be ma
 
 If you want to prevent this pull request from being auto-merged, simply leave a comment. If you want to post a comment without blocking auto-merging, you must include the text `[noblock]` in your comment.
 
-_Tip: You can edit blocking comments to add `[noblock]` in order to unblock auto-merging._
+_Tip: You can edit blocking comments to add `[noblock]` in order to unblock auto-merging. Auto-merge runs periodically. After unblocking a comment you may have to wait up to 15 minutes._
 
 <!-- [noblock] -->
