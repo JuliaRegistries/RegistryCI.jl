@@ -65,16 +65,6 @@ function pr_comment_is_blocking(c::GitHub.Comment)
     return !not_blocking
 end
 
-function pr_has_blocking_comments(
-    api::GitHub.GitHubAPI,
-    registry::GitHub.Repo,
-    pr::GitHub.PullRequest;
-    auth::GitHub.Authorization,
-)
-    all_pr_comments = get_all_pull_request_comments(api, registry, pr; auth=auth)
-    return any(pr_comment_is_blocking, all_pr_comments)
-end
-
 function _parse_timeline_event_time(event)
     haskey(event, "created_at") || return nothing
     timestamp = event["created_at"]
