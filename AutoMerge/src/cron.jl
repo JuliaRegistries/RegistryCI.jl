@@ -101,8 +101,11 @@ function pr_is_blocked_by_comments(
     auth::GitHub.Authorization,
 )
     all_pr_comments = get_all_pull_request_comments(api, registry, pr; auth=auth)
-    timeline_events = has_label(pr.labels, OVERRIDE_BLOCKS_LABEL) ?
-        get_all_pull_request_timeline_events(api, registry, pr; auth=auth) : Any[]
+    if has_label(pr.labels, OVERRIDE_BLOCKS_LABEL)
+        timeline_events = get_all_pull_request_timeline_events(api, registry, pr; auth=auth)
+    else
+        timeline_events = Any[]
+    end
     return pr_is_blocked_by_comments(all_pr_comments, pr.labels, timeline_events)
 end
 
