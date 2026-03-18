@@ -75,12 +75,11 @@ end
 function _latest_label_add_time(timeline_events, label_name::AbstractString)
     latest = nothing
     for event in timeline_events
-        get(event, "event", nothing) == "labeled" || continue
-        label = get(event, "label", nothing)
-        label isa AbstractDict || continue
-        get(label, "name", nothing) == label_name || continue
+        event_name = event["event"]::AbstractString
+        event_name == "labeled" || continue
+        label = event["label"]::AbstractDict
+        label["name"]::AbstractString == label_name || continue
         event_time = _parse_timeline_event_time(event)
-        isnothing(event_time) && continue
         if isnothing(latest) || event_time > latest
             latest = event_time
         end
