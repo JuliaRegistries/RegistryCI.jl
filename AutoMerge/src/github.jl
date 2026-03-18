@@ -120,20 +120,14 @@ function get_all_pull_request_timeline_events(
     pr::GitHub.PullRequest;
     auth::GitHub.Authorization,
 )
-    all_events = Any[]
-    page = 1
-    while true
-        path = "/repos/$(GitHub.name(repo))/issues/$(number(pr))/timeline?per_page=100&page=$(page)"
-        events = GitHub.gh_get_json(
-            api,
-            path;
-            auth=auth,
-            headers=Dict("Accept" => "application/vnd.github.mockingbird-preview+json"),
-        )
-        append!(all_events, events)
-        length(events) < 100 && break
-        page += 1
-    end
+    path = "/repos/$(GitHub.name(repo))/issues/$(number(pr))/timeline"
+    all_events, _ = GitHub.gh_get_paged_json(
+        api,
+        path;
+        auth=auth,
+        headers=Dict("Accept" => "application/vnd.github.mockingbird-preview+json"),
+        params=Dict("per_page" => 100, "page" => 1),
+    )
     return all_events
 end
 
