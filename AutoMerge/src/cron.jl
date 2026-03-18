@@ -67,8 +67,7 @@ end
 
 function _parse_timeline_event_time(event)
     haskey(event, "created_at") || return nothing
-    timestamp = event["created_at"]
-    timestamp isa AbstractString || return nothing
+    timestamp = event["created_at"]::AbstractString
     return TimeZones.ZonedDateTime(timestamp)
 end
 
