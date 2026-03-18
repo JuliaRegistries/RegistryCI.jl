@@ -65,12 +65,15 @@ function pr_comment_is_blocking(c::GitHub.Comment)
     return !not_blocking
 end
 
-function _parse_timeline_event_time(event)
+function _parse_timeline_event_time(event::AbstractDict)
     timestamp = event["created_at"]::AbstractString
     return TimeZones.ZonedDateTime(timestamp)
 end
 
-function _latest_label_add_time(timeline_events, label_name::AbstractString)
+function _latest_label_add_time(
+    timeline_events::AbstractVector{<:AbstractDict},
+    label_name::AbstractString,
+)
     latest = nothing
     for event in timeline_events
         event_name = event["event"]::AbstractString
@@ -85,7 +88,11 @@ function _latest_label_add_time(timeline_events, label_name::AbstractString)
     return latest
 end
 
-function pr_is_blocked_by_comments(all_pr_comments, labels, timeline_events)
+function pr_is_blocked_by_comments(
+    all_pr_comments::AbstractVector{GitHub.Comment},
+    labels,
+    timeline_events::AbstractVector{<:AbstractDict},
+)
     blocking_comments = filter(pr_comment_is_blocking, all_pr_comments)
     isempty(blocking_comments) && return false
     has_label(labels, OVERRIDE_BLOCKS_LABEL) || return true

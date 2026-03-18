@@ -77,7 +77,7 @@ end
 
 make_comment(body, created_at) = GitHub.Comment(; body, created_at)
 make_label(name) = GitHub.Label(; name)
-make_timeline_label_event(label_name, created_at; event="labeled") = Dict(
+make_timeline_label_event(label_name, created_at; event="labeled") = Dict{String,Any}(
     "event" => event,
     "created_at" => created_at,
     "label" => Dict("name" => label_name),
@@ -375,24 +375,24 @@ end
         no_override = GitHub.Label[]
         label_time = "2026-03-16T12:00:00Z"
 
-        @test !AutoMerge.pr_is_blocked_by_comments(GitHub.Comment[], no_override, Any[])
+        @test !AutoMerge.pr_is_blocked_by_comments(GitHub.Comment[], no_override, Dict{String,Any}[])
 
         @test AutoMerge.pr_is_blocked_by_comments(
             [make_comment("blocking", DateTime(2026, 3, 16, 11, 0, 0))],
             no_override,
-            Any[],
+            Dict{String,Any}[],
         )
 
         @test !AutoMerge.pr_is_blocked_by_comments(
             [make_comment("blocking", DateTime(2026, 3, 16, 11, 0, 0))],
             override,
-            Any[make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, label_time)],
+            Dict{String,Any}[make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, label_time)],
         )
 
         @test AutoMerge.pr_is_blocked_by_comments(
             [make_comment("blocking", DateTime(2026, 3, 16, 13, 0, 0))],
             override,
-            Any[make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, label_time)],
+            Dict{String,Any}[make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, label_time)],
         )
 
         @test AutoMerge.pr_is_blocked_by_comments(
@@ -401,13 +401,13 @@ end
                 make_comment("new blocking", DateTime(2026, 3, 16, 13, 0, 0)),
             ],
             override,
-            Any[make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, label_time)],
+            Dict{String,Any}[make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, label_time)],
         )
 
         @test !AutoMerge.pr_is_blocked_by_comments(
             [make_comment("blocking", DateTime(2026, 3, 16, 11, 30, 0))],
             override,
-            Any[
+            Dict{String,Any}[
                 make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, "2026-03-16T10:00:00Z"),
                 make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, "2026-03-16T12:00:00Z"),
             ],
@@ -416,7 +416,7 @@ end
         @test AutoMerge.pr_is_blocked_by_comments(
             [make_comment("blocking", DateTime(2026, 3, 16, 13, 30, 0))],
             override,
-            Any[
+            Dict{String,Any}[
                 make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, "2026-03-16T10:00:00Z"),
                 make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, "2026-03-16T12:00:00Z"),
             ],
@@ -425,7 +425,7 @@ end
         @test AutoMerge.pr_is_blocked_by_comments(
             [make_comment("blocking", DateTime(2026, 3, 16, 11, 0, 0))],
             override,
-            Any[],
+            Dict{String,Any}[],
         )
 
         @test !AutoMerge.pr_is_blocked_by_comments(
@@ -434,7 +434,7 @@ end
                 make_comment("[merge approved] later", DateTime(2026, 3, 16, 14, 0, 0)),
             ],
             override,
-            Any[make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, label_time)],
+            Dict{String,Any}[make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, label_time)],
         )
     end
     @testset "comment_block_status_params" begin
