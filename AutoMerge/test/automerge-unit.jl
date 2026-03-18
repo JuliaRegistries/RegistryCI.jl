@@ -75,6 +75,14 @@ function pkgdir_from_depot(depot_path::String, pkg::String)
     return only_pkdir
 end
 
+make_comment(body, created_at) = GitHub.Comment(; body, created_at)
+make_label(name) = GitHub.Label(; name)
+make_timeline_label_event(label_name, created_at; event="labeled") = Dict(
+    "event" => event,
+    "created_at" => created_at,
+    "label" => Dict("name" => label_name),
+)
+
 strip_equal(x, y) = strip(x) == strip(y)
 
 # Here we reference test all the permutations of the AutoMerge comments.
@@ -361,6 +369,73 @@ end
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]"))
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]hi"))
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[merge approved] abc"))
+    end
+    @testset "pr_is_blocked_by_comments" begin
+        override = [make_label(AutoMerge.OVERRIDE_BLOCKS_LABEL)]
+        no_override = GitHub.Label[]
+        label_time = "2026-03-16T12:00:00Z"
+
+        @test !AutoMerge.pr_is_blocked_by_comments(GitHub.Comment[], no_override, Any[])
+
+        @test AutoMerge.pr_is_blocked_by_comments(
+            [make_comment("blocking", DateTime(2026, 3, 16, 11, 0, 0))],
+            no_override,
+            Any[],
+        )
+
+        @test !AutoMerge.pr_is_blocked_by_comments(
+            [make_comment("blocking", DateTime(2026, 3, 16, 11, 0, 0))],
+            override,
+            Any[make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, label_time)],
+        )
+
+        @test AutoMerge.pr_is_blocked_by_comments(
+            [make_comment("blocking", DateTime(2026, 3, 16, 13, 0, 0))],
+            override,
+            Any[make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, label_time)],
+        )
+
+        @test AutoMerge.pr_is_blocked_by_comments(
+            [
+                make_comment("old blocking", DateTime(2026, 3, 16, 11, 0, 0)),
+                make_comment("new blocking", DateTime(2026, 3, 16, 13, 0, 0)),
+            ],
+            override,
+            Any[make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, label_time)],
+        )
+
+        @test !AutoMerge.pr_is_blocked_by_comments(
+            [make_comment("blocking", DateTime(2026, 3, 16, 11, 30, 0))],
+            override,
+            Any[
+                make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, "2026-03-16T10:00:00Z"),
+                make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, "2026-03-16T12:00:00Z"),
+            ],
+        )
+
+        @test AutoMerge.pr_is_blocked_by_comments(
+            [make_comment("blocking", DateTime(2026, 3, 16, 13, 30, 0))],
+            override,
+            Any[
+                make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, "2026-03-16T10:00:00Z"),
+                make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, "2026-03-16T12:00:00Z"),
+            ],
+        )
+
+        @test AutoMerge.pr_is_blocked_by_comments(
+            [make_comment("blocking", DateTime(2026, 3, 16, 11, 0, 0))],
+            override,
+            Any[],
+        )
+
+        @test !AutoMerge.pr_is_blocked_by_comments(
+            [
+                make_comment("[noblock] later", DateTime(2026, 3, 16, 13, 0, 0)),
+                make_comment("[merge approved] later", DateTime(2026, 3, 16, 14, 0, 0)),
+            ],
+            override,
+            Any[make_timeline_label_event(AutoMerge.OVERRIDE_BLOCKS_LABEL, label_time)],
+        )
     end
     @testset "comment_block_status_params" begin
         # Test blocked state returns failure status

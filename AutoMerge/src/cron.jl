@@ -75,6 +75,50 @@ function pr_has_blocking_comments(
     return any(pr_comment_is_blocking, all_pr_comments)
 end
 
+function _parse_timeline_event_time(event)
+    haskey(event, "created_at") || return nothing
+    timestamp = event["created_at"]
+    timestamp isa AbstractString || return nothing
+    return TimeZones.ZonedDateTime(timestamp)
+end
+
+function _latest_label_add_time(timeline_events, label_name::AbstractString)
+    latest = nothing
+    for event in timeline_events
+        get(event, "event", nothing) == "labeled" || continue
+        label = get(event, "label", nothing)
+        label isa AbstractDict || continue
+        get(label, "name", nothing) == label_name || continue
+        event_time = _parse_timeline_event_time(event)
+        isnothing(event_time) && continue
+        if isnothing(latest) || event_time > latest
+            latest = event_time
+        end
+    end
+    return latest
+end
+
+function pr_is_blocked_by_comments(all_pr_comments, labels, timeline_events)
+    blocking_comments = filter(pr_comment_is_blocking, all_pr_comments)
+    isempty(blocking_comments) && return false
+    has_label(labels, OVERRIDE_BLOCKS_LABEL) || return true
+    override_added_at = _latest_label_add_time(timeline_events, OVERRIDE_BLOCKS_LABEL)
+    isnothing(override_added_at) && return true
+    return any(created_at(comment) > override_added_at for comment in blocking_comments)
+end
+
+function pr_is_blocked_by_comments(
+    api::GitHub.GitHubAPI,
+    registry::GitHub.Repo,
+    pr::GitHub.PullRequest;
+    auth::GitHub.Authorization,
+)
+    all_pr_comments = get_all_pull_request_comments(api, registry, pr; auth=auth)
+    timeline_events = has_label(pr.labels, OVERRIDE_BLOCKS_LABEL) ?
+        get_all_pull_request_timeline_events(api, registry, pr; auth=auth) : Any[]
+    return pr_is_blocked_by_comments(all_pr_comments, pr.labels, timeline_events)
+end
+
 function comment_block_status_params(blocked::Bool)
     if blocked
         return (
@@ -307,7 +351,7 @@ function cron_or_api_build(
     # (as opposed to some other kind of PR).
     # This way we can update the labels now, regardless of the current status
     # of the other steps (e.g. automerge passing, waiting period, etc).
-    blocked = pr_has_blocking_comments(api, registry_repo, pr; auth=auth) && !has_label(pr.labels, OVERRIDE_BLOCKS_LABEL)
+    blocked = pr_is_blocked_by_comments(api, registry_repo, pr; auth=auth)
 
     # Set GitHub status check for blocked-by-comment state
     # This sets the `automerge/comment` commit status which is distinct from the
