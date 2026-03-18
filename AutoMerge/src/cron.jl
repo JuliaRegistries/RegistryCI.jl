@@ -66,8 +66,6 @@ function pr_comment_is_blocking(c::GitHub.Comment)
 end
 
 function _parse_timeline_event_time(event)
-    haskey(event, "created_at") ||
-        error("Timeline event is missing `created_at`: $(repr(event))")
     timestamp = event["created_at"]::AbstractString
     return TimeZones.ZonedDateTime(timestamp)
 end
