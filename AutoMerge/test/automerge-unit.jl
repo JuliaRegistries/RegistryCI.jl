@@ -1140,7 +1140,7 @@ end
             @test !result[1]
         end
     end
-    @testset "Config TOML functionality" begin
+@testset "Config TOML functionality" begin
         @testset "general_registry_config" begin
             config = AutoMerge.general_registry_config()
             @test config isa AutoMerge.AutoMergeConfiguration
@@ -1396,9 +1396,34 @@ end
                 @test_throws Exception AutoMerge.read_config(config_path2)
             end
         end
-    end
+end
 
-    @testset "Version diff functionality" begin
+@testset "Public API" begin
+    if VERSION >= v"1.11"
+        public_names = (
+            :check_pr,
+            :merge_prs,
+            :Guideline,
+            :GitHubAutoMergeData,
+            :ProjectInfo,
+            :NewPackage,
+            :NewVersion,
+            :get_automerge_guidelines,
+            Symbol("check!"),
+            :passed,
+            :message,
+            :guideline_compat_for_julia,
+            :guideline_compat_for_all_deps,
+            :guideline_registry_consistency_tests_pass,
+            :guideline_version_can_be_pkg_added,
+        )
+        for name in public_names
+            @test Base.ispublic(AutoMerge, name)
+        end
+    end
+end
+
+@testset "Version diff functionality" begin
         @testset "find_previous_semver_version" begin
             # Create a temporary registry structure
             tmp_registry = mktempdir()
