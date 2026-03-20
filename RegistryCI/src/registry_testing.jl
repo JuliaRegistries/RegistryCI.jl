@@ -278,6 +278,19 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                 )
                 @test length(i_parts) == length(i_parts′)
             end
+
+            # Make sure there are no package directories on disk that are missing from Registry.toml
+            expected_package_dirs = Set{String}(normpath(data["path"]) for (_, data) in reg["packages"])
+            actual_package_dirs = Set{String}()
+            for (root, _, files) in walkdir(path)
+                if basename(root) == ".git"
+                    continue
+                end
+                if "Package.toml" in files
+                    push!(actual_package_dirs, normpath(relpath(root, path)))
+                end
+            end
+            @test actual_package_dirs == expected_package_dirs
         end
     end
     return nothing
