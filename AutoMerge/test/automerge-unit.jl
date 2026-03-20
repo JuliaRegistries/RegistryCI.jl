@@ -1133,9 +1133,15 @@ end
             result = has_osi_license_in_depot("UnbalancedOptimalTransport")
             @test !result[1]
 
-            # What about no license at all?
+            # REUSE-style projects can keep their license texts under LICENSES/
             pkg_path = pkgdir_from_depot(tmp_depot, "VisualStringDistances")
-            rm(joinpath(pkg_path, "LICENSE"))
+            mkpath(joinpath(pkg_path, "LICENSES"))
+            mv(joinpath(pkg_path, "LICENSE"), joinpath(pkg_path, "LICENSES", "MIT.txt"))
+            result = has_osi_license_in_depot("VisualStringDistances")
+            @test result[1]
+
+            # What about no license at all?
+            rm(joinpath(pkg_path, "LICENSES", "MIT.txt"))
             result = has_osi_license_in_depot("VisualStringDistances")
             @test !result[1]
         end

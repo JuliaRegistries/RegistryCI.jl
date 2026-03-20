@@ -1018,14 +1018,14 @@ function meets_version_has_osi_license(pkg::String; pkg_code_path)
         "Could not check license because could not access package code. Perhaps the `can_download_code` check failed earlier."
     end
 
-    license_results = LicenseCheck.find_licenses(pkgdir)
+    license_results = find_package_licenses(pkgdir)
 
     # Failure mode 1: no licenses
     if isempty(license_results)
         @error "Could not find any licenses"
         return false,
         string(
-            "No licenses detected in the package's top-level folder. An OSI-approved license is required.",
+            "No licenses detected in the package's top-level folder or LICENSES/ directory. An OSI-approved license is required.",
         )
     end
 
@@ -1065,6 +1065,22 @@ function meets_version_has_osi_license(pkg::String; pkg_code_path)
     else
         return true, string(osi_string, " Found no other licenses.")
     end
+end
+
+function find_package_licenses(pkgdir::AbstractString)
+    license_results = copy(LicenseCheck.find_licenses(pkgdir))
+    licenses_dir = joinpath(pkgdir, "LICENSES")
+    if isdir(licenses_dir)
+        append!(
+            license_results,
+            (
+                ; license_filename=joinpath("LICENSES", result.license_filename),
+                licenses_found=result.licenses_found,
+                license_file_percent_covered=result.license_file_percent_covered,
+            ) for result in LicenseCheck.find_licenses(licenses_dir)
+        )
+    end
+    return license_results
 end
 
 const guideline_version_can_be_pkg_added = Guideline(;
