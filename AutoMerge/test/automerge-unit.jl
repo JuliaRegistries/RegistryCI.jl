@@ -325,7 +325,10 @@ end
     @testset "Package name match check" begin
         @test AutoMerge.meets_name_match_check("Flux", ["Abc", "Def"])[1]
         @test !AutoMerge.meets_name_match_check("Websocket", ["websocket"])[1]
-        @test !AutoMerge.meets_name_match_check("Logging", joinpath(DEPOT_PATH[1], "registries", "General"))[1]
+        @test AutoMerge.meets_name_match_check("Filesystem", joinpath(DEPOT_PATH[1], "registries", "General"))[1]
+    end
+    @testset "Julia module name check" begin
+        @test AutoMerge.meets_julia_module_name_check("Flux", ["Threads", "Filesystem"])[1]
         @test !AutoMerge.meets_julia_module_name_check("Threads", ["Threads", "Filesystem"])[1]
         @test !AutoMerge.meets_julia_module_name_check("filesystem", ["Threads", "Filesystem"])[1]
     end

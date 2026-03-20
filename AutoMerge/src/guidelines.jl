@@ -301,8 +301,6 @@ const guideline_name_match_check = Guideline(;
     check=data -> meets_name_match_check(data.pkg, data.registry_master))
 
 function meets_name_match_check(pkg_name::AbstractString, registry_master::AbstractString)
-    result = meets_julia_module_name_check(pkg_name, julia_public_module_names())
-    result[1] || return result
     other_packages = get_all_pkg_names(registry_master)
     return meets_name_match_check(pkg_name, other_packages)
 end
@@ -321,6 +319,11 @@ function meets_name_match_check(
     end
     return (true, "")
 end
+
+const guideline_julia_module_name_check = Guideline(;
+    info = "Name does not match a reserved Julia module name",
+    docs = "Packages must not match the name of a public Julia module, including up-to-case matches.",
+    check=data -> meets_julia_module_name_check(data.pkg, julia_public_module_names()))
 
 function meets_julia_module_name_check(
     pkg_name::AbstractString,
@@ -1368,6 +1371,7 @@ function get_automerge_guidelines(
         (guideline_uuid_sanity_check, true),
         # this is the non-optional part of name checking
         (guideline_name_match_check, true),
+        (guideline_julia_module_name_check, true),
         # We always run the `guideline_distance_check`
         # check last, because if the check fails, it
         # prints the list of similar package names in
