@@ -246,6 +246,33 @@ end
             end
         end
     end
+
+    @testset "`AutoMerge.get_diff_stats` reports missing tree objects clearly" begin
+        mktempdir() do repo_dir
+            run(`git -C $repo_dir init`)
+            run(`git -C $repo_dir config user.name RegistryCITest`)
+            run(`git -C $repo_dir config user.email registryci@example.com`)
+            write(joinpath(repo_dir, "Project.toml"), "name = \"Example\"\n")
+            run(`git -C $repo_dir add Project.toml`)
+            run(`git -C $repo_dir commit -m init`)
+
+            old_tree_sha = readchomp(`git -C $repo_dir rev-parse $("HEAD^{tree}")`)
+            new_tree_sha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+            err = try
+                AutoMerge.get_diff_stats(old_tree_sha, new_tree_sha; clone_dir=repo_dir)
+                nothing
+            catch caught
+                caught
+            end
+
+            @test err isa ErrorException
+            @test occursin("Could not compute version diff stats because tree object(s) are missing", err.msg)
+            @test occursin("old_tree_sha=present", err.msg)
+            @test occursin("new_tree_sha=missing", err.msg)
+            @test occursin("new_tree_sha=$new_tree_sha", err.msg)
+        end
+    end
 end
 
 @testset "juliaup" begin

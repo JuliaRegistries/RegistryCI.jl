@@ -165,10 +165,28 @@ function format_diff_stats(full_diff::AbstractString, stat::AbstractString, shor
 end
 
 function get_diff_stats(old_tree_sha::AbstractString, new_tree_sha::AbstractString; clone_dir::AbstractString)
+    old_tree_exists = tree_object_exists(old_tree_sha; clone_dir)
+    new_tree_exists = tree_object_exists(new_tree_sha; clone_dir)
+    if !(old_tree_exists && new_tree_exists)
+        old_tree_status = old_tree_exists ? "present" : "missing"
+        new_tree_status = new_tree_exists ? "present" : "missing"
+        missing = String[]
+        old_tree_exists || push!(missing, "old_tree_sha=$old_tree_sha")
+        new_tree_exists || push!(missing, "new_tree_sha=$new_tree_sha")
+        error(
+            "Could not compute version diff stats because tree object(s) are missing in package repo clone: " *
+            "old_tree_sha=$old_tree_status, new_tree_sha=$new_tree_status. Missing SHA(s): $(join(missing, ", ")). " *
+            "This can happen if package history or tags were rewritten after an earlier registration."
+        )
+    end
     full_diff = readchomp(`git -C $clone_dir diff-tree --patch $old_tree_sha $new_tree_sha --no-color`)
     stat = readchomp(`git -C $clone_dir diff-tree --stat $old_tree_sha $new_tree_sha --stat-width=80 --no-color`)
     shortstat = readchomp(`git -C $clone_dir diff-tree --shortstat $old_tree_sha $new_tree_sha --no-color`)
     return format_diff_stats(full_diff, stat, shortstat; old_tree_sha, new_tree_sha)
+end
+
+function tree_object_exists(tree_sha::AbstractString; clone_dir::AbstractString)
+    return success(pipeline(`git -C $clone_dir cat-file -e $("$tree_sha^{tree}")`; stderr=devnull))
 end
 
 """
