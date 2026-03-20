@@ -1071,14 +1071,16 @@ function find_package_licenses(pkgdir::AbstractString)
     license_results = copy(LicenseCheck.find_licenses(pkgdir))
     licenses_dir = joinpath(pkgdir, "LICENSES")
     if isdir(licenses_dir)
-        append!(
-            license_results,
-            (
-                ; license_filename=joinpath("LICENSES", result.license_filename),
-                licenses_found=result.licenses_found,
-                license_file_percent_covered=result.license_file_percent_covered,
-            ) for result in LicenseCheck.find_licenses(licenses_dir)
-        )
+        for result in LicenseCheck.find_licenses(licenses_dir)
+            push!(
+                license_results,
+                (;
+                    license_filename=joinpath("LICENSES", result.license_filename),
+                    licenses_found=result.licenses_found,
+                    license_file_percent_covered=result.license_file_percent_covered,
+                ),
+            )
+        end
     end
     return license_results
 end
