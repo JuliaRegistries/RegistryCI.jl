@@ -84,7 +84,7 @@ function comment_block_status_params(blocked::Bool)
         return (
             state = "failure",
             context = "automerge/comments",
-            description = "Blocked by one or more comments. Add [noblock] or [no block] to comments or add label `$OVERRIDE_BLOCKS_LABEL`."
+            description = "Blocked by one or more comments. Add [noblock] to comments or add label `$OVERRIDE_BLOCKS_LABEL`."
         )
     else
         return (
