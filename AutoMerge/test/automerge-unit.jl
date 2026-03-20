@@ -349,6 +349,19 @@ end
         @test !AutoMerge.perform_distance_check([GitHub.Label(; name="Override AutoMerge: name similarity is okay")])
         @test !AutoMerge.perform_distance_check([GitHub.Label(; name="hi"), GitHub.Label(; name="Override AutoMerge: name similarity is okay")])
     end
+    @testset "New packages must have test/runtests.jl" begin
+        mktempdir() do pkgdir
+            mkpath(joinpath(pkgdir, "test"))
+            result, message = AutoMerge.meets_has_runtests(pkgdir)
+            @test !result
+            @test occursin("test/runtests.jl", message)
+
+            write(joinpath(pkgdir, "test", "runtests.jl"), "using Test\n")
+            result, message = AutoMerge.meets_has_runtests(pkgdir)
+            @test result
+            @test isempty(message)
+        end
+    end
     @testset "has_author_approved_label" begin
         @test !AutoMerge.has_package_author_approved_label(nothing)
         @test !AutoMerge.has_package_author_approved_label([GitHub.Label(; name="hi")])

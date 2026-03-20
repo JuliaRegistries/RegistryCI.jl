@@ -951,6 +951,21 @@ const guideline_src_names_OK = Guideline(;
     check=data -> meets_src_names_ok(data.pkg_code_path),
 )
 
+const guideline_has_runtests = Guideline(;
+    info="Package has `test/runtests.jl`",
+    docs="New packages must include a `test/runtests.jl` file.",
+    check=data -> meets_has_runtests(data.pkg_code_path),
+)
+
+function meets_has_runtests(pkg_code_path::String)
+    runtests = joinpath(pkg_code_path, "test", "runtests.jl")
+    if isfile(runtests)
+        return true, ""
+    else
+        return false, "New packages must include a `test/runtests.jl` file."
+    end
+end
+
 function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_path, pkg_clone_dir)
     uuid, package_repo, subdir, tree_hash_from_toml = parse_registry_pkg_info(
         registry_head, pkg, version
@@ -1341,6 +1356,7 @@ function get_automerge_guidelines(
         # after `guideline_code_can_be_downloaded` so
         # that it can use the downloaded code!
         (guideline_version_has_osi_license, check_license),
+        (guideline_has_runtests, true),
         (guideline_src_names_OK, true),
         (guideline_version_can_be_imported, true),
         (:update_status, true),
