@@ -90,4 +90,62 @@ end
             end
         end
     end
+
+    @testset "Compat entries must reference existing packages" begin
+        mktempdir() do tmpdir
+            registry_dir = joinpath(tmpdir, "TestRegistry")
+            mkpath(registry_dir)
+
+            write(joinpath(registry_dir, "Registry.toml"), """
+                name = "TestRegistry"
+                uuid = "12345678-1234-5678-9abc-123456789abc"
+                repo = "https://github.com/test/TestRegistry.git"
+
+                [packages]
+                87654321-4321-8765-cba9-987654321cba = { name = "TestPkg", path = "T/TestPkg" }
+                """)
+
+            pkg_dir = joinpath(registry_dir, "T", "TestPkg")
+            mkpath(pkg_dir)
+
+            write(joinpath(pkg_dir, "Package.toml"), """
+                name = "TestPkg"
+                uuid = "87654321-4321-8765-cba9-987654321cba"
+                repo = "https://github.com/test/TestPkg.git"
+                """)
+
+            write(joinpath(pkg_dir, "Versions.toml"), """
+                ["1.0.0"]
+                git-tree-sha1 = "abcdef0123456789abcdef0123456789abcdef01"
+                """)
+
+            write(joinpath(pkg_dir, "Deps.toml"), """
+                ["1.0.0"]
+                Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+                """)
+
+            write(joinpath(pkg_dir, "Compat.toml"), """
+                ["1.0.0"]
+                Printf = "1"
+                """)
+
+            @test RegistryCI.test(registry_dir) === nothing
+
+            write(joinpath(pkg_dir, "Compat.toml"), """
+                ["1.0.0"]
+                DoesNotExist = "1"
+                """)
+
+            write(joinpath(pkg_dir, "Deps.toml"), """
+                ["1.0.0"]
+                DoesNotExist = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+                """)
+
+            @testset "Unknown compat package name" begin
+                @test fails() do
+                    RegistryCI.test(registry_dir)
+                end
+            end
+        end
+    end
 end
