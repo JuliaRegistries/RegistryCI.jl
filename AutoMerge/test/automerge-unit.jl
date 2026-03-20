@@ -613,6 +613,63 @@ end
 end
 
 @testset "Guidelines for new versions" begin
+    @testset "DelimitedFiles requires compat for pre-1.9 Julia support" begin
+        mktempdir() do tmp_registry
+            pkg_dir = joinpath(tmp_registry, "T", "TestPkg")
+            mkpath(pkg_dir)
+
+            write(joinpath(tmp_registry, "Registry.toml"), """
+            [packages]
+            87654321-4321-8765-cba9-987654321cba = { name = "TestPkg", path = "T/TestPkg" }
+            """)
+
+            write(joinpath(pkg_dir, "Package.toml"), """
+            name = "TestPkg"
+            uuid = "87654321-4321-8765-cba9-987654321cba"
+            repo = "https://github.com/test/TestPkg.jl.git"
+            """)
+
+            write(joinpath(pkg_dir, "Deps.toml"), """
+            ["1.0.0"]
+            DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+            """)
+
+            write(joinpath(pkg_dir, "Compat.toml"), """
+            ["1.0.0"]
+            julia = "1.6"
+            """)
+
+            result, message = AutoMerge.meets_compat_for_all_deps(
+                tmp_registry, "TestPkg", v"1.0.0"
+            )
+            @test !result
+            @test occursin("DelimitedFiles", message)
+
+            write(joinpath(pkg_dir, "Compat.toml"), """
+            ["1.0.0"]
+            julia = "1.6"
+            DelimitedFiles = "1.6"
+            """)
+
+            result, message = AutoMerge.meets_compat_for_all_deps(
+                tmp_registry, "TestPkg", v"1.0.0"
+            )
+            @test result
+            @test isempty(message)
+
+            write(joinpath(pkg_dir, "Compat.toml"), """
+            ["1.0.0"]
+            julia = "1.9"
+            """)
+
+            result, message = AutoMerge.meets_compat_for_all_deps(
+                tmp_registry, "TestPkg", v"1.0.0"
+            )
+            @test result
+            @test isempty(message)
+        end
+    end
+
     @testset "Sequential version number" begin
         @test AutoMerge.meets_sequential_version_number([v"0.0.1"], v"0.0.2")[1]
         @test AutoMerge.meets_sequential_version_number([v"0.1.0"], v"0.1.1")[1]
