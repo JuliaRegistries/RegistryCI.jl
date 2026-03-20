@@ -694,6 +694,47 @@ end
         @test !AutoMerge.range_did_not_narrow(r2, r3)[1]
         @test !AutoMerge.range_did_not_narrow(r3, r2)[1]
     end
+    @testset "Compat messages distinguish lower and upper bounds" begin
+        @test occursin(
+            "lower-bounded",
+            AutoMerge.compat_violation_message(["Foo"]; bound_type="lower-bounded"),
+        )
+        @test AutoMerge._has_lower_bound(Pkg.Types.VersionRange("1"))
+        @test !AutoMerge._has_lower_bound(Pkg.Types.VersionRange("*"))
+
+        mktempdir() do tmp_registry
+            pkg_dir = joinpath(tmp_registry, "T", "TestPkg")
+            mkpath(pkg_dir)
+
+            write(joinpath(tmp_registry, "Registry.toml"), """
+            [packages]
+            87654321-4321-8765-cba9-987654321cba = { name = "TestPkg", path = "T/TestPkg" }
+            """)
+
+            write(joinpath(pkg_dir, "Package.toml"), """
+            name = "TestPkg"
+            uuid = "87654321-4321-8765-cba9-987654321cba"
+            repo = "https://github.com/test/TestPkg.jl.git"
+            """)
+
+            write(joinpath(pkg_dir, "Deps.toml"), """
+            ["1.0.0"]
+            Example = "7876af07-990d-54b4-ab0e-23690620f79a"
+            """)
+
+            write(joinpath(pkg_dir, "Compat.toml"), """
+            ["1.0.0"]
+            Example = "*"
+            """)
+
+            result, message = AutoMerge.meets_compat_for_all_deps(
+                tmp_registry, "TestPkg", v"1.0.0"
+            )
+            @test !result
+            @test occursin("lower-bounded", message)
+            @test occursin("upper-bounded", message)
+        end
+    end
 
     @testset "Breaking change releases must have explanatory release notes" begin
         body_good = """
