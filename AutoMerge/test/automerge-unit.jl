@@ -722,11 +722,28 @@ end
         <!-- END RELEASE NOTES -->
         """
         body_bad_no_notes = ""
+        body_with_commit = """
+        Repository: https://github.com/JuliaRegistries/RegistryCI.jl.git
+        Commit: 0123456789abcdef0123456789abcdef01234567
+        <!-- BEGIN RELEASE NOTES -->
+        `````
+        ## Features
+        - something
+        `````
+        <!-- END RELEASE NOTES -->
+        """
         breaking_label = GitHub.Label(; name="BREAKING")
         @test AutoMerge.meets_breaking_explanation_check([breaking_label], body_good)[1]
         @test AutoMerge.meets_breaking_explanation_check([breaking_label], body_good_changelog)[1]
         @test !AutoMerge.meets_breaking_explanation_check([breaking_label], body_bad)[1]
         @test !AutoMerge.meets_breaking_explanation_check([breaking_label], body_bad_no_notes)[1]
+        result, msg = AutoMerge.meets_breaking_explanation_check(
+            [breaking_label],
+            body_with_commit;
+            commit_url=AutoMerge.commit_url_from_pull_request_body(body_with_commit),
+        )
+        @test !result
+        @test occursin("[original commit](https://github.com/JuliaRegistries/RegistryCI.jl/commit/0123456789abcdef0123456789abcdef01234567)", msg)
 
         # Maybe this should fail as the label isn't applied by JuliaRegistrator, so the version isn't breaking?
         @test AutoMerge.meets_breaking_explanation_check([], body_good)[1]
