@@ -111,6 +111,21 @@ end
         end
     end
 
+    @testset "_spacify_hyphens preserves nested formatting structure" begin
+        input = Dict(
+            "1-2" => Dict(
+                "3-4" => ["5-6", "7 - 8"],
+            ),
+        )
+        expected = Dict(
+            "1 - 2" => Dict(
+                "3 - 4" => ["5 - 6", "7 - 8"],
+            ),
+        )
+
+        @test RegistryCI._spacify_hyphens(input) == expected
+    end
+
     @testset "Yanked key validation" begin
         mktempdir() do tmpdir
             registry_dir = joinpath(tmpdir, "TestRegistry")
