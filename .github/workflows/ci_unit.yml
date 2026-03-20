@@ -12,6 +12,9 @@ env:
   JULIA_PKG_UNPACK_REGISTRY: 'true'
   JULIA_PKG_USE_CLI_GIT: 'true'
 
+permissions:
+  contents: read
+
 jobs:
 
   typos:
