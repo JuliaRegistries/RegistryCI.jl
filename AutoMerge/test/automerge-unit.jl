@@ -1137,6 +1137,7 @@ end
             pkg_path = pkgdir_from_depot(tmp_depot, "VisualStringDistances")
             mkpath(joinpath(pkg_path, "LICENSES"))
             mv(joinpath(pkg_path, "LICENSE"), joinpath(pkg_path, "LICENSES", "MIT.txt"))
+            @test !ispath(joinpath(pkg_path, "LICENSE"))
             result = has_osi_license_in_depot("VisualStringDistances")
             @test result[1]
 
