@@ -61,7 +61,11 @@ end
 
 function pr_comment_is_blocking(c::GitHub.Comment)
     # Note: `[merge approved]` is not case sensitive, to match the semantics of `contains` on GitHub Actions
-    not_blocking = occursin("[noblock]", body(c)) || occursin("[merge approved]", lowercase(body(c)))
+    lower_body = lowercase(body(c))
+    not_blocking =
+        occursin("[noblock]", lower_body) ||
+        occursin("[no block]", lower_body) ||
+        occursin("[merge approved]", lower_body)
     return !not_blocking
 end
 
@@ -80,7 +84,7 @@ function comment_block_status_params(blocked::Bool)
         return (
             state = "failure",
             context = "automerge/comments",
-            description = "Blocked by one or more comments. Add [noblock] to comments or add label `$OVERRIDE_BLOCKS_LABEL`."
+            description = "Blocked by one or more comments. Add [noblock] or [no block] to comments or add label `$OVERRIDE_BLOCKS_LABEL`."
         )
     else
         return (

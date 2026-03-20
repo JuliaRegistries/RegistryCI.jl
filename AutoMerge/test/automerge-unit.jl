@@ -360,6 +360,9 @@ end
         @test AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="block"))
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]"))
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]hi"))
+        @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[no block]"))
+        @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[No Block] hi"))
+        @test AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[no      block]"))
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[merge approved] abc"))
     end
     @testset "comment_block_status_params" begin
@@ -369,6 +372,7 @@ end
         @test blocked_params.context == "automerge/comments"
         @test occursin("Blocked", blocked_params.description)
         @test occursin("[noblock]", blocked_params.description)
+        @test occursin("[no block]", blocked_params.description)
 
         # Test unblocked state returns success status
         unblocked_params = AutoMerge.comment_block_status_params(false)
