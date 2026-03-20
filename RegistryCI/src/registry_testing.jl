@@ -283,7 +283,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
     return nothing
 end
 
-# Change all occurences of "digit-digit" to "digit - digit"
+# Change all occurrences of "digit-digit" to "digit - digit"
 function _spacify_hyphens(str::AbstractString)
     r = r"(\d)-(\d)"
     s = s"\1 - \2"
