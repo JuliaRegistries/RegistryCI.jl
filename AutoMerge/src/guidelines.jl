@@ -301,6 +301,8 @@ const guideline_name_match_check = Guideline(;
     check=data -> meets_name_match_check(data.pkg, data.registry_master))
 
 function meets_name_match_check(pkg_name::AbstractString, registry_master::AbstractString)
+    result = meets_julia_module_name_check(pkg_name, julia_public_module_names())
+    result[1] || return result
     other_packages = get_all_pkg_names(registry_master)
     return meets_name_match_check(pkg_name, other_packages)
 end
@@ -315,6 +317,20 @@ function meets_name_match_check(
             return (false, "Package name already exists in the registry.")
         elseif lowercase(pkg_name) == lowercase(other_pkg)
             return (false, "Package name matches existing package name $(other_pkg) up-to-case.")
+        end
+    end
+    return (true, "")
+end
+
+function meets_julia_module_name_check(
+    pkg_name::AbstractString,
+    module_names::Vector{String},
+)
+    for module_name in module_names
+        if pkg_name == module_name
+            return (false, "Package name matches reserved Julia module name $(module_name).")
+        elseif lowercase(pkg_name) == lowercase(module_name)
+            return (false, "Package name matches reserved Julia module name $(module_name) up-to-case.")
         end
     end
     return (true, "")
