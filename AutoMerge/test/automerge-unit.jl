@@ -734,6 +734,38 @@ end
 end
 
 @testset "Guidelines for both new packages and new versions" begin
+    @testset "Registry consistency rejects changed version hashes" begin
+        master_registry = joinpath(TEMPLATE_DIR, "master_2")
+        feature_registry = joinpath(TEMPLATE_DIR, "feature_2")
+
+        success, message = AutoMerge.meets_registry_consistency_tests_pass(
+            feature_registry,
+            master_registry,
+            "Requires";
+            registry_deps=String[],
+        )
+        @test success
+        @test isempty(message)
+
+        mktempdir() do tmp_registry
+            cp(master_registry, tmp_registry; force=true)
+            versions_file = joinpath(tmp_registry, "R", "Requires", "Versions.toml")
+            write(versions_file, """
+            ["1.0.0"]
+            git-tree-sha1 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            """)
+
+            success, message = AutoMerge.meets_registry_consistency_tests_pass(
+                tmp_registry,
+                master_registry,
+                "Requires";
+                registry_deps=String[],
+            )
+            @test !success
+            @test occursin("registry consistency tests failed", lowercase(message))
+        end
+    end
+
     @testset "Version numbers may not contain prerelease data" begin
         @test AutoMerge.meets_version_number_no_prerelease(v"1.2.3")[1]
         @test !AutoMerge.meets_version_number_no_prerelease(v"1.2.3-alpha")[1]
