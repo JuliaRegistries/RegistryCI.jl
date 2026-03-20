@@ -211,7 +211,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     compressed = RegistryTools.Compress.compress(
                         depsfile, RegistryTools.Compress.load(depsfile)
                     )
-                    @test _spacify_hyphens(compressed) == _spacify_hyphens(deps)
+                    @test _normalize_deps_roundtrip(compressed, vnums) == _normalize_deps_roundtrip(deps, vnums)
                 else
                     @debug "Deps.toml file does not exist" depsfile
                 end
@@ -257,10 +257,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     compressed = RegistryTools.Compress.compress(
                         compatfile, RegistryTools.Compress.load(compatfile)
                     )
-                    mapvalues = (f, dict) -> Dict(k => f(v) for (k, v) in dict)
-                    f_inner = v -> Pkg.Types.VersionRange.(v)
-                    f_outer = dict -> mapvalues(f_inner, dict)
-                    @test _spacify_hyphens(mapvalues(f_outer, compressed)) == _spacify_hyphens(mapvalues(f_outer, compat))
+                    @test _normalize_compat_roundtrip(compressed, vnums) == _normalize_compat_roundtrip(compat, vnums)
                 else
                     @debug "Compat.toml file does not exist" compatfile
                 end
@@ -281,6 +278,36 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
         end
     end
     return nothing
+end
+
+function _normalize_deps_roundtrip(dict::AbstractDict, versions::AbstractVector{VersionNumber})
+    normalized = Dict{VersionNumber, Dict{String, Base.UUID}}()
+    for (version_range, entries) in pairs(dict)
+        vrange = Pkg.Types.VersionRange(version_range)
+        typed_entries = Dict(
+            name => uuid isa Base.UUID ? uuid : Base.UUID(uuid) for (name, uuid) in pairs(entries)
+        )
+        for version in versions
+            version in vrange || continue
+            normalized[version] = typed_entries
+        end
+    end
+    return normalized
+end
+
+function _normalize_compat_roundtrip(dict::AbstractDict, versions::AbstractVector{VersionNumber})
+    normalized = Dict{VersionNumber, Dict{String, Pkg.Types.VersionSpec}}()
+    for (version_range, entries) in pairs(dict)
+        vrange = Pkg.Types.VersionRange(version_range)
+        typed_entries = Dict(
+            name => spec isa Pkg.Types.VersionSpec ? spec : Pkg.Types.VersionSpec(spec) for (name, spec) in pairs(entries)
+        )
+        for version in versions
+            version in vrange || continue
+            normalized[version] = typed_entries
+        end
+    end
+    return normalized
 end
 
 # Change all occurences of "digit-digit" to "digit - digit"

@@ -44,6 +44,58 @@ if test_general
 end
 
 @testset "Synthetic tests" begin
+    @testset "Deps and compat roundtrip with RegistryTools typed values" begin
+        mktempdir() do tmpdir
+            registry_dir = joinpath(tmpdir, "TestRegistry")
+            mkpath(registry_dir)
+
+            write(joinpath(registry_dir, "Registry.toml"), """
+                name = "TestRegistry"
+                uuid = "12345678-1234-5678-9abc-123456789abc"
+                repo = "https://github.com/test/TestRegistry.git"
+
+                [packages]
+                87654321-4321-8765-cba9-987654321cba = { name = "TestPkg", path = "T/TestPkg" }
+                aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee = { name = "OtherPkg", path = "O/OtherPkg" }
+                """)
+
+            pkg_dir = joinpath(registry_dir, "T", "TestPkg")
+            mkpath(pkg_dir)
+            write(joinpath(pkg_dir, "Package.toml"), """
+                name = "TestPkg"
+                uuid = "87654321-4321-8765-cba9-987654321cba"
+                repo = "https://github.com/test/TestPkg.git"
+                """)
+            write(joinpath(pkg_dir, "Versions.toml"), """
+                ["1.0.0"]
+                git-tree-sha1 = "abcdef0123456789abcdef0123456789abcdef01"
+                """)
+            write(joinpath(pkg_dir, "Deps.toml"), """
+                ["1.0.0"]
+                OtherPkg = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+                """)
+            write(joinpath(pkg_dir, "Compat.toml"), """
+                ["1.0.0"]
+                OtherPkg = "1"
+                julia = "1"
+                """)
+
+            other_pkg_dir = joinpath(registry_dir, "O", "OtherPkg")
+            mkpath(other_pkg_dir)
+            write(joinpath(other_pkg_dir, "Package.toml"), """
+                name = "OtherPkg"
+                uuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+                repo = "https://github.com/test/OtherPkg.git"
+                """)
+            write(joinpath(other_pkg_dir, "Versions.toml"), """
+                ["1.0.0"]
+                git-tree-sha1 = "0123456789abcdef0123456789abcdef01234567"
+                """)
+
+            @test RegistryCI.test(registry_dir) === nothing
+        end
+    end
+
     @testset "Yanked key validation" begin
         mktempdir() do tmpdir
             registry_dir = joinpath(tmpdir, "TestRegistry")
