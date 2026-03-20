@@ -240,6 +240,70 @@ function meets_patch_release_does_not_narrow_julia_compat(
     end
 end
 
+const guideline_build_release_does_not_change_compat = Guideline(;
+    info="If it is a build-number release, then it does not change compat bounds for previous build releases with the same major.minor.patch.",
+    check=data -> meets_build_release_does_not_change_compat(
+        data.pkg,
+        data.version;
+        registry_head=data.registry_head,
+        registry_master=data.registry_master,
+    ),
+)
+
+function _same_release_line_ignoring_build(a::VersionNumber, b::VersionNumber)
+    return a.major == b.major && a.minor == b.minor && a.patch == b.patch
+end
+
+function compat_for_version(pkg::String, version::VersionNumber, registry_path::String)
+    package_relpath = get_package_relpath_in_registry(;
+        package_name=pkg, registry_path=registry_path
+    )
+    compat = parse_registry_toml(registry_path, package_relpath, "Compat.toml"; allow_missing = true)
+    result = Dict{String,Any}()
+    for version_range in keys(compat)
+        if version in Pkg.Types.VersionRange(version_range)
+            for (name, value) in compat[version_range]
+                result[name] = value
+            end
+        end
+    end
+    return result
+end
+
+function meets_build_release_does_not_change_compat(
+    pkg::String, new_version::VersionNumber; registry_head::String, registry_master::String
+)
+    isempty(new_version.build) && return true, ""
+    previous_build_versions = filter(
+        old_version ->
+            _same_release_line_ignoring_build(old_version, new_version) &&
+            !isempty(old_version.build),
+        all_versions(pkg, registry_master),
+    )
+    isempty(previous_build_versions) && return true, ""
+
+    previous_build_version = maximum(previous_build_versions)
+    old_compat = compat_for_version(pkg, previous_build_version, registry_master)
+    new_compat = compat_for_version(pkg, new_version, registry_head)
+    if old_compat == new_compat
+        return true, ""
+    end
+
+    msg = string(
+        "A build-number release is not allowed to change compat bounds for previous build releases with the same major.minor.patch. ",
+        "The compat entries have changed from ",
+        repr(old_compat),
+        " (in ",
+        previous_build_version,
+        ") to ",
+        repr(new_compat),
+        " (in ",
+        new_version,
+        ").",
+    )
+    return false, msg
+end
+
 const _AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH = 5
 
 const guideline_name_length = Guideline(;
@@ -1381,6 +1445,10 @@ function get_automerge_guidelines(
         (guideline_compat_for_all_deps, true),
         (
             guideline_patch_release_does_not_narrow_julia_compat,
+            !this_pr_can_use_special_jll_exceptions,
+        ),
+        (
+            guideline_build_release_does_not_change_compat,
             !this_pr_can_use_special_jll_exceptions,
         ),
         (guideline_allowed_jll_nonrecursive_dependencies, this_is_jll_package),

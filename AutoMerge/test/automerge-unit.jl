@@ -695,6 +695,72 @@ end
         @test !AutoMerge.range_did_not_narrow(r3, r2)[1]
     end
 
+    @testset "Build releases cannot change compat bounds" begin
+        mktempdir() do tmp_registry
+            pkg_dir = joinpath(tmp_registry, "M", "MicrosoftMPI_jll")
+            mkpath(pkg_dir)
+
+            write(joinpath(tmp_registry, "Registry.toml"), """
+            [packages]
+            87654321-4321-8765-cba9-987654321cba = { name = "MicrosoftMPI_jll", path = "M/MicrosoftMPI_jll" }
+            """)
+
+            write(joinpath(pkg_dir, "Package.toml"), """
+            name = "MicrosoftMPI_jll"
+            uuid = "87654321-4321-8765-cba9-987654321cba"
+            repo = "https://github.com/test/MicrosoftMPI_jll.jl.git"
+            """)
+
+            write(joinpath(pkg_dir, "Versions.toml"), """
+            ["10.2.1+4"]
+            git-tree-sha1 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+            ["10.2.1+5"]
+            git-tree-sha1 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            """)
+
+            write(joinpath(pkg_dir, "Compat.toml"), """
+            ["10.2.1+4"]
+            julia = "1.6"
+            JLLWrappers = "1"
+
+            ["10.2.1+5"]
+            julia = "1.6"
+            JLLWrappers = "1"
+            """)
+
+            result, message = AutoMerge.meets_build_release_does_not_change_compat(
+                "MicrosoftMPI_jll",
+                v"10.2.1+5";
+                registry_head=tmp_registry,
+                registry_master=tmp_registry,
+            )
+            @test result
+            @test isempty(message)
+
+            master_registry = mktempdir()
+            cp(tmp_registry, master_registry; force=true)
+            write(joinpath(tmp_registry, "M", "MicrosoftMPI_jll", "Compat.toml"), """
+            ["10.2.1+4"]
+            julia = "1.6"
+            JLLWrappers = "1"
+
+            ["10.2.1+5"]
+            julia = "1.6"
+            JLLWrappers = "1.2"
+            """)
+
+            result, message = AutoMerge.meets_build_release_does_not_change_compat(
+                "MicrosoftMPI_jll",
+                v"10.2.1+5";
+                registry_head=tmp_registry,
+                registry_master=master_registry,
+            )
+            @test !result
+            @test occursin("build-number release", message)
+        end
+    end
+
     @testset "Breaking change releases must have explanatory release notes" begin
         body_good = """
         <!-- BEGIN RELEASE NOTES -->
