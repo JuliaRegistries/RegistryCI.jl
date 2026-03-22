@@ -301,9 +301,11 @@ function _spacify_hyphens(dict::Dict{K, V}) where {K, V}
     for (k, v) in dict
         new_k = _spacify_hyphens(k)
         new_v = _spacify_hyphens(v)
+        new_dict[new_k] = new_v
     end
     return new_dict
 end
 
 _spacify_hyphens(range::Pkg.Types.VersionRange) = range
 _spacify_hyphens(ranges::Vector{Pkg.Types.VersionRange}) = ranges
+_spacify_hyphens(strings::Vector{String}) = _spacify_hyphens.(strings)
