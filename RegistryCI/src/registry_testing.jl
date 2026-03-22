@@ -280,6 +280,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
             end
 
             # Make sure there are no package directories on disk that are missing from Registry.toml
+            # https://github.com/JuliaRegistries/RegistryCI.jl/issues/310
             expected_package_dirs = Set{String}(normpath(data["path"]) for (_, data) in reg["packages"])
             actual_package_dirs = Set{String}()
             for (root, _, files) in walkdir(path)
