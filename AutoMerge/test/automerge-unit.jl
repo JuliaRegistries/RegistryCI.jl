@@ -360,6 +360,9 @@ end
         @test AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="block"))
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]"))
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[noblock]hi"))
+        @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[no block]"))
+        @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[No Block] hi"))
+        @test AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[no      block]"))
         @test !AutoMerge.pr_comment_is_blocking(GitHub.Comment(; body="[merge approved] abc"))
     end
     @testset "comment_block_status_params" begin
