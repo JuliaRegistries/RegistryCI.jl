@@ -16,22 +16,6 @@ end
 
 is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str))
 
-function _registry_dep_aliases(registry_dep_name::AbstractString)
-    aliases = String[registry_dep_name]
-    if isdir(registry_dep_name)
-        registry_toml = joinpath(registry_dep_name, "Registry.toml")
-        if isfile(registry_toml)
-            registry = Pkg.TOML.parsefile(registry_toml)
-            for key in ("name", "repo")
-                if haskey(registry, key) && registry[key] isa AbstractString
-                    push!(aliases, registry[key])
-                end
-            end
-        end
-    end
-    return unique(aliases)
-end
-
 function _include_this_registry(
     registry_spec, registry_deps_names::Vector{<:AbstractString}
 )
@@ -69,22 +53,16 @@ function load_registry_dep_uuids(registry_deps_names::Vector{<:AbstractString}=S
         for repo_spec in registry_deps_names
             if is_valid_url(repo_spec)
                 Pkg.Registry.add(Pkg.RegistrySpec(; url=repo_spec))
-            elseif isdir(repo_spec)
-                Pkg.Registry.add(Pkg.RegistrySpec(; path=repo_spec))
             else
                 Pkg.Registry.add(repo_spec)
             end
         end
-        registry_dep_aliases = reduce(
-            vcat, (_registry_dep_aliases(repo_spec) for repo_spec in registry_deps_names);
-            init=String[]
-        )
         # Now use the RegistrySpec's to find the Project.toml's. I know
         # .julia/registires/XYZ/ABC is the most likely place, but this way the
         # function never has to assume. BJW.
         extrauuids = Set{Base.UUID}()
         for spec in collect_registries()
-            if _include_this_registry(spec, registry_dep_aliases)
+            if _include_this_registry(spec, registry_deps_names)
                 reg = Pkg.TOML.parsefile(joinpath(spec.path, "Registry.toml"))
                 for x in keys(reg["packages"])
                     push!(extrauuids, Base.UUID(x))
