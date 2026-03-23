@@ -19,25 +19,41 @@ else
     test_general = true
 end
 
-if test_general
-    @testset "Public interface" begin
-        @testset "RegistryCI.test on general" begin
-            path = joinpath(DEPOT_PATH[1], "registries", "General")
-            RegistryCI.test(path)
+function with_local_general_registry(f::Function)
+    mktempdir() do tmpdir
+        general_path = joinpath(tmpdir, "General")
+        existing_general = joinpath(DEPOT_PATH[1], "registries", "General")
+        if isdir(existing_general)
+            cp(existing_general, general_path; force=true)
+        else
+            RegistryCI.with_temp_depot() do
+                Pkg.Registry.add("General")
+                cp(
+                    joinpath(DEPOT_PATH[1], "registries", "General"),
+                    general_path;
+                    force=true,
+                )
+            end
         end
+        return f(general_path)
     end
+end
 
-    @testset "Internal functions (private)" begin
-        @testset "RegistryCI.load_registry_dep_uuids" begin
-            all_registry_deps_names = [
-                ["General"],
-                ["https://github.com/JuliaRegistries/General"],
-                ["https://github.com/JuliaRegistries/General.git"],
-            ]
-            for registry_deps_names in all_registry_deps_names
-                extrauuids = RegistryCI.load_registry_dep_uuids(registry_deps_names)
-                @test extrauuids isa Set{Base.UUID}
-                @test length(extrauuids) > 1_000
+if test_general
+    with_local_general_registry() do general_path
+        @testset "Public interface" begin
+            @testset "RegistryCI.test on general" begin
+                RegistryCI.test(general_path)
+            end
+        end
+
+        @testset "Internal functions (private)" begin
+            @testset "RegistryCI.load_registry_dep_uuids" begin
+                for _ in 1:3
+                    extrauuids = RegistryCI.load_registry_dep_uuids([general_path])
+                    @test extrauuids isa Set{Base.UUID}
+                    @test length(extrauuids) > 1_000
+                end
             end
         end
     end
