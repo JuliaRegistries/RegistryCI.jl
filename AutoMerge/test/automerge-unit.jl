@@ -37,6 +37,96 @@ function create_mock_pr(commit_sha::String)
     )
 end
 
+function write_test_package(
+    pkg_root::AbstractString,
+    pkg::AbstractString;
+    version::VersionNumber=v"0.1.0",
+    project_name::AbstractString=pkg,
+    uuid::UUID=UUID("11111111-1111-1111-1111-111111111111"),
+    entrypoint::AbstractString=string(
+        "module ",
+        pkg,
+        "\n",
+        "export sample\n",
+        "sample() = :sample\n",
+        "end\n",
+    ),
+    extra_files::Dict{String,String}=Dict{String,String}(),
+)
+    mkpath(joinpath(pkg_root, "src"))
+    write(
+        joinpath(pkg_root, "Project.toml"),
+        """
+        name = "$project_name"
+        uuid = "$uuid"
+        version = "$version"
+        """,
+    )
+    write(joinpath(pkg_root, "src", "$pkg.jl"), entrypoint)
+    for (relative_path, contents) in extra_files
+        full_path = joinpath(pkg_root, relative_path)
+        mkpath(dirname(full_path))
+        write(full_path, contents)
+    end
+    return pkg_root
+end
+
+function commit_package_version!(
+    repo_dir::AbstractString,
+    pkg::AbstractString;
+    version::VersionNumber,
+    entrypoint::AbstractString,
+)
+    rm(joinpath(repo_dir, "Project.toml"); force=true)
+    rm(joinpath(repo_dir, "src"); force=true, recursive=true)
+    write_test_package(repo_dir, pkg; version=version, entrypoint=entrypoint)
+
+    git_env = copy(ENV)
+    git_env["GIT_AUTHOR_NAME"] = "Codex"
+    git_env["GIT_AUTHOR_EMAIL"] = "codex@example.com"
+    git_env["GIT_COMMITTER_NAME"] = "Codex"
+    git_env["GIT_COMMITTER_EMAIL"] = "codex@example.com"
+    run(setenv(`git -C $repo_dir add .`, git_env))
+    run(setenv(`git -C $repo_dir commit -m "commit $(version)"`, git_env))
+    return readchomp(Cmd(["git", "-C", repo_dir, "rev-parse", "HEAD^{tree}"]))
+end
+
+function write_test_registry(
+    registry_dir::AbstractString,
+    pkg::AbstractString,
+    uuid::AbstractString,
+    repo::AbstractString,
+    versions::Vector{Pair{VersionNumber,String}},
+)
+    package_path = joinpath(first(pkg), pkg)
+    mkpath(joinpath(registry_dir, package_path))
+
+    write(
+        joinpath(registry_dir, "Registry.toml"),
+        """
+        [packages]
+        "$uuid" = { name = "$pkg", path = "$package_path" }
+        """,
+    )
+    write(
+        joinpath(registry_dir, package_path, "Package.toml"),
+        """
+        name = "$pkg"
+        uuid = "$uuid"
+        repo = "$repo"
+        """,
+    )
+
+    versions_toml = IOBuffer()
+    for (version, tree_hash) in versions
+        println(versions_toml, "[\"$version\"]")
+        println(versions_toml, "git-tree-sha1 = \"$tree_hash\"")
+        println(versions_toml)
+    end
+    write(joinpath(registry_dir, package_path, "Versions.toml"), String(take!(versions_toml)))
+    return registry_dir
+end
+
 REQUIRES_CLONE = mktempdir()
 # Clone the actual Requires.jl repository for diff operations
 run(`git clone https://github.com/MikeInnes/Requires.jl.git $(REQUIRES_CLONE)`)
@@ -730,6 +820,175 @@ end
 
         # Maybe this should fail as the label isn't applied by JuliaRegistrator, so the version isn't breaking?
         @test AutoMerge.meets_breaking_explanation_check([], body_good)[1]
+    end
+    @testset "Removed exports require a breaking version bump" begin
+        mktempdir() do old_pkg_root
+            write_test_package(
+                old_pkg_root,
+                "ExportProbe";
+                entrypoint="""
+                module ExportProbe
+                export alpha, beta
+                alpha() = :alpha
+                beta() = :beta
+                end
+                """,
+            )
+            result = AutoMerge.detect_package_exports("ExportProbe", old_pkg_root)
+            @test result.success
+            @test result.method == :runtime
+            @test result.exports == Set(["alpha", "beta"])
+        end
+
+        mktempdir() do pkg_root
+            write_test_package(
+                pkg_root,
+                "FallbackProbe";
+                entrypoint="""
+                module FallbackProbe
+                export alpha
+                __init__() = error("force runtime fallback")
+                alpha() = :alpha
+                end
+                """,
+            )
+            result = AutoMerge.detect_package_exports("FallbackProbe", pkg_root)
+            @test result.success
+            @test result.method == :source
+            @test result.exports == Set(["alpha"])
+        end
+
+        mktempdir() do pkg_root
+            write_test_package(
+                pkg_root,
+                "IncludeProbe";
+                entrypoint="""
+                module IncludeProbe
+                include("exports.jl")
+                end
+                """,
+                extra_files=Dict(
+                    joinpath("src", "exports.jl") => """
+                    export alpha, beta
+                    alpha() = :alpha
+                    beta() = :beta
+                    """,
+                ),
+            )
+            result = AutoMerge.detect_package_exports_from_source("IncludeProbe", pkg_root)
+            @test result.success
+            @test result.exports == Set(["alpha", "beta"])
+        end
+
+        mktempdir() do pkg_root
+            write_test_package(
+                pkg_root,
+                "BrokenProbe";
+                entrypoint="""
+                module BrokenProbe
+                export alpha
+                alpha() = :alpha
+                end
+                """,
+            )
+            rm(joinpath(pkg_root, "src", "BrokenProbe.jl"))
+            result = AutoMerge.detect_package_exports("BrokenProbe", pkg_root)
+            @test !result.success
+            @test occursin("runtime inspection failed", result.message)
+            @test occursin("source parsing failed", result.message)
+        end
+
+        mktempdir() do old_pkg_root
+            mktempdir() do new_pkg_root
+                write_test_package(
+                    old_pkg_root,
+                    "DiffProbe";
+                    entrypoint="""
+                    module DiffProbe
+                    export alpha, beta
+                    alpha() = :alpha
+                    beta() = :beta
+                    end
+                    """,
+                )
+                write_test_package(
+                    new_pkg_root,
+                    "DiffProbe";
+                    entrypoint="""
+                    module DiffProbe
+                    export alpha, gamma
+                    alpha() = :alpha
+                    gamma() = :gamma
+                    end
+                    """,
+                )
+                result = AutoMerge.detect_removed_exports("DiffProbe", old_pkg_root, new_pkg_root)
+                @test result.success
+                @test result.removed_exports == ["beta"]
+            end
+        end
+
+        mktempdir() do repo_dir
+            run(`git -C $repo_dir init`)
+
+            old_tree = commit_package_version!(
+                repo_dir,
+                "GuidelineProbe";
+                version=v"0.1.0",
+                entrypoint="""
+                module GuidelineProbe
+                export alpha, beta
+                alpha() = :alpha
+                beta() = :beta
+                end
+                """,
+            )
+            new_tree = commit_package_version!(
+                repo_dir,
+                "GuidelineProbe";
+                version=v"0.1.1",
+                entrypoint="""
+                module GuidelineProbe
+                export alpha
+                alpha() = :alpha
+                end
+                """,
+            )
+
+            mktempdir() do registry_master
+                mktempdir() do current_pkg_root
+                    write_test_registry(
+                        registry_master,
+                        "GuidelineProbe",
+                        "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                        repo_dir,
+                        [v"0.1.0" => old_tree],
+                    )
+                    write_test_package(
+                        current_pkg_root,
+                        "GuidelineProbe";
+                        version=v"0.1.1",
+                        entrypoint="""
+                        module GuidelineProbe
+                        export alpha
+                        alpha() = :alpha
+                        end
+                        """,
+                    )
+
+                    data = (;
+                        pkg="GuidelineProbe",
+                        version=v"0.1.1",
+                        registry_master=registry_master,
+                        pkg_clone_dir=mktempdir(),
+                        pkg_code_path=current_pkg_root,
+                    )
+                    success, message = AutoMerge.meets_removed_exports_requires_breaking_bump(data)
+                    @test !success
+                    @test occursin("Removed exports: beta", message)
+                end
+            end
+        end
     end
 end
 

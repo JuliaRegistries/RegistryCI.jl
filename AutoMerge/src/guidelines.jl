@@ -539,6 +539,63 @@ function get_release_notes(body::AbstractString)
     return m === nothing ? nothing : m.captures[1]
 end
 
+const guideline_removed_exports_requires_breaking_bump = Guideline(;
+    info = "Removing exports requires a breaking version bump.",
+    docs = "If a release removes exported names from the previous release, then it must use a breaking version number.",
+    check=data -> meets_removed_exports_requires_breaking_bump(data),
+)
+
+function removed_exports_requires_breaking_bump_message(
+    previous_version::VersionNumber,
+    new_version::VersionNumber,
+    removed_exports::Vector{String},
+)
+    return string(
+        "This release removes exported names from v",
+        previous_version,
+        " but is registered as v",
+        new_version,
+        ", which is not a breaking version bump. Removed exports: ",
+        join(removed_exports, ", "),
+        ". Removing exports requires a breaking release.",
+    )
+end
+
+function meets_removed_exports_requires_breaking_bump(data)
+    previous_version = find_previous_semver_version(data.pkg, data.version, data.registry_master)
+    previous_version === nothing && return true, ""
+    is_breaking(previous_version, data.version) && return true, ""
+
+    previous_pkg_info = parse_registry_pkg_info(data.registry_master, data.pkg, previous_version)
+    mktempdir() do previous_pkg_root
+        clone_success = load_files_from_url_and_tree_hash(
+            _ -> nothing,
+            previous_pkg_root,
+            previous_pkg_info.repo,
+            previous_pkg_info.tree_hash,
+            data.pkg_clone_dir,
+        )
+        if !clone_success
+            return false,
+            "AutoMerge could not determine whether exports were removed because cloning the previous package version failed. Manual review is required."
+        end
+
+        result = detect_removed_exports(data.pkg, previous_pkg_root, data.pkg_code_path)
+        if !result.success
+            return false, result.message
+        elseif isempty(result.removed_exports)
+            return true, ""
+        else
+            return false,
+            removed_exports_requires_breaking_bump_message(
+                previous_version,
+                data.version,
+                result.removed_exports,
+            )
+        end
+    end
+end
+
 # This check looks for similar (but not exactly matching) names. It can be
 # overridden by a label.
 const guideline_distance_check = Guideline(;
@@ -1395,6 +1452,7 @@ function get_automerge_guidelines(
         (guideline_project_toml_check, true),
         (guideline_src_names_OK, true),
         (guideline_version_can_be_imported, true),
+        (guideline_removed_exports_requires_breaking_bump, true),
         (guideline_breaking_explanation, check_breaking_explanation && !this_is_jll_package),
     ]
     return guidelines
