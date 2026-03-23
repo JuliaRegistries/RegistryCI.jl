@@ -5,6 +5,8 @@ using JSON
 using Pkg
 using Printf
 using AutoMerge
+using SHA
+using Tar
 using Test
 using TimeZones
 
@@ -27,6 +29,29 @@ function setup_global_depot()::String
     run(setenv(`julia -e 'import Pkg; Pkg.add(["RegistryCI"])'`, env1))
     TEMP_DEPOT_FOR_TESTING = tmp_depot
     tmp_depot
+end
+
+function create_test_artifact_archive(; files::Dict{String,String})
+    tmpdir = mktempdir()
+    src_dir = joinpath(tmpdir, "src")
+    mkpath(src_dir)
+    for (relative_path, contents) in files
+        absolute_path = joinpath(src_dir, relative_path)
+        mkpath(dirname(absolute_path))
+        write(absolute_path, contents)
+    end
+    tar_path = joinpath(tmpdir, "artifact.tar")
+    Tar.create(src_dir, tar_path)
+    tar_gz_path = joinpath(tmpdir, "artifact.tar.gz")
+    open(tar_gz_path, "w") do io
+        run(pipeline(Cmd(["gzip", "-n", "-c", tar_path]), stdout=io))
+    end
+    return (
+        tmpdir=tmpdir,
+        tar_gz_path=tar_gz_path,
+        sha256=bytes2hex(open(sha256, tar_gz_path)),
+        tree_hash=string(Tar.tree_hash(tar_path)),
+    )
 end
 
 # Helper function to create a mock GitHub.PullRequest with only essential fields
@@ -1138,6 +1163,94 @@ end
             rm(joinpath(pkg_path, "LICENSE"))
             result = has_osi_license_in_depot("VisualStringDistances")
             @test !result[1]
+        end
+    end
+    @testset "`AutoMerge.meets_artifacts_toml_check`" begin
+        mktempdir() do pkg_dir
+            @test AutoMerge.meets_artifacts_toml_check(pkg_dir) == (true, "")
+        end
+
+        archive = create_test_artifact_archive(; files=Dict("file.txt" => "hello\n"))
+        try
+            mktempdir() do pkg_dir
+                write(
+                    joinpath(pkg_dir, "Artifacts.toml"),
+                    """
+                    [example]
+                    git-tree-sha1 = "$(archive.tree_hash)"
+                        [[example.download]]
+                        url = "file://$(archive.tar_gz_path)"
+                        sha256 = "$(archive.sha256)"
+                    """,
+                )
+                @test AutoMerge.meets_artifacts_toml_check(pkg_dir) == (true, "")
+            end
+
+            mktempdir() do pkg_dir
+                write(
+                    joinpath(pkg_dir, "Artifacts.toml"),
+                    """
+                    [example]
+                    git-tree-sha1 = "0000000000000000000000000000000000000000"
+                        [[example.download]]
+                        url = "file://$(archive.tar_gz_path)"
+                        sha256 = "$(archive.sha256)"
+                    """,
+                )
+                ok, msg = AutoMerge.meets_artifacts_toml_check(pkg_dir)
+                @test !ok
+                @test occursin("Artifacts.toml entry `example`", msg)
+                @test occursin("has no download source matching", msg)
+            end
+
+            mktempdir() do pkg_dir
+                write(joinpath(pkg_dir, "Artifacts.toml"), "[example\n")
+                ok, msg = AutoMerge.meets_artifacts_toml_check(pkg_dir)
+                @test !ok
+                @test occursin("Artifacts.toml could not be parsed", msg)
+            end
+
+            mktempdir() do pkg_dir
+                write(
+                    joinpath(pkg_dir, "Artifacts.toml"),
+                    """
+                    [example]
+                    git-tree-sha1 = "not-a-sha1"
+                        [[example.download]]
+                        url = "file://$(archive.tar_gz_path)"
+                        sha256 = "$(archive.sha256)"
+                    """,
+                )
+                ok, msg = AutoMerge.meets_artifacts_toml_check(pkg_dir)
+                @test !ok
+                @test occursin("invalid `git-tree-sha1`", msg)
+            end
+
+            mktempdir() do pkg_dir
+                write(
+                    joinpath(pkg_dir, "Artifacts.toml"),
+                    """
+                    [[multi]]
+                    os = "linux"
+                    arch = "x86_64"
+                    git-tree-sha1 = "$(archive.tree_hash)"
+                        [[multi.download]]
+                        url = "file:///does/not/exist/artifact.tar.gz"
+                        sha256 = "$(archive.sha256)"
+                        [[multi.download]]
+                        url = "file://$(archive.tar_gz_path)"
+                        sha256 = "$(archive.sha256)"
+
+                    [[multi]]
+                    os = "macos"
+                    arch = "aarch64"
+                    git-tree-sha1 = "1111111111111111111111111111111111111111"
+                    """,
+                )
+                @test AutoMerge.meets_artifacts_toml_check(pkg_dir) == (true, "")
+            end
+        finally
+            rm(archive.tmpdir; force=true, recursive=true)
         end
     end
     @testset "Config TOML functionality" begin

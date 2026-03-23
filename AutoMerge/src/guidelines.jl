@@ -888,6 +888,223 @@ const guideline_code_can_be_downloaded = Guideline(;
     ),
 )
 
+const guideline_artifacts_toml_check = Guideline(;
+    info="Artifacts.toml download verification.",
+    docs="Checks that each downloadable entry in `Artifacts.toml` has a `git-tree-sha1` that matches at least one declared download source.",
+    check=data -> meets_artifacts_toml_check(data.pkg_code_path),
+)
+
+function _artifact_variant_context(name::AbstractString, index::Int, total::Int)
+    total == 1 && return "Artifacts.toml entry `$(name)`"
+    return "Artifacts.toml entry `$(name)` variant $(index)"
+end
+
+function _artifact_download_context(
+    name::AbstractString, variant_index::Int, variant_total::Int, download_index::Int
+)
+    return string(
+        _artifact_variant_context(name, variant_index, variant_total),
+        " download $(download_index)",
+    )
+end
+
+function _artifact_variants(artifact_name::AbstractString, value)
+    if value isa AbstractDict
+        return Any[value]
+    elseif value isa AbstractVector
+        return Any[value...]
+    end
+    throw(
+        ArgumentError(
+            "Artifacts.toml entry `$(artifact_name)` must be a table or array of tables.",
+        ),
+    )
+end
+
+function _artifact_downloads(
+    artifact_name::AbstractString, variant_index::Int, variant_total::Int, value
+)
+    if value isa AbstractDict
+        return Any[value]
+    elseif value isa AbstractVector
+        return Any[value...]
+    end
+    throw(
+        ArgumentError(
+            string(
+                _artifact_variant_context(artifact_name, variant_index, variant_total),
+                " has an invalid `download` section.",
+            ),
+        ),
+    )
+end
+
+function _artifact_tree_hash(
+    artifact_name::AbstractString,
+    variant_index::Int,
+    variant_total::Int,
+    variant::AbstractDict,
+)
+    tree_hash_str = get(variant, "git-tree-sha1", nothing)
+    if !(tree_hash_str isa AbstractString)
+        throw(
+            ArgumentError(
+                string(
+                    _artifact_variant_context(artifact_name, variant_index, variant_total),
+                    " is missing a string `git-tree-sha1`.",
+                ),
+            ),
+        )
+    end
+    try
+        return Base.SHA1(tree_hash_str), tree_hash_str
+    catch err
+        throw(
+            ArgumentError(
+                string(
+                    _artifact_variant_context(artifact_name, variant_index, variant_total),
+                    " has an invalid `git-tree-sha1` `",
+                    tree_hash_str,
+                    "`: ",
+                    sprint(showerror, err),
+                ),
+            ),
+        )
+    end
+end
+
+function _validate_artifact_variant_downloads(
+    artifact_name::AbstractString,
+    variant::AbstractDict,
+    variant_index::Int,
+    variant_total::Int,
+)
+    downloads = get(variant, "download", nothing)
+    downloads === nothing && return nothing
+
+    normalized_downloads = _artifact_downloads(
+        artifact_name, variant_index, variant_total, downloads
+    )
+    isempty(normalized_downloads) && return nothing
+
+    tree_hash, tree_hash_str = _artifact_tree_hash(
+        artifact_name, variant_index, variant_total, variant
+    )
+    errors = String[]
+    for (download_index, download) in enumerate(normalized_downloads)
+        if !(download isa AbstractDict)
+            throw(
+                ArgumentError(
+                    string(
+                        _artifact_download_context(
+                            artifact_name, variant_index, variant_total, download_index
+                        ),
+                        " must be a table.",
+                    ),
+                ),
+            )
+        end
+        url = get(download, "url", nothing)
+        sha256 = get(download, "sha256", nothing)
+        if !(url isa AbstractString)
+            throw(
+                ArgumentError(
+                    string(
+                        _artifact_download_context(
+                            artifact_name, variant_index, variant_total, download_index
+                        ),
+                        " is missing a string `url`.",
+                    ),
+                ),
+            )
+        end
+        if !(sha256 isa AbstractString)
+            throw(
+                ArgumentError(
+                    string(
+                        _artifact_download_context(
+                            artifact_name, variant_index, variant_total, download_index
+                        ),
+                        " is missing a string `sha256`.",
+                    ),
+                ),
+            )
+        end
+
+        try
+            result = Pkg.Artifacts.download_artifact(
+                tree_hash, url, sha256; quiet_download=true
+            )
+            if result === true
+                return nothing
+            elseif result isa Exception
+                push!(errors, sprint(showerror, result))
+            else
+                push!(errors, sprint(show, result))
+            end
+        catch err
+            push!(errors, sprint(showerror, err))
+        end
+    end
+
+    throw(
+        ErrorException(
+            string(
+                _artifact_variant_context(artifact_name, variant_index, variant_total),
+                " has no download source matching `git-tree-sha1` `",
+                tree_hash_str,
+                "`. Errors: ",
+                join(errors, " | "),
+            ),
+        ),
+    )
+end
+
+function meets_artifacts_toml_check(pkg_code_path::AbstractString)
+    artifacts_toml_path = joinpath(pkg_code_path, "Artifacts.toml")
+    isfile(artifacts_toml_path) || return true, ""
+
+    parsed = TOML.tryparsefile(artifacts_toml_path)
+    if parsed isa TOML.ParserError
+        return false, "Artifacts.toml could not be parsed: $(parsed)"
+    end
+
+    depot_sep = Sys.iswindows() ? ";" : ":"
+    try
+        mktempdir() do tmp_depot
+            withenv(
+                "JULIA_DEPOT_PATH" => tmp_depot * depot_sep,
+                "JULIA_PKG_SERVER" => "",
+            ) do
+                for (artifact_name, value) in pairs(parsed)
+                    variants = _artifact_variants(artifact_name, value)
+                    for (variant_index, variant) in enumerate(variants)
+                        if !(variant isa AbstractDict)
+                            throw(
+                                ArgumentError(
+                                    string(
+                                        _artifact_variant_context(
+                                            artifact_name, variant_index, length(variants)
+                                        ),
+                                        " must be a table.",
+                                    ),
+                                ),
+                            )
+                        end
+                        _validate_artifact_variant_downloads(
+                            artifact_name, variant, variant_index, length(variants)
+                        )
+                    end
+                end
+            end
+        end
+    catch err
+        return false, sprint(showerror, err)
+    end
+
+    return true, ""
+end
+
 function _find_lowercase_duplicates(v)
     elts = Dict{String, String}()
     for x in v
@@ -1337,6 +1554,7 @@ function get_automerge_guidelines(
         (:update_status, true),
         (guideline_version_can_be_pkg_added, true),
         (guideline_code_can_be_downloaded, true),
+        (guideline_artifacts_toml_check, true),
         # `guideline_version_has_osi_license` must be run
         # after `guideline_code_can_be_downloaded` so
         # that it can use the downloaded code!
@@ -1387,6 +1605,7 @@ function get_automerge_guidelines(
         (:update_status, true),
         (guideline_version_can_be_pkg_added, true),
         (guideline_code_can_be_downloaded, true),
+        (guideline_artifacts_toml_check, true),
         # `guideline_version_has_osi_license` must be run
         # after `guideline_code_can_be_downloaded` so
         # that it can use the downloaded code!
