@@ -80,6 +80,51 @@ end
     end
 end
 
+@testset "get_initial_pulls" begin
+    pulls = [GH.PullRequest(; merged_at=now(UTC))]
+    pages = Dict("next" => "abc")
+
+    @testset "retries server errors" begin
+        pull_requests = Mock([
+            ErrorException("Server error: 502"),
+            ErrorException("Server error: 503"),
+            (pulls, pages),
+        ])
+        result = mock(GH.pull_requests => pull_requests) do _prs
+            TB.get_initial_pulls(
+                "JuliaRegistries/General";
+                retry_delays=[0.0, 0.0],
+                auth=TB.AUTH[],
+            )
+        end
+        @test result == (pulls, pages)
+        @test length(SimpleMock.calls(pull_requests)) == 3
+    end
+
+    @testset "stops after bounded retries" begin
+        pull_requests = Mock([
+            ErrorException("Server error: 500"),
+            ErrorException("Server error: 502"),
+            ErrorException("Server error: 503"),
+        ])
+        err = mock(GH.pull_requests => pull_requests) do _prs
+            try
+                TB.get_initial_pulls(
+                    "JuliaRegistries/General";
+                    retry_delays=[0.0, 0.0],
+                    auth=TB.AUTH[],
+                )
+                nothing
+            catch ex
+                ex
+            end
+        end
+        @test err isa ErrorException
+        @test err.msg == "Server error: 503"
+        @test length(SimpleMock.calls(pull_requests)) == 3
+    end
+end
+
 @testset "collect_pulls" begin
     PR = GH.PullRequest
     prs = [
