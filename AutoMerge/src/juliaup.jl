@@ -58,9 +58,18 @@ end
 
 function get_julia_binary(version, kind)
     Base.run(`$(juliaup()) add $(version)`)
-    # Disable adjust_LIBPATH since we are calling a standalone Julia
-    # installation. Otherwise libraries may mismatch.
-    cmd = `$(julia(adjust_LIBPATH = false)) +$(version)`
+    if version == VERSION
+        # Avoid routing the current Julia version back through the juliaup_jll
+        # launcher. On some installations the launcher can fail to resolve the
+        # active channel under the sanitized environment used by AutoMerge's
+        # add/import checks, while the current binary works directly. See
+        # https://github.com/JuliaRegistries/RegistryCI.jl/issues/693.
+        cmd = `$(Base.julia_cmd()[1])`
+    else
+        # Disable adjust_LIBPATH since we are calling a standalone Julia
+        # installation. Otherwise libraries may mismatch.
+        cmd = `$(julia(adjust_LIBPATH = false)) +$(version)`
+    end
     text = "julia $(version) ($kind compatible version)"
     return cmd, text
 end
