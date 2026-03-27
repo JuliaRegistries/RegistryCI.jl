@@ -44,6 +44,73 @@ if test_general
 end
 
 @testset "Synthetic tests" begin
+    @testset "Empty registry" begin
+        mktempdir() do tmpdir
+            registry_dir = joinpath(tmpdir, "TestRegistry")
+            mkpath(registry_dir)
+
+            write(joinpath(registry_dir, "Registry.toml"), """
+                name = "TestRegistry"
+                uuid = "12345678-1234-5678-9abc-123456789abc"
+                repo = "https://github.com/test/TestRegistry.git"
+
+                [packages]
+                """)
+
+            @test RegistryCI.test(registry_dir) === nothing
+        end
+    end
+
+    @testset "Case-insensitive path collapse" begin
+        mktempdir() do tmpdir
+            registry_dir = joinpath(tmpdir, "TestRegistry")
+            mkpath(registry_dir)
+
+            write(joinpath(registry_dir, "Registry.toml"), """
+                name = "TestRegistry"
+                uuid = "12345678-1234-5678-9abc-123456789abc"
+                repo = "https://github.com/test/TestRegistry.git"
+
+                [packages]
+                87654321-4321-8765-cba9-987654321cba = { name = "TestPkg", path = "T/TestPkg" }
+                87654321-4321-8765-cba9-987654321cbb = { name = "TestPkg2", path = "t/TestPkg2" }
+
+""")
+
+            pkg_dir = joinpath(registry_dir, "T", "TestPkg")
+            mkpath(pkg_dir)
+
+            write(joinpath(pkg_dir, "Package.toml"), """
+                name = "TestPkg"
+                uuid = "87654321-4321-8765-cba9-987654321cba"
+                repo = "https://github.com/test/TestPkg.git"
+                """)
+
+            write(joinpath(pkg_dir, "Versions.toml"), """
+                ["1.0.0"]
+                git-tree-sha1 = "abcdef0123456789abcdef0123456789abcdef01"
+                """)
+
+            pkg_dir = joinpath(registry_dir, "t", "TestPkg2")
+            mkpath(pkg_dir)
+
+            write(joinpath(pkg_dir, "Package.toml"), """
+                name = "TestPkg2"
+                uuid = "87654321-4321-8765-cba9-987654321cbb"
+                repo = "https://github.com/test/TestPkg2.git"
+                """)
+
+            write(joinpath(pkg_dir, "Versions.toml"), """
+                ["1.0.0"]
+                git-tree-sha1 = "abcdef0123456789abcdef0123456789abcdef02"
+                """)
+
+            @test fails() do
+                RegistryCI.test(registry_dir)
+            end
+        end
+    end
+
     @testset "Yanked key validation" begin
         mktempdir() do tmpdir
             registry_dir = joinpath(tmpdir, "TestRegistry")

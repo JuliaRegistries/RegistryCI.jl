@@ -265,18 +265,25 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     @debug "Compat.toml file does not exist" compatfile
                 end
             end
-            # Make sure all paths are unique
-            path_parts = [splitpath(data["path"]) for (_, data) in reg["packages"]]
-            for i in 1:maximum(length, path_parts)
-                i_parts = Set(
-                    joinpath(x[1:i]...) for
-                    x in path_parts if get(x, i, nothing) !== nothing
-                )
-                i_parts′ = Set(
-                    joinpath(lowercase.(x[1:i])...) for
-                    x in path_parts if get(x, i, nothing) !== nothing
-                )
-                @test length(i_parts) == length(i_parts′)
+            # For an empty registry the `maximum` call errors unless
+            # you add `init = 0`, but that feature requires Julia 1.6.
+            if !isempty(reg["packages"])
+                # Make sure all paths and partial paths are unique with
+                # respect to a case-insensitive file system. E.g. "A/A1"
+                # and "a/a1" would collide, whereas "A/A1" and "a/a2"
+                # would not collide but be placed in the same directory.
+                path_parts = [splitpath(data["path"]) for (_, data) in reg["packages"]]
+                for i in 1:maximum(length, path_parts)
+                    i_parts = Set(
+                        joinpath(x[1:i]...) for
+                        x in path_parts if length(x) >= i
+                    )
+                    i_parts′ = Set(
+                        joinpath(lowercase.(x[1:i])...) for
+                        x in path_parts if length(x) >= i
+                    )
+                    @test length(i_parts) == length(i_parts′)
+                end
             end
         end
     end
