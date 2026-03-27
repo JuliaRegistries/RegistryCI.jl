@@ -2,21 +2,12 @@ function is_jll_name(name::AbstractString)::Bool
     return endswith(name, "_jll")
 end
 
-function _get_all_dependencies_nonrecursive(working_directory::AbstractString, pkg, version)
-    all_dependencies = String[]
-    package_relpath = get_package_relpath_in_registry(;
-        package_name=pkg, registry_path=working_directory
-    )
-    deps = parse_registry_toml(working_directory, package_relpath, "Deps.toml"; allow_missing = true)
-    for version_range in keys(deps)
-        if version in Pkg.Types.VersionRange(version_range)
-            for name in keys(deps[version_range])
-                push!(all_dependencies, name)
-            end
-        end
-    end
-    unique!(all_dependencies)
-    return all_dependencies
+function _get_all_dependencies_nonrecursive(registry::RegistryInstance, pkg, version)
+    # Get dependencies for this version using helper
+    deps_dict = get_deps_for_version(registry, pkg, version)
+
+    # Return just the dependency names
+    return collect(keys(deps_dict))
 end
 
 const guideline_allowed_jll_nonrecursive_dependencies = Guideline(;
@@ -28,7 +19,7 @@ const guideline_allowed_jll_nonrecursive_dependencies = Guideline(;
 )
 
 function meets_allowed_jll_nonrecursive_dependencies(
-    working_directory::AbstractString, pkg, version
+    registry::RegistryInstance, pkg, version
 )
     # If you are a JLL package, you are only allowed to have five kinds of dependencies:
     # 1. Pkg
@@ -39,7 +30,7 @@ function meets_allowed_jll_nonrecursive_dependencies(
     # 6. TOML
     # 8. MPIPreferences
     # 7. other JLL packages
-    all_dependencies = _get_all_dependencies_nonrecursive(working_directory, pkg, version)
+    all_dependencies = _get_all_dependencies_nonrecursive(registry, pkg, version)
     allowed_dependencies = ("Pkg", "Libdl", "Artifacts", "JLLWrappers", "LazyArtifacts", "TOML", "MPIPreferences")
     for dep in all_dependencies
         if dep ∉ allowed_dependencies && !is_jll_name(dep)
