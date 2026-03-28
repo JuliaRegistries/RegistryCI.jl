@@ -1,5 +1,7 @@
 module AutoMerge
 
+# Hello world
+
 using Dates: Dates
 # import GitCommand
 using GitHub: GitHub
