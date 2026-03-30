@@ -478,7 +478,7 @@ function meets_breaking_explanation_check(data::GitHubAutoMergeData)
     # Look up PR here in case the labels are slow to be applied by the Registrator bot
     # which decides whether to add the BREAKING label
     pr = GitHub.pull_request(data.api, data.registry, data.pr.number; auth=data.auth)
-    return meets_breaking_explanation_check(; pr.labels, pr.body, data.version)
+    return meets_breaking_explanation_check(pr.labels, pr.body, data.version)
 end
 
 function breaking_explanation_message(has_release_notes)
@@ -516,14 +516,13 @@ function breaking_explanation_message(has_release_notes)
     end
 end
 
-function meets_breaking_explanation_check(; labels::Vector, body::AbstractString, version::VersionNumber)
+function meets_breaking_explanation_check(labels::Vector{<:AbstractString}, body::AbstractString, version::VersionNumber)
     if version.major == 1
         # Authors may choose to move directly from 0.x.y to 1.0.0 (or 1.a.b), and we do not
         # want the breaking-change release-notes guideline to add friction to any
         # 1.0.0 (or 1.a.b) registration that is part of that transition.
         return true, ""
     end
-
     if has_label(labels, BREAKING_LABEL)
         release_notes = get_release_notes(body)
         if release_notes === nothing
