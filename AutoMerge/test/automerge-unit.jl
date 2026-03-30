@@ -825,6 +825,57 @@ end
         touch(joinpath(tmp, "src", "B", "con"))
         @test !AutoMerge.meets_src_names_ok(tmp)[1]
     end
+    @testset "meets_no_git_submodules" begin
+        @test !AutoMerge.meets_no_git_submodules("DOES NOT EXIST")[1]
+
+        tmp = mktempdir()
+        mkdir(joinpath(tmp, "src"))
+        touch(joinpath(tmp, "src", "Example.jl"))
+        @test AutoMerge.meets_no_git_submodules(tmp)[1]
+
+        touch(joinpath(tmp, ".gitmodules"))
+        success, msg = AutoMerge.meets_no_git_submodules(tmp)
+        @test !success
+        @test occursin("Git submodules", msg)
+        @test occursin(".gitmodules", msg)
+
+        rm(joinpath(tmp, ".gitmodules"))
+        mkpath(joinpath(tmp, "deps", "vendor"))
+        touch(joinpath(tmp, "deps", "vendor", ".gitmodules"))
+        success, msg = AutoMerge.meets_no_git_submodules(tmp)
+        @test !success
+        @test occursin("Git submodules", msg)
+        @test occursin(joinpath("deps", "vendor", ".gitmodules"), msg)
+    end
+    @testset "no git submodules guideline is included" begin
+        new_package_guidelines = AutoMerge.get_automerge_guidelines(
+            AutoMerge.NewPackage();
+            check_license=true,
+            this_is_jll_package=false,
+            this_pr_can_use_special_jll_exceptions=false,
+            use_distance_check=false,
+            package_author_approved=false,
+            check_breaking_explanation=false,
+        )
+        @test any(
+            x -> !(x[1] isa Symbol) && x[1] === AutoMerge.guideline_no_git_submodules,
+            new_package_guidelines,
+        )
+
+        new_version_guidelines = AutoMerge.get_automerge_guidelines(
+            AutoMerge.NewVersion();
+            check_license=true,
+            check_breaking_explanation=false,
+            this_is_jll_package=false,
+            this_pr_can_use_special_jll_exceptions=false,
+            use_distance_check=false,
+            package_author_approved=false,
+        )
+        @test any(
+            x -> !(x[1] isa Symbol) && x[1] === AutoMerge.guideline_no_git_submodules,
+            new_version_guidelines,
+        )
+    end
     @testset "pull-requests.jl" begin
         @testset "regexes" begin
             @testset "new_package_title_regex" begin
