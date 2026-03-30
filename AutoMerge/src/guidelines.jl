@@ -478,7 +478,7 @@ function meets_breaking_explanation_check(data::GitHubAutoMergeData)
     if _breaking_explanation_is_exempt(data.version)
         # Authors may choose to move directly from 0.x.y to 1.0.0, and we do not
         # want the breaking-change release-notes guideline to add friction to any
-        # 1.x.y registration that is part of that transition.
+        # 1.a.b registration that is part of that transition.
         return true, ""
     end
 
