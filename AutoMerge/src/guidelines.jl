@@ -951,6 +951,66 @@ const guideline_src_names_OK = Guideline(;
     check=data -> meets_src_names_ok(data.pkg_code_path),
 )
 
+const _GIT_LFS_POINTER_VERSION_LINE = "version https://git-lfs.github.com/spec/v1"
+
+function _is_git_lfs_pointer_file(path::AbstractString)
+    isfile(path) || return false
+    lines = try
+        readlines(path)
+    catch
+        return false
+    end
+    length(lines) >= 3 || return false
+    strip(lines[1]) == _GIT_LFS_POINTER_VERSION_LINE || return false
+    startswith(strip(lines[2]), "oid sha256:") || return false
+    oid = strip(lines[2])[12:end]
+    !isempty(oid) || return false
+    all(c -> isdigit(c) || ('a' <= c <= 'f'), oid) || return false
+    startswith(strip(lines[3]), "size ") || return false
+    size_text = strip(lines[3])[6:end]
+    !isempty(size_text) || return false
+    all(isdigit, size_text) || return false
+    return true
+end
+
+function _contains_git_lfs_gitattributes_config(path::AbstractString)
+    isfile(path) || return false
+    for line in eachline(path)
+        stripped = strip(line)
+        isempty(stripped) && continue
+        startswith(stripped, '#') && continue
+        if occursin("filter=lfs", stripped) ||
+           occursin("diff=lfs", stripped) ||
+           occursin("merge=lfs", stripped)
+            return true
+        end
+    end
+    return false
+end
+
+function meets_no_git_lfs(pkg_code_path::AbstractString)
+    isdir(pkg_code_path) || return false, "Could not check for Git LFS usage because package code was not available."
+    for (root, _, files) in walkdir(pkg_code_path)
+        for file in files
+            path = joinpath(root, file)
+            relative_path = relpath(path, pkg_code_path)
+            if file == ".gitattributes" && _contains_git_lfs_gitattributes_config(path)
+                return false, "Git LFS is not allowed. Found Git LFS configuration in `$relative_path`."
+            end
+            if _is_git_lfs_pointer_file(path)
+                return false, "Git LFS is not allowed. Found a Git LFS pointer file at `$relative_path`."
+            end
+        end
+    end
+    return true, ""
+end
+
+const guideline_no_git_lfs = Guideline(;
+    info="Package does not use Git LFS",
+    docs="Git LFS: Packages must not use Git LFS. AutoMerge rejects package trees that contain Git LFS pointer files or `.gitattributes` entries configuring LFS.",
+    check=data -> meets_no_git_lfs(data.pkg_code_path),
+)
+
 function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_path, pkg_clone_dir)
     uuid, package_repo, subdir, tree_hash_from_toml = parse_registry_pkg_info(
         registry_head, pkg, version
@@ -1337,6 +1397,7 @@ function get_automerge_guidelines(
         (:update_status, true),
         (guideline_version_can_be_pkg_added, true),
         (guideline_code_can_be_downloaded, true),
+        (guideline_no_git_lfs, true),
         # `guideline_version_has_osi_license` must be run
         # after `guideline_code_can_be_downloaded` so
         # that it can use the downloaded code!
@@ -1387,6 +1448,7 @@ function get_automerge_guidelines(
         (:update_status, true),
         (guideline_version_can_be_pkg_added, true),
         (guideline_code_can_be_downloaded, true),
+        (guideline_no_git_lfs, true),
         # `guideline_version_has_osi_license` must be run
         # after `guideline_code_can_be_downloaded` so
         # that it can use the downloaded code!

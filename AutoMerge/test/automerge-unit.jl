@@ -757,6 +757,74 @@ end
         success, _ = AutoMerge.meets_version_can_be_imported(registry_path, "RegistryCI", v"10.10.4"; environment_variables_to_pass=String[])
         @test success
     end
+    @testset "Git LFS is not allowed" begin
+        tmp = mktempdir()
+        mkdir(joinpath(tmp, "src"))
+        touch(joinpath(tmp, "src", "Example.jl"))
+
+        @test AutoMerge.meets_no_git_lfs(tmp)[1]
+
+        pointer_path = joinpath(tmp, "artifact.bin")
+        write(
+            pointer_path,
+            """
+            version https://git-lfs.github.com/spec/v1
+            oid sha256:4d7a214614c32f5f3e7d4d8b3e0f6b4f3f8f0d3c2b1a09876543210fedcba987
+            size 1234
+            """,
+        )
+        success, msg = AutoMerge.meets_no_git_lfs(tmp)
+        @test !success
+        @test occursin("pointer file", msg)
+        @test occursin("artifact.bin", msg)
+        rm(pointer_path)
+
+        write(
+            joinpath(tmp, ".gitattributes"),
+            """
+            # comment only
+            *.bin filter=lfs diff=lfs merge=lfs -text
+            """,
+        )
+        success, msg = AutoMerge.meets_no_git_lfs(tmp)
+        @test !success
+        @test occursin(".gitattributes", msg)
+        @test occursin("configuration", msg)
+
+        write(
+            joinpath(tmp, ".gitattributes"),
+            """
+            # comment only
+
+            """,
+        )
+        @test AutoMerge.meets_no_git_lfs(tmp)[1]
+
+        write(joinpath(tmp, ".gitattributes"), "*.png diff=lfs\n")
+        @test !AutoMerge.meets_no_git_lfs(tmp)[1]
+
+        write(joinpath(tmp, ".gitattributes"), "*.tar merge=lfs\n")
+        @test !AutoMerge.meets_no_git_lfs(tmp)[1]
+    end
+    @testset "Git LFS guideline is run for new packages and new versions" begin
+        for registration_type in (AutoMerge.NewPackage(), AutoMerge.NewVersion())
+            guidelines = AutoMerge.get_automerge_guidelines(
+                registration_type;
+                check_license=true,
+                check_breaking_explanation=true,
+                this_is_jll_package=false,
+                this_pr_can_use_special_jll_exceptions=false,
+                use_distance_check=false,
+                package_author_approved=false,
+            )
+            filtered = [guideline for (guideline, applicable) in guidelines if applicable && guideline isa AutoMerge.Guideline]
+            infos = getfield.(filtered, :info)
+            @test "Code can be downloaded." in infos
+            @test "Package does not use Git LFS" in infos
+            @test findfirst(==("Package does not use Git LFS"), infos) ==
+                findfirst(==("Code can be downloaded."), infos) + 1
+        end
+    end
 end
 
 @testset "Unit tests" begin
