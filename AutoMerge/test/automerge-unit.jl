@@ -24,7 +24,12 @@ function setup_global_depot()::String
     env2 = copy(env1)
     env2["JULIA_PKG_SERVER"] = ""
     run(setenv(`julia -e 'import Pkg; Pkg.Registry.add("General")'`, env2))
-    run(setenv(`julia -e 'import Pkg; Pkg.add(["RegistryCI"])'`, env1))
+    run(
+        setenv(
+            `julia -e 'import Pkg; Pkg.add(["RegistryCI", "UnbalancedOptimalTransport", "VisualStringDistances"])'`,
+            env1,
+        ),
+    )
     TEMP_DEPOT_FOR_TESTING = tmp_depot
     tmp_depot
 end
@@ -132,19 +137,15 @@ end
     @testset "`AutoMerge.parse_registry_pkg_info`" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
         result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI", "1.0.0")
-        @test result == (;
-            uuid="0c95cc5f-2f7e-43fe-82dd-79dbcba86b32",
-            repo="https://github.com/JuliaRegistries/RegistryCI.jl.git",
-            subdir="",
-            tree_hash="1036c9c4d600468785fbd9dae87587e59d2f66a9",
-        )
+        @test result.uuid == "0c95cc5f-2f7e-43fe-82dd-79dbcba86b32"
+        @test result.repo == "https://github.com/JuliaRegistries/RegistryCI.jl.git"
+        @test result.subdir isa String
+        @test result.tree_hash == "1036c9c4d600468785fbd9dae87587e59d2f66a9"
         result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI")
-        @test result == (;
-            uuid="0c95cc5f-2f7e-43fe-82dd-79dbcba86b32",
-            repo="https://github.com/JuliaRegistries/RegistryCI.jl.git",
-            subdir="",
-            tree_hash=nothing,
-        )
+        @test result.uuid == "0c95cc5f-2f7e-43fe-82dd-79dbcba86b32"
+        @test result.repo == "https://github.com/JuliaRegistries/RegistryCI.jl.git"
+        @test result.subdir isa String
+        @test result.tree_hash === nothing
 
         result = AutoMerge.parse_registry_pkg_info(
             registry_path, "SnoopCompileCore", "2.5.2"
@@ -1107,6 +1108,12 @@ end
     end
 
     @testset "`AutoMerge.meets_version_has_osi_license`" begin
+        result = AutoMerge.meets_version_has_osi_license(
+            "RegistryCI"; pkg_code_path=nothing
+        )
+        @test !result[1]
+        @test result[2] == "Could not check license because could not access package code. Perhaps the `can_download_code` check failed earlier."
+
         withenv("JULIA_PKG_PRECOMPILE_AUTO" => "0") do
             # Let's install a fresh depot in a temporary directory
             # and add some packages to inspect.

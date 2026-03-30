@@ -1019,7 +1019,7 @@ const guideline_version_has_osi_license = Guideline(;
 
 function meets_version_has_osi_license(pkg::String; pkg_code_path)
     pkgdir = pkg_code_path
-    if !isdir(pkgdir) || isempty(readdir(pkgdir))
+    if !(pkgdir isa AbstractString) || !isdir(pkgdir) || isempty(readdir(pkgdir))
         return false,
         "Could not check license because could not access package code. Perhaps the `can_download_code` check failed earlier."
     end
