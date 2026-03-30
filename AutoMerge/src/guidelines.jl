@@ -475,20 +475,11 @@ const guideline_breaking_explanation = Guideline(;
     check=data -> meets_breaking_explanation_check(data))
 
 function meets_breaking_explanation_check(data::GitHubAutoMergeData)
-    if _breaking_explanation_is_exempt(data.version)
-        # Authors may choose to move directly from 0.x.y to 1.0.0 (or 1.a.b), and we do not
-        # want the breaking-change release-notes guideline to add friction to any
-        # 1.0.0 (or 1.a.b) registration that is part of that transition.
-        return true, ""
-    end
-
     # Look up PR here in case the labels are slow to be applied by the Registrator bot
     # which decides whether to add the BREAKING label
     pr = GitHub.pull_request(data.api, data.registry, data.pr.number; auth=data.auth)
-    return meets_breaking_explanation_check(data.version, pr.labels, pr.body)
+    return meets_breaking_explanation_check(; pr.labels, pr.body, data.version)
 end
-
-_breaking_explanation_is_exempt(version::VersionNumber) = version.major == 1
 
 function breaking_explanation_message(has_release_notes)
     example_detail = """
@@ -525,7 +516,14 @@ function breaking_explanation_message(has_release_notes)
     end
 end
 
-function meets_breaking_explanation_check(labels::Vector, body::AbstractString)
+function meets_breaking_explanation_check(; labels::Vector, body::AbstractString, version::VersionNumber)
+    if version.major == 1
+        # Authors may choose to move directly from 0.x.y to 1.0.0 (or 1.a.b), and we do not
+        # want the breaking-change release-notes guideline to add friction to any
+        # 1.0.0 (or 1.a.b) registration that is part of that transition.
+        return true, ""
+    end
+
     if has_label(labels, BREAKING_LABEL)
         release_notes = get_release_notes(body)
         if release_notes === nothing
@@ -540,15 +538,6 @@ function meets_breaking_explanation_check(labels::Vector, body::AbstractString)
     else
         return true, ""
     end
-end
-
-function meets_breaking_explanation_check(
-    version::VersionNumber, labels::Vector, body::AbstractString
-)
-    if _breaking_explanation_is_exempt(version)
-        return true, ""
-    end
-    return meets_breaking_explanation_check(labels, body)
 end
 
 function get_release_notes(body::AbstractString)
