@@ -24,7 +24,12 @@ function setup_global_depot()::String
     env2 = copy(env1)
     env2["JULIA_PKG_SERVER"] = ""
     run(setenv(`julia -e 'import Pkg; Pkg.Registry.add("General")'`, env2))
-    run(setenv(`julia -e 'import Pkg; Pkg.add(["RegistryCI"])'`, env1))
+    run(
+        setenv(
+            `julia -e 'import Pkg; Pkg.add(["RegistryCI", "UnbalancedOptimalTransport", "VisualStringDistances"])'`,
+            env1,
+        ),
+    )
     TEMP_DEPOT_FOR_TESTING = tmp_depot
     tmp_depot
 end
