@@ -1097,6 +1097,12 @@ end
     end
 
     @testset "`AutoMerge.meets_version_has_osi_license`" begin
+        result = AutoMerge.meets_version_has_osi_license(
+            "RegistryCI"; pkg_code_path=nothing
+        )
+        @test !result[1]
+        @test result[2] == "Could not check license because could not access package code. Perhaps the `can_download_code` check failed earlier."
+
         withenv("JULIA_PKG_PRECOMPILE_AUTO" => "0") do
             # Let's install a fresh depot in a temporary directory
             # and add some packages to inspect.
