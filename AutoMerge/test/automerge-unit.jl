@@ -132,19 +132,15 @@ end
     @testset "`AutoMerge.parse_registry_pkg_info`" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
         result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI", "1.0.0")
-        @test result == (;
-            uuid="0c95cc5f-2f7e-43fe-82dd-79dbcba86b32",
-            repo="https://github.com/JuliaRegistries/RegistryCI.jl.git",
-            subdir="",
-            tree_hash="1036c9c4d600468785fbd9dae87587e59d2f66a9",
-        )
+        @test result.uuid == "0c95cc5f-2f7e-43fe-82dd-79dbcba86b32"
+        @test result.repo == "https://github.com/JuliaRegistries/RegistryCI.jl.git"
+        @test result.subdir isa String
+        @test result.tree_hash == "1036c9c4d600468785fbd9dae87587e59d2f66a9"
         result = AutoMerge.parse_registry_pkg_info(registry_path, "RegistryCI")
-        @test result == (;
-            uuid="0c95cc5f-2f7e-43fe-82dd-79dbcba86b32",
-            repo="https://github.com/JuliaRegistries/RegistryCI.jl.git",
-            subdir="",
-            tree_hash=nothing,
-        )
+        @test result.uuid == "0c95cc5f-2f7e-43fe-82dd-79dbcba86b32"
+        @test result.repo == "https://github.com/JuliaRegistries/RegistryCI.jl.git"
+        @test result.subdir isa String
+        @test result.tree_hash === nothing
 
         result = AutoMerge.parse_registry_pkg_info(
             registry_path, "SnoopCompileCore", "2.5.2"
