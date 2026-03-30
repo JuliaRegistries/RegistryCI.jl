@@ -730,6 +730,12 @@ end
 
         # Maybe this should fail as the label isn't applied by JuliaRegistrator, so the version isn't breaking?
         @test AutoMerge.meets_breaking_explanation_check([], body_good)[1]
+
+        @test AutoMerge.meets_breaking_explanation_check(v"1.0.0", [breaking_label], body_bad)[1]
+        @test AutoMerge.meets_breaking_explanation_check(v"1.2.3", [breaking_label], body_bad_no_notes)[1]
+        @test !AutoMerge.meets_breaking_explanation_check(v"0.3.0", [breaking_label], body_bad)[1]
+        @test !AutoMerge.meets_breaking_explanation_check(v"2.0.0", [breaking_label], body_bad_no_notes)[1]
+        @test AutoMerge.meets_breaking_explanation_check(v"2.0.0", [breaking_label], body_good)[1]
     end
 end
 
