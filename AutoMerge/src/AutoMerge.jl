@@ -24,6 +24,9 @@ if VERSION >= v"1.11"
     """))
 end
 
+include("DownloadJuliaVersions/DownloadJuliaVersions.jl")
+using .DownloadJuliaVersions: julia_binary_cmd
+
 include("TagBot/TagBot.jl")
 
 include("types.jl")
@@ -39,7 +42,7 @@ include("dependency_confusion.jl")
 include("github.jl")
 include("guidelines.jl")
 include("jll.jl")
-include("juliaup.jl")
+include("julia_versions.jl")
 include("not_automerge_applicable.jl")
 include("package_path_in_registry.jl")
 include("public.jl")
