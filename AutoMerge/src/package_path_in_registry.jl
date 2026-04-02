@@ -25,7 +25,7 @@ end
 # What the relative path of the package *should* be, in theory.
 # This function should ONLY be used in the
 # "PR only changes a subset of the allowed files" check.
-# For all other uses, you shoud use the `get_package_relpath_in_registry`
+# For all other uses, you should use the `get_package_relpath_in_registry`
 # function instead.
 function _get_package_relpath_per_name_scheme(; package_name::String)
     return RegistryTools.package_relpath(package_name)
