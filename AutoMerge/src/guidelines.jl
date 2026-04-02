@@ -888,6 +888,16 @@ const guideline_code_can_be_downloaded = Guideline(;
     ),
 )
 
+const guideline_no_git_submodules = Guideline(;
+    info="Package does not use Git submodules.",
+    docs=string(
+        "Git submodules: The package source tree must not contain Git submodules ",
+        "or submodule-related metadata such as a `.gitmodules` file. ",
+        "Registrations that include Git submodules are not eligible for AutoMerge.",
+    ),
+    check=data -> meets_no_git_submodules(data.pkg_code_path),
+)
+
 function _find_lowercase_duplicates(v)
     elts = Dict{String, String}()
     for x in v
@@ -943,6 +953,22 @@ function meets_src_names_ok(pkg_code_path)
             end
         end
     end
+    return true, ""
+end
+
+function meets_no_git_submodules(pkg_code_path)
+    if !(pkg_code_path isa AbstractString) || !isdir(pkg_code_path) || isempty(readdir(pkg_code_path))
+        return false,
+        "Could not check for Git submodules because could not access package code. Perhaps the `can_download_code` check failed earlier."
+    end
+
+    for (root, _, files) in walkdir(pkg_code_path)
+        if ".gitmodules" in files
+            return false,
+            "Git submodules are not allowed for AutoMerge. Found submodule-related metadata at `$(joinpath(root, ".gitmodules"))`."
+        end
+    end
+
     return true, ""
 end
 
@@ -1337,6 +1363,7 @@ function get_automerge_guidelines(
         (:update_status, true),
         (guideline_version_can_be_pkg_added, true),
         (guideline_code_can_be_downloaded, true),
+        (guideline_no_git_submodules, true),
         # `guideline_version_has_osi_license` must be run
         # after `guideline_code_can_be_downloaded` so
         # that it can use the downloaded code!
@@ -1387,6 +1414,7 @@ function get_automerge_guidelines(
         (:update_status, true),
         (guideline_version_can_be_pkg_added, true),
         (guideline_code_can_be_downloaded, true),
+        (guideline_no_git_submodules, true),
         # `guideline_version_has_osi_license` must be run
         # after `guideline_code_can_be_downloaded` so
         # that it can use the downloaded code!
