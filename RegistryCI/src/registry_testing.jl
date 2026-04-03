@@ -170,6 +170,10 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                 @test Base.isidentifier(data["name"])
                 @test haskey(pkg, "repo")
                 if !is_sourcehut_repo(pkg["repo"])
+                    # Sourcehut does not seem to support the URL form that ends in `.git`
+                    # So we have to skip Sourcehut repos for this check
+                    #
+                    # For all non-Sourcehut repo, we require that the repo URL ends in `.git`
                     @test endswith(pkg["repo"], ".git")
                 end
 
