@@ -326,6 +326,12 @@ end
     @testset "Package name match check" begin
         @test AutoMerge.meets_name_match_check("Flux", ["Abc", "Def"])[1]
         @test !AutoMerge.meets_name_match_check("Websocket", ["websocket"])[1]
+        @test AutoMerge.meets_name_match_check("Filesystem", joinpath(DEPOT_PATH[1], "registries", "General"))[1]
+    end
+    @testset "Julia module name check" begin
+        @test AutoMerge.meets_julia_module_name_check("Flux", ["Threads", "Filesystem"])[1]
+        @test !AutoMerge.meets_julia_module_name_check("Threads", ["Threads", "Filesystem"])[1]
+        @test !AutoMerge.meets_julia_module_name_check("filesystem", ["Threads", "Filesystem"])[1]
     end
     @testset "Package name distance" begin
         @test AutoMerge.meets_distance_check("Flux", ["Abc", "Def"])[1]
@@ -545,6 +551,11 @@ end
         result, msg = AutoMerge.meets_uuid_match_check(nothing, registry_path)
         @test !result
         @test occursin("Project.toml checks failed", msg)
+
+        logging_uuid = only(filter(x -> x.name == "Logging", AutoMerge.get_all_pkg_name_uuids(registry_path))).uuid
+        result, msg = AutoMerge.meets_uuid_match_check(logging_uuid, AutoMerge.get_all_pkg_name_uuids(registry_path))
+        @test !result
+        @test occursin("Logging", msg)
     end
     @testset "`uuid_passes_sanity_check`" begin
         # Test standards-compliant UUIDs (variant = 2, version 1-8)

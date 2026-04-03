@@ -542,6 +542,23 @@ function julia_stdlib_list()
     return stdlib_list
 end
 
+function julia_public_module_names()
+    module_names = String[]
+    for module_parent in (Base, Core)
+        for module_name in names(module_parent)
+            value = try
+                getproperty(module_parent, module_name)
+            catch
+                continue
+            end
+            if value isa Module && parentmodule(value) === module_parent
+                push!(module_names, String(module_name))
+            end
+        end
+    end
+    return sort!(unique!(module_names))
+end
+
 function now_utc()
     utc = TimeZones.tz"UTC"
     return Dates.now(utc)

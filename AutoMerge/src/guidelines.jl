@@ -320,6 +320,25 @@ function meets_name_match_check(
     return (true, "")
 end
 
+const guideline_julia_module_name_check = Guideline(;
+    info = "Name does not match a reserved Julia module name",
+    docs = "Packages must not match the name of a public Julia module, including up-to-case matches.",
+    check=data -> meets_julia_module_name_check(data.pkg, julia_public_module_names()))
+
+function meets_julia_module_name_check(
+    pkg_name::AbstractString,
+    module_names::Vector{String},
+)
+    for module_name in module_names
+        if pkg_name == module_name
+            return (false, "Package name matches reserved Julia module name $(module_name).")
+        elseif lowercase(pkg_name) == lowercase(module_name)
+            return (false, "Package name matches reserved Julia module name $(module_name) up-to-case.")
+        end
+    end
+    return (true, "")
+end
+
 
 const guideline_project_toml_check = Guideline(;
     info = "Project.toml (or JuliaProject.toml) either does not exist, cannot be parsed, or is not consistent with registration PR.",
@@ -1352,6 +1371,7 @@ function get_automerge_guidelines(
         (guideline_uuid_sanity_check, true),
         # this is the non-optional part of name checking
         (guideline_name_match_check, true),
+        (guideline_julia_module_name_check, true),
         # We always run the `guideline_distance_check`
         # check last, because if the check fails, it
         # prints the list of similar package names in
