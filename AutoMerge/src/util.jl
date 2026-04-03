@@ -338,6 +338,264 @@ function get_github_diff_link(data, previous_pkg_info, current_pkg_info)
 end
 
 #####
+##### Export comparison
+#####
+
+function detect_removed_exports(
+    pkg::AbstractString, previous_pkg_root::AbstractString, current_pkg_root::AbstractString
+)
+    previous_result = detect_package_exports(pkg, previous_pkg_root)
+    current_result = detect_package_exports(pkg, current_pkg_root)
+
+    if !previous_result.success || !current_result.success
+        errors = String[]
+        if !previous_result.success
+            push!(
+                errors,
+                "previous version ($(previous_result.method)): $(previous_result.message)",
+            )
+        end
+        if !current_result.success
+            push!(
+                errors,
+                "new version ($(current_result.method)): $(current_result.message)",
+            )
+        end
+        return (;
+            success=false,
+            removed_exports=String[],
+            method=:none,
+            message=string(
+                "AutoMerge could not determine whether exports were removed. Manual review is required. ",
+                join(errors, " "),
+            ),
+        )
+    end
+
+    removed_exports = sort!(collect(setdiff(previous_result.exports, current_result.exports)))
+    method = previous_result.method == current_result.method ? previous_result.method : :hybrid
+    return (; success=true, removed_exports, method, message="")
+end
+
+function detect_package_exports(pkg::AbstractString, pkg_root::AbstractString)
+    runtime_result = detect_package_exports_runtime(pkg, pkg_root)
+    runtime_result.success && return runtime_result
+
+    source_result = detect_package_exports_from_source(pkg, pkg_root)
+    source_result.success && return source_result
+
+    return (;
+        success=false,
+        exports=Set{String}(),
+        method=:source,
+        message=string(
+            "runtime inspection failed: ",
+            runtime_result.message,
+            " source parsing failed: ",
+            source_result.message,
+        ),
+    )
+end
+
+function detect_package_exports_runtime(pkg::AbstractString, pkg_root::AbstractString)
+    env = _child_process_environment(String[])
+    pkg_literal = repr(String(pkg))
+    pkg_root_literal = repr(abspath(pkg_root))
+    code = """
+        import Pkg
+        temp_env = mktempdir()
+        Pkg.activate(temp_env)
+        Pkg.develop(Pkg.PackageSpec(path=$pkg_root_literal))
+        Pkg.instantiate()
+        import $(pkg)
+        module_ref = getproperty(Main, Symbol($pkg_literal))
+        exports = sort!(String[
+            s for s in string.(names(module_ref; all=true, imported=true))
+            if Base.isexported(module_ref, Symbol(s)) && Symbol(s) != Symbol($pkg_literal)
+        ])
+        foreach(println, exports)
+        """
+
+    cmd = Cmd(`$(Base.julia_cmd()) -e $(code)`; env=env)
+
+    try
+        output = read(cmd, String)
+        exports = isempty(output) ? String[] : String.(split(chomp(output), '\n'))
+        return (; success=true, exports=Set(exports), method=:runtime, message="")
+    catch err
+        return (; success=false, exports=Set{String}(), method=:runtime, message=sprint(showerror, err))
+    end
+end
+
+function detect_package_exports_from_source(pkg::AbstractString, pkg_root::AbstractString)
+    src_root = joinpath(pkg_root, "src")
+    entrypoint = joinpath(src_root, string(pkg, ".jl"))
+
+    if !isfile(entrypoint)
+        return (;
+            success=false,
+            exports=Set{String}(),
+            method=:source,
+            message="expected source entrypoint $(entrypoint) was not found.",
+        )
+    end
+
+    exports = Set{String}()
+    visited_files = Set{String}()
+    try
+        _collect_exports_from_file!(exports, visited_files, entrypoint, Symbol(pkg); in_package_module=false)
+        return (; success=true, exports, method=:source, message="")
+    catch err
+        return (; success=false, exports=Set{String}(), method=:source, message=sprint(showerror, err))
+    end
+end
+
+function _collect_exports_from_file!(
+    exports::Set{String},
+    visited_files::Set{String},
+    path::AbstractString,
+    pkg_module_name::Symbol;
+    in_package_module::Bool,
+)
+    normalized_path = normpath(path)
+    normalized_path in visited_files && return nothing
+    push!(visited_files, normalized_path)
+
+    expr = Meta.parseall(read(normalized_path, String); filename=normalized_path)
+    base_dir = dirname(normalized_path)
+    return _collect_exports_from_expr!(
+        exports,
+        visited_files,
+        expr,
+        base_dir,
+        pkg_module_name;
+        in_package_module=in_package_module,
+    )
+end
+
+function _collect_exports_from_expr!(
+    exports::Set{String},
+    visited_files::Set{String},
+    expr,
+    base_dir::AbstractString,
+    pkg_module_name::Symbol;
+    in_package_module::Bool,
+)
+    expr isa Expr || return nothing
+
+    if expr.head == :module
+        module_name = expr.args[2]
+        module_body = expr.args[3]
+        next_in_package_module = in_package_module || module_name == pkg_module_name
+        return _collect_exports_from_expr!(
+            exports,
+            visited_files,
+            module_body,
+            base_dir,
+            pkg_module_name;
+            in_package_module=next_in_package_module && module_name == pkg_module_name,
+        )
+    end
+
+    if in_package_module && expr.head == :export
+        for arg in expr.args
+            arg isa Symbol || continue
+            push!(exports, string(arg))
+        end
+        return nothing
+    end
+
+    if in_package_module
+        include_path = _extract_include_path(expr)
+        if include_path !== nothing
+            included_file = normpath(joinpath(base_dir, include_path))
+            if isfile(included_file)
+                _collect_exports_from_file!(
+                    exports,
+                    visited_files,
+                    included_file,
+                    pkg_module_name;
+                    in_package_module=true,
+                )
+            end
+        end
+    end
+
+    for arg in expr.args
+        _collect_exports_from_expr!(
+            exports,
+            visited_files,
+            arg,
+            base_dir,
+            pkg_module_name;
+            in_package_module=in_package_module,
+        )
+    end
+    return nothing
+end
+
+function _extract_include_path(expr::Expr)
+    if expr.head != :call || isempty(expr.args)
+        return nothing
+    end
+
+    callee = expr.args[1]
+    if callee == :include && length(expr.args) >= 2
+        return _string_literal_value(expr.args[2])
+    elseif callee == :joinpath
+        return nothing
+    elseif callee == GlobalRef(Base, :include) && length(expr.args) >= 3
+        return _string_literal_value(expr.args[3])
+    elseif callee == :include && length(expr.args) == 2
+        return _string_literal_value(expr.args[2])
+    end
+
+    if callee == :include && length(expr.args) == 3
+        return _string_literal_value(expr.args[3])
+    end
+
+    return nothing
+end
+
+_string_literal_value(x::String) = x
+function _string_literal_value(x::Expr)
+    if x.head == :call && x.args[1] == :joinpath
+        parts = String[]
+        for arg in x.args[2:end]
+            value = _string_literal_value(arg)
+            value === nothing && return nothing
+            push!(parts, value)
+        end
+        return joinpath(parts...)
+    end
+    return nothing
+end
+_string_literal_value(::Any) = nothing
+
+function _child_process_environment(environment_variables_to_pass::Vector{String})
+    env = Dict(
+        "JULIA_DEPOT_PATH" => mktempdir() * (Sys.iswindows() ? ";" : ":"),
+        "JULIA_PKG_PRECOMPILE_AUTO" => "0",
+        "JULIA_REGISTRYCI_AUTOMERGE" => "true",
+        "PYTHON" => "",
+        "R_HOME" => "*",
+    )
+    default_environment_variables_to_pass = [
+        "HOME",
+        "JULIA_PKG_SERVER",
+        "PATH",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+    ]
+    for k in vcat(default_environment_variables_to_pass, environment_variables_to_pass)
+        if haskey(ENV, k)
+            env[k] = ENV[k]
+        end
+    end
+    return env
+end
+
+#####
 ##### AutoMerge comment
 #####
 
