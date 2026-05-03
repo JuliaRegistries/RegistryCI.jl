@@ -21,7 +21,6 @@ jobs:
     strategy:
       matrix:
         julia-version: [1.3.0]
-        julia-arch: [x86]
         os: [ubuntu-latest]
     steps:
       - uses: actions/checkout@af513c7a016048ae468971c52ed77d9562c7c819 # v1.0.0
