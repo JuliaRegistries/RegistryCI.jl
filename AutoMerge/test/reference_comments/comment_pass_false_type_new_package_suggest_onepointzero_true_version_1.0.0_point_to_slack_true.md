@@ -4,6 +4,8 @@ Hello, I am an automated registration bot. I help manage the registration proces
 
 Please make sure that you have read the [package naming guidelines](https://pkgdocs.julialang.org/dev/creating-packages/#Package-naming-guidelines).
 
+Welcome to the General registry, and thanks for sharing your work.
+
 ## 2. [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) which are not met ❌
 
 - The following dependencies do not have a `[compat]` entry that is upper-bounded and only includes a finite number of breaking releases: julia

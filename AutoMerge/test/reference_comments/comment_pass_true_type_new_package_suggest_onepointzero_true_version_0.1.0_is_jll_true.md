@@ -2,6 +2,8 @@ Hello, I am an automated registration bot. I help manage the registration proces
 
 ## 1. [AutoMerge Guidelines](https://juliaregistries.github.io/RegistryCI.jl/stable/guidelines/) are all met! ✅
 
+Welcome to the General registry, and thanks for sharing your work.
+
 Your new `_jll` package registration met all of the guidelines for auto-merging and is scheduled to be merged in the next round (~20 minutes).
 
 ## 2. Declare v1.0?
