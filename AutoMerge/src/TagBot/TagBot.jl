@@ -71,7 +71,7 @@ function tagbot_file(repo; issue_comments=false)
     end
     for f in files
         f.typ == "file" || continue
-        file = GH.file(repo, f.path; auth=AUTH[])
+        file = GH.file(repo, GH.URIs.escapepath(f.path); auth=AUTH[])
         contents = String(base64decode(file.content))
         if occursin("JuliaRegistries/TagBot", contents) || occursin("julia-testitems/testitem-workflow/.github/workflows/juliaci.yml", contents)
             issue_comments && !occursin("issue_comment", contents) && continue
