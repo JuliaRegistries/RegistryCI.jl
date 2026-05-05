@@ -7,6 +7,7 @@ using HTTP: HTTP
 using LibGit2: LibGit2
 using Pkg: Pkg
 using TimeZones: TimeZones
+using URIs: URIs
 using JSON: JSON
 using VisualStringDistances: VisualStringDistances
 using StringDistances: StringDistances

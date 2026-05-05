@@ -14,8 +14,18 @@ function clone_repo(url::AbstractString)
     return repo_dir
 end
 
+function sanitize_userinfo_from_url(url::AbstractString)
+    uri = URIs.URI(url)
+    if isempty(uri.userinfo)
+        return url
+    end
+    sanitized_uri = URIs.URI(uri; userinfo="[userinfo]")
+    return string(sanitized_uri)
+end
+
 function _clone_repo_into_dir(url::AbstractString, repo_dir)
-    @info("Attempting to clone...")
+    sanitized_url = sanitize_userinfo_from_url(url)
+    @info("Attempting to clone URL: $sanitized_url")
     rm(repo_dir; force=true, recursive=true)
     mkpath(repo_dir)
     LibGit2.clone(url, repo_dir)
