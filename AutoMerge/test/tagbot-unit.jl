@@ -31,13 +31,23 @@ end
         - Version: v1.2.3
         """
     github = body("https://github.com/Foo/Bar")
-    @test TB.repo_and_version_of_pull_request_body(github) == ("Foo/Bar", "v1.2.3")
+    @test TB.repo_and_version_of_pull_request_body(github) == ("Foo/Bar", "v1.2.3", nothing)
     ssh = body("git@github.com:Foo/Bar.git")
-    @test TB.repo_and_version_of_pull_request_body(ssh) == ("Foo/Bar", "v1.2.3")
+    @test TB.repo_and_version_of_pull_request_body(ssh) == ("Foo/Bar", "v1.2.3", nothing)
     gitlab = body("https://gitlab.com/Foo/Bar")
-    @test TB.repo_and_version_of_pull_request_body(gitlab) == (nothing, "v1.2.3")
+    @test TB.repo_and_version_of_pull_request_body(gitlab) == (nothing, "v1.2.3", nothing)
     no_body = nothing
-    @test TB.repo_and_version_of_pull_request_body(no_body) == (nothing, nothing)
+    @test TB.repo_and_version_of_pull_request_body(no_body) == (nothing, nothing, nothing)
+    # Subdir packages include `Registering package: <name>` in the body so
+    # the cron can look up the package's `subdir` and check for the prefixed
+    # tag (e.g. `Pkg-v1.2.3` instead of `v1.2.3`).
+    subdir_body = """
+        - Registering package: Pkg
+        - Repository: https://github.com/Foo/Bar
+        - Version: v1.2.3
+        """
+    @test TB.repo_and_version_of_pull_request_body(subdir_body) ==
+          ("Foo/Bar", "v1.2.3", "Pkg")
 end
 
 @testset "tagbot_file" begin
