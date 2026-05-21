@@ -1,4 +1,5 @@
 using BrokenRecord: BrokenRecord, HTTP, playback
+using Base64: base64encode
 using Dates: DateTime, Day, UTC, now
 using AutoMerge: TagBot
 using SimpleMock: Mock, called_with, mock
@@ -49,6 +50,22 @@ end
         @test occursin("JuliaRegistries/TagBot", contents)
         @test TB.tagbot_file("JuliaWeb/HTTP.jl") !== nothing
         @test TB.tagbot_file("JuliaWeb/HTTP.jl"; issue_comments=true) === nothing
+    end
+
+    workflow_path = ".github/workflows/Julia TagBot.yml"
+    encoded_path = ".github/workflows/Julia%20TagBot.yml"
+    workflow_file = GH.Content(Dict("typ" => "file", "path" => workflow_path))
+    body = "uses: JuliaRegistries/TagBot@v1\n"
+    fetched_file = GH.Content(Dict("content" => base64encode(body), "encoding" => "base64"))
+    mock(
+        GH.directory => Mock(([workflow_file], Dict())),
+        GH.file => Mock(fetched_file),
+    ) do directory, file
+        path, contents = TB.tagbot_file("repo")
+        @test called_with(directory, "repo", ".github/workflows")
+        @test called_with(file, "repo", encoded_path)
+        @test path == workflow_path
+        @test contents == body
     end
 end
 
