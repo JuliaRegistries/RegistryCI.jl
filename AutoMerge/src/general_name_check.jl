@@ -5,7 +5,11 @@ using ..AutoMerge: meets_name_length, meets_name_ascii, meets_julia_name_check,
                    meets_name_match_check, meets_distance_check,
                    meets_name_is_identifier, meets_normal_capitalization
 
-function @main(ARGS)
+@static if VERSION >= v"1.12"
+    @main(ARGS) = _main(ARGS)
+end
+
+function _main(ARGS)
     if length(ARGS) != 1
         return fatal("Usage: general_name_check <Package Name>")
     end
@@ -81,4 +85,6 @@ end
 end
 
 # Speed up the CLI by precompiling the main entry point.
-precompile(Tuple{typeof(AutoMerge.GeneralNameCheck.main), Array{String, 1}})
+@static if VERSION >= v"1.12"
+    precompile(Tuple{typeof(AutoMerge.GeneralNameCheck.main), Array{String, 1}})
+end
