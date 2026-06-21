@@ -5,6 +5,7 @@ import URIs
 import HTTP
 import TOML
 import Downloads
+using ..AutoMerge: get_all_pull_requests
 
 @kwdef mutable struct PRData
     api::GitHub.GitHubAPI
@@ -27,13 +28,37 @@ end
 end
 
 function _main(ARGS)
-    length(ARGS) != 1 && return fatal("Usage: manualmerge <PR Number>")
-    n = tryparse(Int, lstrip(only(ARGS), '#'))
-    isnothing(n) && return fatal("Cannot parse PR number `$(only(ARGS))` as an integer.")
+    length(ARGS) > 1 && return fatal("Usage: manualmerge <PR Number>")
 
     api = GitHub.GitHubWebAPI(URIs.URI("https://api.github.com"))
     auth = GitHub.AnonymousAuth()
     repo = GitHub.Repo("JuliaRegistries/General")
+
+    if isempty(ARGS)
+        pull_requests = get_all_pull_requests(api, repo, "open"; auth)
+        for pr in pull_requests
+            user = pr.user.login
+            if user ∉ ("JuliaRegistrator", "jlbuild")
+                if !contains(user, "[bot]") && user != "JuliaTagBot"
+                    printstyled(pr.number, color = :green)
+                else
+                    print(pr.number)
+                end
+                println(" by ", user, ": ", pr.title)
+            end
+        end
+        if isempty(pull_requests)
+            println("No open manual pull requests.")
+        else
+            println()
+            println("Run `manual_merge_analysis <PR Number>` to analyze a PR.")
+        end
+        return 0
+    end
+
+    n = tryparse(Int, lstrip(only(ARGS), '#'))
+    isnothing(n) && return fatal("Cannot parse PR number `$(only(ARGS))` as an integer.")
+
     pr = GitHub.pull_request(repo, n)
     pr_data = PRData(; api, auth, repo, pr)
 
