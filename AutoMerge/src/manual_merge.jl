@@ -262,9 +262,11 @@ function git_available(fail_message)
     return false
 end
 
-# Sanity check of URL. We are quite conservative here.
+# Sanity check of URL. We are quite conservative here but it should be
+# liberal enough to cover all currently registered repo names in
+# General.
 function url_is_normal(url)
-    re = r"^https:/(/[\w.]+)+$"
+    re = r"^https:/(/[\w.~-]+)+$"
     return !isnothing(match(re, url))
 end
 
