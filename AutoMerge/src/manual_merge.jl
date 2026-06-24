@@ -5,6 +5,7 @@ import URIs
 import HTTP
 import TOML
 import Downloads
+import RegistryTools
 using ..AutoMerge: get_all_pull_requests
 
 @kwdef mutable struct PRData
@@ -273,7 +274,93 @@ end
 
 # Not yet implemented.
 analyze_subdir_change(pr_data::PRData) = false
-analyze_retro_compat_change(pr_data::PRData) = false
+
+# A retro compat change PR is recognized by:
+# * Only changing one or two files called Compat.toml and WeakCompat.toml.
+# * If both are changed they must be in the same directory.
+#
+# Performed checks:
+# * New files can be read by RegistryTools.Compress.load.
+# * Roundtripping the new files with Compress.load and Compress.save should
+#   preferably yield the same result.
+#
+# Diagnostics:
+# * Write the name of the package and list all the effective changes
+#   to compat from the PR.
+function analyze_retro_compat_change(pr_data::PRData)
+    files = get_files(pr_data)
+    1 <= length(files) <= 2 || return false
+    filenames = [file.filename for file in files]
+    length(files) == 2 && !allequal(dirname.(filenames)) &&  return false
+    all(in.(basename.(filenames),
+            Ref(("Compat.toml", "WeakCompat.toml")))) || return false
+    all(file.status == "modified" for file in files) || return false
+    package_name = basename(dirname(first(filenames)))
+    print_pr_kind("retro compat change", package_name)
+
+    for file in files
+        mktempdir() do tmpdir
+            tmpdir = "/tmp/foo10"; mkpath(tmpdir)
+            compat_url = file.raw_url
+            # Note: This is also effective for WeakCompat.toml -> WeakDeps.toml.
+            deps_url = replace(file.raw_url, "Compat.toml" => "Deps.toml")
+            versions_url = replace(file.raw_url,
+                                   basename(file.filename) => "Versions.toml")
+            compat_path = joinpath(tmpdir, "Compat.toml")
+            deps_path = joinpath(tmpdir, "Deps.toml")
+            versions_path = joinpath(tmpdir, "Versions.toml")
+            Downloads.download(compat_url, compat_path)
+            Downloads.download(deps_url, deps_path)
+            Downloads.download(versions_url, versions_path)
+            pr = pr_data.pr
+            old_compat_url = replace(compat_url, pr.head.sha => pr.base.sha)
+            old_deps_url = replace(deps_url, pr.head.sha => pr.base.sha)
+            old_versions_url = replace(versions_url, pr.head.sha => pr.base.sha)
+            old_compat_path = joinpath(tmpdir, "old", "Compat.toml")
+            old_deps_path = joinpath(tmpdir, "old", "Deps.toml")
+            old_versions_path = joinpath(tmpdir, "old", "Versions.toml")
+            mkpath(dirname(old_compat_path))
+            Downloads.download(old_compat_url, old_compat_path)
+            Downloads.download(old_deps_url, old_deps_path)
+            Downloads.download(old_versions_url, old_versions_path)
+
+            # All needed files are downloaded. Get to work with
+            # RegistryTools.Compress functionality.
+            old_compat = RegistryTools.Compress.load(old_compat_path)
+            compat = RegistryTools.Compress.load(compat_path)
+            resaved_compat_path = joinpath(tmpdir, "ResavedCompat.toml")
+            RegistryTools.Compress.save(resaved_compat_path, compat)
+            compat_raw = read(compat_path, String)
+            resaved_compat_raw = read(resaved_compat_path, String)
+            if equal_up_to_spaces(compat_raw, resaved_compat_raw)
+                pass(string(basename(file.filename),
+                            " roundtrips through compressed load+save (spaces ignored)."))
+            else
+                # The issue fixed in
+                # https://github.com/JuliaRegistries/RegistryTools.jl/pull/107
+                # may cause these kinds of problems for a long time yet.
+                doubt(string(basename(file.filename),
+                             " does not roundtrip through compressed load+save up to space differences. This is probably ok."))
+            end
+            differences = []
+            for version in sort(collect(keys(compat)))
+                old = old_compat[version]
+                new = compat[version]
+                for dep in sort(collect(union(keys(old), keys(new))))
+                    old_c = get(old, dep, "")
+                    new_c = get(new, dep, "")
+                    if old_c != new_c
+                        println(version, " ", dep, " ", old_c, " => ", new_c)
+                    end
+                end
+            end
+        end
+    end
+
+    return true
+end
+
+# Not yet implemented.
 analyze_new_package(pr_data::PRData) = false
 analyze_new_version(pr_data::PRData) = false
 
@@ -286,6 +373,8 @@ function git_available(fail_message)
     end
     return false
 end
+
+equal_up_to_spaces(a, b) = replace(a, " " => "") == replace(b, " " => "")
 
 # Sanity check of URL. We are quite conservative here but it should be
 # liberal enough to cover all currently registered repo names in
