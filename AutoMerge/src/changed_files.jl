@@ -49,31 +49,26 @@ function pr_only_changes_allowed_files(
     _num_allowed_changed_files = length(_allowed_changed_files)
     this_pr_num_changed_files = num_changed_files(pr)
     if this_pr_num_changed_files > _num_allowed_changed_files
-        g0 = false
-        m0 = "This PR is allowed to modify at most $(_num_allowed_changed_files) files, but it actually modified $(this_pr_num_changed_files) files."
-        return g0, m0
-    else
-        this_pr_changed_files = get_changed_filenames(api, registry, pr; auth=auth)
-        if length(this_pr_changed_files) != this_pr_num_changed_files
-            g0 = false
-            m0 = "Something weird happened when I tried to get the list of changed files"
-            return g0, m0
-        else
-            if issubset(this_pr_changed_files, _allowed_changed_files)
-                g0 = true
-                m0 = ""
-                return g0, m0
-            else
-                g0 = false
-                m0 = string(
-                    "This pull request modified at least one file ",
-                    "that it is not allowed to modify. It is only ",
-                    "allowed to modify the following files ",
-                    "(or a subset thereof): ",
-                    "$(join(_allowed_changed_files, ", "))",
-                )
-                return g0, m0
-            end
-        end
+        message = "This PR is allowed to modify at most $(_num_allowed_changed_files) files, but it actually modified $(this_pr_num_changed_files) files."
+        return false, message
     end
+
+    this_pr_changed_files = get_changed_filenames(api, registry, pr; auth=auth)
+    if length(this_pr_changed_files) != this_pr_num_changed_files
+        message = "Something weird happened when I tried to get the list of changed files"
+        return false, message
+    end
+
+    if !issubset(this_pr_changed_files, _allowed_changed_files)
+        message = string(
+            "This pull request modified at least one file ",
+            "that it is not allowed to modify. It is only ",
+            "allowed to modify the following files ",
+            "(or a subset thereof): ",
+            "$(join(_allowed_changed_files, ", "))",
+        )
+        return false, message
+    end
+
+    return true, ""
 end
