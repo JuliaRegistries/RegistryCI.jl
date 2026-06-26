@@ -1,3 +1,4 @@
+using Base64: base64encode
 using BrokenRecord: BrokenRecord, HTTP, playback
 using Dates: DateTime, Day, UTC, now
 using AutoMerge: TagBot
@@ -49,6 +50,17 @@ end
         @test occursin("JuliaRegistries/TagBot", contents)
         @test TB.tagbot_file("JuliaWeb/HTTP.jl") !== nothing
         @test TB.tagbot_file("JuliaWeb/HTTP.jl"; issue_comments=true) === nothing
+    end
+    tagbot_yml = (; typ="file", path=".github/workflows/TagBot.yml")
+    unrelated_yml = (; typ="file", path=".github/workflows/CI.yml")
+    mock(
+        GH.directory => Mock(([tagbot_yml, unrelated_yml], Dict())),
+        GH.file => Mock((; content=base64encode("uses: SciML/.github/.github/workflows/tagbot.yml@v1"))),
+    ) do directory, file
+        path, contents = TB.tagbot_file("SciML/CurveFit.jl")
+        @test path == ".github/workflows/TagBot.yml"
+        @test occursin("SciML/.github/.github/workflows/tagbot.yml", contents)
+        @test TB.tagbot_file("SciML/CurveFit.jl"; issue_comments=true) === nothing
     end
 end
 
