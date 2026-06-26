@@ -99,6 +99,7 @@ function analyze_general_registry_pr(pr_data::PRData)
     for analyzer in [analyze_yank,
                      analyze_repo_move,
                      analyze_subdir_change,
+                     analyze_repo_move_and_subdir_change,
                      analyze_retro_compat_change,
                      analyze_new_package,
                      analyze_new_version]
@@ -156,7 +157,7 @@ function analyze_yank(pr_data::PRData)
 end
 
 # A repo move PR is recognized by:
-# * Only changing one file called Project.toml
+# * Only changing one file called Package.toml
 # * Removing and adding exactly one line.
 # * Both the removed and added lines start with `repo = "` and ends with `"`.
 #
@@ -168,6 +169,8 @@ end
 # * New URL is normal and restricted to letters, digits, dots, and slashes.
 # * Cloning from the new URL works.
 # * Cloned repository contains all registered tree hashes.
+# * Cloned repository has a Project.toml or JuliaProject.toml.
+# * (Julia)Project.toml has matching name and uuid.
 #
 # Diagnostics:
 # * Write the name of the package, source repo, and target repo.
@@ -188,56 +191,170 @@ function analyze_repo_move(pr_data::PRData)
     package_name = basename(dirname(filename))
     print_pr_kind("move repository", package_name)
 
-    old_url = chopprefix(chopsuffix(removed_line, "\""), "repo = \"")
-    new_url = chopprefix(chopsuffix(added_line, "\""), "repo = \"")
-    println("Old URL: ", old_url)
-    println("New URL: ", new_url)
+    check_repo_and_subdir_changes(pr_data, package_name, file)
+    return true
+end
+
+# A subdir change PR is recognized by:
+# * Only changing one file called Package.toml.
+# * Changing at most one line starting with `subdir = `.
+#
+# Performed checks:
+# * Subdir exists in repository.
+# * Subdir contains Project.toml or JuliaProject.toml.
+# * (Julia)Project.toml has matching name and uuid.
+#
+# Diagnostics:
+# * Write the name of the package, old subdir and new subdir.
+function analyze_subdir_change(pr_data::PRData)
+    files = get_files(pr_data)
+    length(files) == 1 || return false
+    file = only(files)
+    filename = file.filename
+    basename(filename) == "Package.toml" || return false
+    file.status == "modified" || return false
+    file.deletions <= 1 || return false
+    file.additions <= 1 || return false
+    removed_lines = get_removed_lines(file)
+    added_lines = get_added_lines(file)
+    for line in vcat(removed_lines, added_lines)
+        startswith(line, "subdir = \"") || return false
+        endswith(line, "\"") || return false
+    end
+    package_name = basename(dirname(filename))
+    print_pr_kind("change subdir", package_name)
+
+    check_repo_and_subdir_changes(pr_data, package_name, file)
+    return true
+end
+
+# A repo move and subdir change PR is recognized by:
+# * Only changing one file called Package.toml.
+# * Removing or adding at most two lines.
+# * All removed and added lines start with `repo = ` or `subdir =`.
+#
+# Performed checks:
+# * If URL is changed:
+#   * Old URL forwards to new URL.
+#   * New URL ends with ".git" for repositories from github/gitlab/codeberg.
+#   * New URL starts with "https://".
+#   * Last part of URL is unchanged. Warn if not.
+#   * New URL is normal and restricted to letters, digits, dots, and slashes.
+# * Cloning from the new URL works.
+# * Cloned repository contains all registered tree hashes.
+# * If new subdir is specified:
+#   * Subdir exists in repository.
+# * Cloned repository has a Project.toml or JuliaProject.toml in new subdir.
+# * (Julia)Project.toml has matching name and uuid.
+#
+# Diagnostics:
+# * Write the name of the package.
+# * Write source repo, and target repo.
+# * Write old subdir and new subdir.
+function analyze_repo_move_and_subdir_change(pr_data::PRData)
+    files = get_files(pr_data)
+    length(files) == 1 || return false
+    file = only(files)
+    filename = file.filename
+    basename(filename) == "Package.toml" || return false
+    file.status == "modified" || return false
+    file.additions <= 2 || return false
+    file.deletions <= 2 || return false
+    removed_lines = get_removed_lines(file)
+    added_lines = get_added_lines(file)
+    for line in vcat(removed_lines, added_lines)
+        startswith(line, "repo = \"") || startswith(line, "subdir = \"") || return false
+        endswith(line, "\"") || return false
+    end
+
+    package_name = basename(dirname(filename))
+    print_pr_kind("move repository and change subdir", package_name)
+
+    check_repo_and_subdir_changes(pr_data, package_name, file)
+    return true
+end
+
+
+
+function check_repo_and_subdir_changes(pr_data, package_name, file)
+    package_url = file.raw_url
+    package_toml =
+        try
+            TOML.parsefile(Downloads.download(package_url))
+        catch e
+            fail("Modified Package.toml cannot be parsed.")
+            return
+        end
+
+    pr = pr_data.pr
+    old_package_url = replace(package_url, pr.head.sha => pr.base.sha)
+    old_package_toml = TOML.parsefile(Downloads.download(old_package_url))
+
+    old_url = old_package_toml["repo"]
+    if !haskey(package_toml, "repo")
+        fail("Modified Package.toml has no repo entry.")
+        return
+    end
+    new_url = package_toml["repo"]
+    old_subdir = get(old_package_toml, "subdir", "")
+    new_subdir = get(package_toml, "subdir", "")
+
+    if old_url != new_url
+        println("Old URL: ", old_url)
+        println("New URL: ", new_url)
+    end
+    if old_subdir != new_subdir
+        println("Old subdir: ", old_subdir)
+        println("New subdir: ", new_subdir)
+    end
     println()
 
-    # Check whether there is a HTTP redirect from the old URL to the
-    # new URL.
-    redirect_to = string(HTTP.head(old_url).request.url)
-    redirect_to_alt = redirect_to * ".git"
-    if redirect_to == old_url || redirect_to_alt == old_url
-        doubt("Old URL does not have a HTTP redirect.")
-    elseif redirect_to == new_url || redirect_to_alt == new_url
-        pass("Old URL redirects to new URL.")
-    else
-        fail("Old URL redirects to `$(redirect_to)`, whích is different from the new URL.")
-    end
+    if old_url != new_url
+        # Check whether there is a HTTP redirect from the old URL to the
+        # new URL.
+        redirect_to = string(HTTP.head(old_url).request.url)
+        redirect_to_alt = redirect_to * ".git"
+        if redirect_to == old_url || redirect_to_alt == old_url
+            doubt("Old URL does not have a HTTP redirect.")
+        elseif redirect_to == new_url || redirect_to_alt == new_url
+            pass("Old URL redirects to new URL.")
+        else
+            fail("Old URL redirects to `$(redirect_to)`, whích is different from the new URL.")
+        end
 
-    # Check whether new URL ends with .git.
-    if endswith(new_url, ".git")
-        pass("New URL ends with `.git`.")
-    elseif contains(new_url, "//github") || contains(new_url, "//gitlab") || contains(new_url, "//codeberg")
-        fail("New URL does not end with `.git`.")
-    else
-        doubt("New URL does not end with `.git` but is not from github/gitlab/codeberg, so might be ok.")
-    end
+        # Check whether new URL ends with .git.
+        if endswith(new_url, ".git")
+            pass("New URL ends with `.git`.")
+        elseif contains(new_url, "//github") || contains(new_url, "//gitlab") || contains(new_url, "//codeberg")
+            fail("New URL does not end with `.git`.")
+        else
+            doubt("New URL does not end with `.git` but is not from github/gitlab/codeberg, so might be ok.")
+        end
 
-    # Check whether new URL starts with https://.
-    if startswith(new_url, "https://")
-        pass("New URL starts with `https://`.")
-    else
-        fail("New URL does not start with `https://`.")
-    end
+        # Check whether new URL starts with https://.
+        if startswith(new_url, "https://")
+            pass("New URL starts with `https://`.")
+        else
+            fail("New URL does not start with `https://`.")
+        end
 
-    # Check whether last part is identical between the URLs.
-    old_last_part = last(split(old_url, "/"))
-    new_last_part = last(split(new_url, "/"))
-    if old_last_part == new_last_part
-        pass("Last URL part is unchanged.")
-    else
-        doubt("Last URL part changes from `$(old_last_part)` to `$(new_last_part)`.")
-    end
+        # Check whether last part is identical between the URLs.
+        old_last_part = last(split(old_url, "/"))
+        new_last_part = last(split(new_url, "/"))
+        if old_last_part == new_last_part
+            pass("Last URL part is unchanged.")
+        else
+            doubt("Last URL part changes from `$(old_last_part)` to `$(new_last_part)`.")
+        end
 
-    # Check whether the new URL is normal.
-    if url_is_normal(new_url)
-        pass("New URL looks normal.")
-    else
-        fail("New URL looks non-standard.")
-        doubt("Clone and treehash checks skipped because we do not trust new URL.")
-        return true
+        # Check whether the new URL is normal.
+        if url_is_normal(new_url)
+            pass("New URL looks normal.")
+        else
+            fail("New URL looks non-standard.")
+            doubt("Clone and treehash checks skipped because we do not trust new URL.")
+            return true
+        end
     end
 
     # Can't run the last checks without git.
@@ -247,14 +364,73 @@ function analyze_repo_move(pr_data::PRData)
         # Check if new URL can be git cloned.
         try
             run(`git clone -q $(new_url) $(tmpdir)`)
-            pass("New URL can be git cloned.")
+            if old_url != new_url
+                pass("New URL can be git cloned.")
+            end
         catch e
-            fail("New URL cannot be git cloned.")
-            doubt("Cannot perform treehash check.")
+            if old_url != new_url
+                fail("New URL cannot be git cloned.")
+            else
+                fail("Package URL cannot be git cloned.")
+            end
+            doubt("Cannot perform treehash check and other repo consistency checks.")
             return true
         end
 
-        # Maybe flush out some references which are not permanent.
+        package_dir = joinpath(tmpdir, new_subdir)
+        if !isempty(new_subdir) && !isdir(package_dir)
+            fail("Subdir `$(subdir)` does not exist in default branch of repository.")
+        else
+            if old_subdir != new_subdir && !isempty(new_subdir)
+                pass("Subdir `$(new_subdir)` exists in default branch of repository.")
+            end
+            project = Dict{String, String}()
+            # Search for both JuliaProject.toml and Project.toml.
+            project_file_name = ""
+            for project_file in Base.project_names
+                project_path = joinpath(package_dir, project_file)
+                if isfile(project_path)
+                    try
+                        project = TOML.parsefile(project_path)
+                        if old_subdir != new_subdir
+                            pass("New subdir contains a $(project_file)")
+                        end
+                    catch e
+                        fail("$(project_file) cannot be parsed as TOML.")
+                    end
+                    project_file_name = project_file
+                    break
+                end
+            end
+            if isempty(project)
+                if isempty(new_subdir)
+                    fail("No Project.toml found in default branch of repository.")
+                else
+                    fail("No Project.toml found in subdir `$(new_subdir)` of default branch of repository.")
+                end
+            else
+                if !haskey(project, "name")
+                    fail("No name found in package's $(project_file_name) in default branch of repository.")
+                elseif project["name"] != package_name
+                    name_in_project = project["name"]
+                    doubt("Package name `$(name_in_project)` found in package's $(project_file_name) in default branch of repository is different from registered package name `$(package_name)`. Was the package also renamed?")
+                elseif old_subdir != new_subdir
+                    pass("Package name in $(project_file_name) of new subdir matches registered package name.")
+                end
+                if !haskey(project, "uuid")
+                    fail("No uuid found in package's $(project_file_name) in default branch of repository.")
+                elseif project["uuid"] != package_toml["uuid"]
+                    uuid_in_project = project["uuid"]
+                    package_uuid = package_toml["uuid"]
+                    doubt("Package uuid `$(uuid_in_project)` found in package's $(project_file_name) in default branch of repository is different from registered package uuid `$(package_uuid)`. Was the package also renamed?")
+                elseif old_subdir != new_subdir
+                    pass("Package uuid in $(project_file_name) of new subdir matches registered package uuid.")
+                end
+            end
+        end
+
+        # Maybe flush out some references which are not permanent
+        # before looking for tree hashes.
         run(`git -C $(tmpdir) gc --quiet --prune=now`)
 
         # Check if all registered tree hashes can be retrieved from cloned repo.
@@ -271,9 +447,6 @@ function analyze_repo_move(pr_data::PRData)
     end
     return true
 end
-
-# Not yet implemented.
-analyze_subdir_change(pr_data::PRData) = false
 
 # A retro compat change PR is recognized by:
 # * Only changing one or two files called Compat.toml and WeakCompat.toml.
