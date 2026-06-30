@@ -41,7 +41,6 @@ include("github.jl")
 include("guidelines.jl")
 include("jll.jl")
 include("juliaup.jl")
-include("manual_merge.jl")
 include("not_automerge_applicable.jl")
 include("package_path_in_registry.jl")
 include("public.jl")
@@ -50,5 +49,8 @@ include("semver.jl")
 include("toml.jl")
 include("update_status.jl")
 include("util.jl")
+
+# App.
+include("manual_merge.jl")
 
 end # module

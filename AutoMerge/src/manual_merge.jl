@@ -6,7 +6,7 @@ import HTTP
 import TOML
 import Downloads
 import RegistryTools
-using ..AutoMerge: get_all_pull_requests
+using ..AutoMerge: get_all_pull_requests, NewPackage, clone_repo, get_automerge_guidelines, GitHubAutoMergeData, Guideline, check!, guideline_version_can_be_pkg_added, guideline_version_can_be_imported, guideline_subdir_parameter_is_correct, passed, message
 
 @kwdef mutable struct PRData
     api::GitHub.GitHubAPI
@@ -533,8 +533,158 @@ function analyze_retro_compat_change(pr_data::PRData)
     return true
 end
 
+# A new package PR is recognized by:
+# * Adding one line to `Registry.toml`.
+# * Adding a number of new files, all in the same directory.
+#
+# Performed checks:
+# * All checks done by regular AutoMerge, except the Pkg.add and
+#   import checks.
+#
+# Diagnostics:
+# * Write the name of the package.
+# * Write the package URL.
+function analyze_new_package(pr_data::PRData)
+    files = get_files(pr_data)
+    filenames = [file.filename for file in files]
+    "Registry.toml" in filenames || return false
+    non_registry_filenames = filter(!=("Registry.toml"), filenames)
+    allequal(dirname.(non_registry_filenames)) || return false
+    registry_file = only(filter(file -> file.filename == "Registry.toml", files))
+    registry_file.status == "modified" || return false
+    registry_file.additions == 1 || return false
+    registry_file.deletions == 0 || return false
+
+    package_name = basename(dirname(first(non_registry_filenames)))
+    print_pr_kind("new package", package_name)
+
+    git_available("Automerge checks cannot be run.") || return true
+
+    # Retrieve the new package guidelines.
+    guidelines = get_automerge_guidelines(
+        NewPackage(),
+        check_license = true,
+        this_is_jll_package = false,
+        this_pr_can_use_special_jll_exceptions = false,
+        use_distance_check = true,
+        package_author_approved = false,
+        check_breaking_explanation = false
+    )
+
+    # Set up the data used by the guideline checks.
+    registry_head = clone_repo(pr_data.pr.head.repo)
+    run(`git -C $(registry_head) checkout $(pr_data.pr.head.ref)`)
+    registry_master = clone_repo(pr_data.pr.base.repo)
+    versions_file = only(filter(file -> basename(file.filename) == "Versions.toml", files))
+    added_lines = get_added_lines(versions_file)
+    version_raw = first(added_lines)
+    version = chopsuffix(chopprefix(version_raw, "[\""), "\"]")
+    tree_hash_raw = last(added_lines)
+    tree_hash = chopsuffix(chopprefix(tree_hash_raw, "git-tree-sha1 = \""), "\"")
+
+    data = GitHubAutoMergeData(
+        ;
+        api = pr_data.api,
+        registration_type = NewPackage(),
+        pr = pr_data.pr,
+        pkg = package_name,
+        version = VersionNumber(version),
+        registry = pr_data.repo,
+        auth = pr_data.auth,
+        registry_head,
+        registry_master,
+        registry_deps = String[],
+        # TODO: This should be synchronized with the information in
+        # `https://github.com/JuliaRegistries/General/blob/master/.github/workflows/automerge.yml`.
+        # We do have access to that file through `registry_master` but
+        # as it is we have to parse YAML to retrieve the public
+        # registries. Ideally those would be in a separate file.
+        public_registries = String[
+            "https://github.com/HolyLab/HolyLabRegistry",
+            "https://github.com/cossio/CossioJuliaRegistry"],
+        # The following arguments are not actually used but are
+        # requried by the constructor.
+        current_pr_head_commit_sha = "",
+        authorization = :normal,
+        suggest_onepointzero = false,
+        point_to_slack = false,
+        whoami = "",
+        read_only = true,
+        environment_variables_to_pass = String[]
+    )
+
+    checked_guidelines = Guideline[]
+    for (guideline, applicable) in guidelines
+        applicable || continue
+
+        if guideline == :early_exit_if_failed
+            all(passed, checked_guidelines) || break
+        elseif guideline == :update_status
+            # Not doing anything with those here.
+        elseif guideline === guideline_version_can_be_pkg_added
+            # Do not run for security reasons.
+        elseif guideline === guideline_version_can_be_imported
+            # Do not run for security reasons.
+        elseif guideline === guideline_subdir_parameter_is_correct
+            # Do not run because it checks information in the PR body,
+            # which probably isn't there in a manual PR.
+        else
+            check!(guideline, data)
+            @info(guideline.info,
+                  meets_this_guideline = passed(guideline),
+                  message = message(guideline))
+            push!(checked_guidelines, guideline)
+        end
+    end
+
+    println()
+    println("------------")
+    println()
+    print_pr_kind("new package", package_name)
+
+    package_file = only(filter(file -> basename(file.filename) == "Package.toml", files))
+    url_raw = only(filter(startswith("repo = \""), get_added_lines(package_file)))
+    url = chopsuffix(chopprefix(url_raw, "repo = \""), "\"")
+    println("Package repo: $url")
+    println()
+
+    for guideline in checked_guidelines
+        if passed(guideline)
+            pass(guideline.info)
+        else
+            fail(guideline.info)
+            println(stderr, message(guideline))
+        end
+    end
+
+    println()
+    print(
+    """
+    Notes:
+    * This PR is not necessarily created by RegistryTools, check manually
+      that things look normal.
+    * For security reasons neither Pkg.add nor import has been checked.
+      If you trust the package code, manually run the following code to
+      verify that adding and importing works.
+
+        using Pkg
+        Pkg.activate(temp = true)
+        Pkg.add(url = "$(url)",
+                rev = "$(tree_hash)")
+        using $(package_name)
+
+    * To increase visibility, post this message in the Slack new-packages-feed
+      channel:
+
+    New package:  $(package_name) v$(version) (Manual PR)
+    Registration: $(pr_data.pr.html_url)
+    Repository:   $(url)
+    """)
+
+    return true
+end
+
 # Not yet implemented.
-analyze_new_package(pr_data::PRData) = false
 analyze_new_version(pr_data::PRData) = false
 
 function git_available(fail_message)
