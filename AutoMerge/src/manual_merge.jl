@@ -6,7 +6,13 @@ import HTTP
 import TOML
 import Downloads
 import RegistryTools
-using ..AutoMerge: get_all_pull_requests, NewPackage, clone_repo, get_automerge_guidelines, GitHubAutoMergeData, Guideline, check!, guideline_version_can_be_pkg_added, guideline_version_can_be_imported, guideline_subdir_parameter_is_correct, passed, message
+using ..AutoMerge: get_all_pull_requests, NewPackage, NewVersion, clone_repo,
+                   get_automerge_guidelines, GitHubAutoMergeData, Guideline,
+                   check!, guideline_version_can_be_pkg_added,
+                   guideline_version_can_be_imported,
+                   guideline_subdir_parameter_is_correct,
+                   guideline_breaking_explanation, passed, message,
+                   get_package_relpath_in_registry, parse_registry_toml
 
 @kwdef mutable struct PRData
     api::GitHub.GitHubAPI
@@ -558,11 +564,51 @@ function analyze_new_package(pr_data::PRData)
     package_name = basename(dirname(first(non_registry_filenames)))
     print_pr_kind("new package", package_name)
 
-    git_available("Automerge checks cannot be run.") || return true
+    analyze_new_package_or_version(pr_data, files, NewPackage(), "new package",
+                                   package_name)
 
-    # Retrieve the new package guidelines.
+    return true
+end
+
+# A new version PR is recognized by:
+# * Changing and/or adding a number of new files, all in the same directory.
+# * Versions.toml is modified and adds exactly three lines.
+#
+# Performed checks:
+# * All checks done by regular AutoMerge, except the Pkg.add and
+#   import checks.
+#
+# Diagnostics:
+# * Write the name of the package.
+function analyze_new_version(pr_data::PRData)
+    files = get_files(pr_data)
+    filenames = [file.filename for file in files]
+    allequal(dirname.(filenames)) || return false
+    package_dir = first(dirname.(filenames))
+    versions_filename = joinpath(package_dir, "Versions.toml")
+    versions_filename in filenames || return false
+    versions_file = only(filter(file -> file.filename == versions_filename, files))
+    versions_file.status == "modified" || return false
+    versions_file.additions == 3 || return false
+    versions_file.deletions == 0 || return false
+
+    package_name = basename(dirname(first(filenames)))
+    print_pr_kind("new version", package_name)
+
+    analyze_new_package_or_version(pr_data, files, NewVersion(), "new version",
+                                   package_name)
+
+    return true
+end
+
+# Common code for new package and new version.
+function analyze_new_package_or_version(pr_data, files, registration_type,
+                                        pr_kind, package_name)
+    git_available("Automerge checks cannot be run.") || return
+
+    # Retrieve the new package/version guidelines.
     guidelines = get_automerge_guidelines(
-        NewPackage(),
+        registration_type,
         check_license = true,
         this_is_jll_package = false,
         this_pr_can_use_special_jll_exceptions = false,
@@ -577,7 +623,10 @@ function analyze_new_package(pr_data::PRData)
     registry_master = clone_repo(pr_data.pr.base.repo)
     versions_file = only(filter(file -> basename(file.filename) == "Versions.toml", files))
     added_lines = get_added_lines(versions_file)
-    version_raw = first(added_lines)
+    # For a new package the version number comes on the first line.
+    # For a new version the first line is empty and the second line
+    # contains the new version.
+    version_raw = added_lines[1 + (registration_type isa NewVersion)]
     version = chopsuffix(chopprefix(version_raw, "[\""), "\"]")
     tree_hash_raw = last(added_lines)
     tree_hash = chopsuffix(chopprefix(tree_hash_raw, "git-tree-sha1 = \""), "\"")
@@ -585,7 +634,7 @@ function analyze_new_package(pr_data::PRData)
     data = GitHubAutoMergeData(
         ;
         api = pr_data.api,
-        registration_type = NewPackage(),
+        registration_type,
         pr = pr_data.pr,
         pkg = package_name,
         version = VersionNumber(version),
@@ -628,6 +677,8 @@ function analyze_new_package(pr_data::PRData)
         elseif guideline === guideline_subdir_parameter_is_correct
             # Do not run because it checks information in the PR body,
             # which probably isn't there in a manual PR.
+        elseif guideline === guideline_breaking_explanation
+            # Same as above.
         else
             check!(guideline, data)
             @info(guideline.info,
@@ -640,11 +691,17 @@ function analyze_new_package(pr_data::PRData)
     println()
     println("------------")
     println()
-    print_pr_kind("new package", package_name)
+    print_pr_kind(pr_kind, package_name)
 
-    package_file = only(filter(file -> basename(file.filename) == "Package.toml", files))
-    url_raw = only(filter(startswith("repo = \""), get_added_lines(package_file)))
-    url = chopsuffix(chopprefix(url_raw, "repo = \""), "\"")
+    package_relpath = get_package_relpath_in_registry(;
+        package_name, registry_path = registry_head
+    )
+    package_toml_parsed = parse_registry_toml(
+        registry_head, package_relpath, "Package.toml"
+    )
+
+    url = package_toml_parsed["repo"]
+
     println("Package repo: $url")
     println()
 
@@ -672,6 +729,10 @@ function analyze_new_package(pr_data::PRData)
         Pkg.add(url = "$(url)",
                 rev = "$(tree_hash)")
         using $(package_name)
+    """)
+
+    registration_type isa NewPackage && print(
+    """
 
     * To increase visibility, post this message in the Slack new-packages-feed
       channel:
@@ -681,11 +742,8 @@ function analyze_new_package(pr_data::PRData)
     Repository:   $(url)
     """)
 
-    return true
+    return
 end
-
-# Not yet implemented.
-analyze_new_version(pr_data::PRData) = false
 
 function git_available(fail_message)
     try
