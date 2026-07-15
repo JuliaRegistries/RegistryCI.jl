@@ -322,7 +322,7 @@ end
 
 
 const guideline_project_toml_check = Guideline(;
-    info = "Project.toml (or JuliaProject.toml) either does not exist, cannot be parsed, or is not consistent with registration PR.",
+    info = "Project.toml (or JuliaProject.toml) exists, can be parsed, and is consistent with registration PR.",
     docs = "Checks that the package's Project.toml (or JuliaProject.toml) exists, can be parsed, and is consistent with registration PR.",
     check=data -> meets_project_toml_check(data))
 
