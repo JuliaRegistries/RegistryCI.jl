@@ -1322,6 +1322,7 @@ function get_automerge_guidelines(
     check_license::Bool,
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
+    allow_build_metadata::Bool,
     use_distance_check::Bool,
     package_author_approved::Bool, # currently unused for new packages
     check_breaking_explanation::Bool # not valid for new packages
@@ -1339,7 +1340,10 @@ function get_automerge_guidelines(
         (guideline_julia_name_check, true),
         (guideline_repo_url_requirement, true),
         (guideline_version_number_no_prerelease, true),
-        (guideline_version_number_no_build, !this_pr_can_use_special_jll_exceptions),
+        (
+            guideline_version_number_no_build,
+            !this_pr_can_use_special_jll_exceptions && !allow_build_metadata,
+        ),
         (guideline_compat_for_julia, true),
         (guideline_compat_for_all_deps, true),
         (guideline_allowed_jll_nonrecursive_dependencies, this_is_jll_package),
@@ -1378,6 +1382,7 @@ function get_automerge_guidelines(
     check_breaking_explanation::Bool,
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
+    allow_build_metadata::Bool,
     use_distance_check::Bool, # unused for new versions
     package_author_approved::Bool,
 )
@@ -1386,7 +1391,10 @@ function get_automerge_guidelines(
         (guideline_pr_only_changes_allowed_files, true),
         (guideline_sequential_version_number, !this_pr_can_use_special_jll_exceptions && !package_author_approved),
         (guideline_version_number_no_prerelease, true),
-        (guideline_version_number_no_build, !this_pr_can_use_special_jll_exceptions),
+        (
+            guideline_version_number_no_build,
+            !this_pr_can_use_special_jll_exceptions && !allow_build_metadata,
+        ),
         (guideline_compat_for_julia, true),
         (guideline_compat_for_all_deps, true),
         (

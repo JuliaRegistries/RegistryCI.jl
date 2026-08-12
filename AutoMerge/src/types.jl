@@ -37,6 +37,7 @@ The second form creates a config with specified fields overridden, e.g., `Regist
 - `error_exit_if_automerge_not_applicable::Bool = false`: if `false`, AutoMerge will not error on PRs made by non-AutoMerge-authorized users
 - `api_url::String = "https://api.github.com"`: the registry host API URL.
 - `read_only::Bool = false`: run in read only mode.
+- `packages_with_build_metadata::Vector{String} = String[]`: a list of package names that are allowed to include build metadata (e.g. `1.2.3+abc`) in their version numbers, exempting them from the `guideline_version_number_no_build` guideline.
 """
 Base.@kwdef struct RegistryConfiguration <: AbstractConfiguration
     registry::String
@@ -50,6 +51,7 @@ Base.@kwdef struct RegistryConfiguration <: AbstractConfiguration
     error_exit_if_automerge_not_applicable::Bool = false
     api_url::String = "https://api.github.com"
     read_only::Bool = false
+    packages_with_build_metadata::Vector{String} = String[]
 end
 
 # Constructor for easy field overrides

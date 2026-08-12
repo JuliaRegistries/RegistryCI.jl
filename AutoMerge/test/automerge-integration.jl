@@ -29,6 +29,7 @@ delete_old_pull_request_branches(repo_url_with_auth, _delete_branches_older_than
 requires_commit = "1c843ed4d4d568345ca557fea48f43efdcd0271f"
 hello_world_commit1 = "197e0e03f3f840f830cb5095ab6407d00fbee61c"
 hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
+tzjdata_commit = "a40557de71721332fe1fb9dd490390b6c6000d11"
 
 @testset "Integration tests" begin
     for (
@@ -200,6 +201,17 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
             requires_commit,
             false,  # create_blocking_comment
         ), # FAIL: new package name is not a Julia identifier
+        (
+            "master_5",
+            "feature_10",
+            "",
+            "New version: TZJData v1.6.0+2025c",
+            false,  # point_to_slack
+            false,  # check_license
+            true,   # pass
+            tzjdata_commit,
+            false,  # create_blocking_comment
+        ), # OK: build metadata allowed via packages_with_build_metadata exception
     ])
         @info "Performing integration tests with settings" test_number master_dir feature_dir public_dir title point_to_slack check_license pass commit
         with_master_branch(
@@ -247,6 +259,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                             registry=AUTOMERGE_INTEGRATION_TEST_REPO,
                             authorized_authors=String[whoami],
                             authorized_authors_special_jll_exceptions=String[whoami],
+                            packages_with_build_metadata=String["TZJData"],
                             new_package_waiting_minutes=Minute(typemax(Int32)),
                             new_jll_package_waiting_minutes=Minute(typemax(Int32)),
                             new_version_waiting_minutes=Minute(typemax(Int32)),
@@ -293,6 +306,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                             registry=AUTOMERGE_INTEGRATION_TEST_REPO,
                             authorized_authors=String[whoami],
                             authorized_authors_special_jll_exceptions=String[whoami],
+                            packages_with_build_metadata=String["TZJData"],
                             new_package_waiting_minutes=Minute(typemax(Int32)),
                             new_jll_package_waiting_minutes=Minute(typemax(Int32)),
                             new_version_waiting_minutes=Minute(typemax(Int32)),
@@ -310,6 +324,7 @@ hello_world_commit2 = "57b0aec49622faa962c6752d4bc39a62b91fe37c"
                             registry=AUTOMERGE_INTEGRATION_TEST_REPO,
                             authorized_authors=String[whoami],
                             authorized_authors_special_jll_exceptions=String[whoami],
+                            packages_with_build_metadata=String["TZJData"],
                             new_package_waiting_minutes=Minute(0),
                             new_jll_package_waiting_minutes=Minute(0),
                             new_version_waiting_minutes=Minute(0),
