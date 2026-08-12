@@ -813,7 +813,13 @@ function meets_sequential_version_number(
     else
         nextpatch(prv)
     end
-    ver <= nxt || return _invalid_sequential_version("version $ver skips over $nxt")
+
+    # Strip build metadata from `ver` as those fields should be ignored during this
+    # comparison. Without this versions which include build metadata will appear to
+    # skip over `nxt`.
+    clean_ver = VersionNumber(ver.major, ver.minor, ver.patch, ver.prerelease)
+
+    clean_ver <= nxt || return _invalid_sequential_version("version $ver skips over $nxt")
     return _valid_change(prv, ver)
 end
 
