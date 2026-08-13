@@ -155,13 +155,7 @@ function pull_request_build(
         registry_config.read_only,
         pr_config.environment_variables_to_pass,
     )
-    pull_request_build(
-        data;
-        pr_config.check_license,
-        pr_config.check_breaking_explanation,
-        registry_config.new_package_waiting_minutes,
-        registry_config.packages_with_build_metadata,
-    )
+    pull_request_build(data; pr_config.check_license, pr_config.check_breaking_explanation, registry_config.new_package_waiting_minutes)
     rm(registry_master; force=true, recursive=true)
     return nothing
 end

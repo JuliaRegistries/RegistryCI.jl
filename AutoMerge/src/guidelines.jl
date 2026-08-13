@@ -1322,7 +1322,7 @@ function get_automerge_guidelines(
     check_license::Bool,
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
-    allow_build_metadata::Bool,
+    allow_build_metadata::Bool=false,
     use_distance_check::Bool,
     package_author_approved::Bool, # currently unused for new packages
     check_breaking_explanation::Bool # not valid for new packages
@@ -1382,7 +1382,7 @@ function get_automerge_guidelines(
     check_breaking_explanation::Bool,
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
-    allow_build_metadata::Bool,
+    allow_build_metadata::Bool=false,
     use_distance_check::Bool, # unused for new versions
     package_author_approved::Bool,
 )
