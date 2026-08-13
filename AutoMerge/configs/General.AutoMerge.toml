@@ -4,7 +4,6 @@ registry = "JuliaRegistries/General"
 api_url = "https://api.github.com"
 new_package_waiting_minutes = 4320
 authorized_authors_special_jll_exceptions = ["jlbuild"]
-packages_with_build_metadata = ["TZJData"]
 new_jll_version_waiting_minutes = 10
 read_only = false
 new_jll_package_waiting_minutes = 20

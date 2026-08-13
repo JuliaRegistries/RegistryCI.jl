@@ -24,7 +24,6 @@ function guidelines_to_markdown_output(guidelines_function::Function)
         check_breaking_explanation = true,
         this_is_jll_package = false,
         this_pr_can_use_special_jll_exceptions = false,
-        allow_build_metadata = false,
         use_distance_check = false,
         package_author_approved = false,
     )
@@ -57,7 +56,6 @@ function guidelines_to_markdown_output(guidelines_function::Function)
         check_breaking_explanation = true,
         this_is_jll_package = false,
         this_pr_can_use_special_jll_exceptions = false,
-        allow_build_metadata = false,
         use_distance_check = false,
         package_author_approved = false,
     )
