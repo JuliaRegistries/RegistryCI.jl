@@ -817,6 +817,10 @@ function meets_sequential_version_number(
     # Strip build metadata from `ver` as those fields should be ignored during this
     # comparison. Without this versions which include build metadata will appear to
     # skip over `nxt`.
+    #
+    # Note: We have a separate guideline for "non-JLL packages should not have
+    # build metadata". That's a separate guideline from this one. So it's okay for
+    # this guideline to strip metadata when doing the version comparison.
     clean_ver = VersionNumber(ver.major, ver.minor, ver.patch, ver.prerelease)
 
     clean_ver <= nxt || return _invalid_sequential_version("version $ver skips over $nxt")
