@@ -680,6 +680,17 @@ end
             @test AutoMerge.meets_sequential_version_number(vers, v"3")[1]
             @test vers == [v"2", v"1"] # no mutation
         end
+        @testset "Build metadata ignored" begin
+            # `Base.VersionNumber` ordering (unlike strict semver) is affected by build
+            # metadata (e.g. `v"1.2.3" < v"1.2.3+demo"`). A version bump that only adds
+            # build data must not be treated as skipping over the plain next version.
+            @test AutoMerge.meets_sequential_version_number([v"1.2.3+demo"], v"1.2.4+demo")[1]
+            @test AutoMerge.meets_sequential_version_number([v"1.0.0+a"], v"1.0.1+b")[1]
+            @test AutoMerge.meets_sequential_version_number([v"1.0.0+a"], v"1.1.0+b")[1]
+            @test AutoMerge.meets_sequential_version_number([v"1.0.0+a"], v"2.0.0+b")[1]
+            @test !AutoMerge.meets_sequential_version_number([v"1.0.0+a"], v"1.2.0+b")[1]
+            @test !AutoMerge.meets_sequential_version_number([v"1.0.0+a"], v"3.0.0+b")[1]
+        end
     end
     @testset "Patch releases cannot narrow Julia compat" begin
         r1 = Pkg.Types.VersionRange("1.3-1.7")
