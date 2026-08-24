@@ -694,9 +694,8 @@ end
 const guideline_normal_capitalization = Guideline(;
     info="Normal capitalization",
     docs=string(
-        "The package name should start with an upper-case letter, ",
-        "contain only ASCII alphanumeric characters, ",
-        "and contain at least one lowercase letter.",
+        "The package name should start with an upper-case letter ",
+        "and contain only ASCII alphanumeric characters.",
     ),
     check=data -> meets_normal_capitalization(data.pkg),
 )
@@ -705,7 +704,7 @@ function meets_normal_capitalization(pkg)
     # We intentionally do not use `\w` in this regex.
     # `\w` includes underscores, but we don't want to include underscores.
     # So, instead of `\w`, we use `[A-Za-z0-9]`.
-    meets_this_guideline = occursin(r"^[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*[0-9]?$", pkg)
+    meets_this_guideline = occursin(r"^[A-Z][A-Za-z0-9]*?$", pkg)
     if meets_this_guideline
         return true, ""
     else
