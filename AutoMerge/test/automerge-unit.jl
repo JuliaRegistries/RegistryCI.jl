@@ -293,20 +293,13 @@ end
     end
     @testset "Normal capitalization" begin
         @test AutoMerge.meets_normal_capitalization("Zygote")[1]  # Regular name
-        @test AutoMerge.meets_normal_capitalization("Zygote")[1]
         @test !AutoMerge.meets_normal_capitalization("HTTP")[1]  # All upper-case
-        @test !AutoMerge.meets_normal_capitalization("HTTP")[1]
         @test AutoMerge.meets_normal_capitalization("ForwardDiff2")[1]  # Ends with a number
-        @test AutoMerge.meets_normal_capitalization("ForwardDiff2")[1]
         @test !AutoMerge.meets_normal_capitalization("JSON2")[1]  # All upper-case and ends with number
-        @test !AutoMerge.meets_normal_capitalization("JSON2")[1]
         @test AutoMerge.meets_normal_capitalization("RegistryCI")[1]  # Ends with upper-case
-        @test AutoMerge.meets_normal_capitalization("RegistryCI")[1]
     end
     @testset "Not too short - at least five letters" begin
         @test AutoMerge.meets_name_length("Zygote")[1]
-        @test AutoMerge.meets_name_length("Zygote")[1]
-        @test !AutoMerge.meets_name_length("Flux")[1]
         @test !AutoMerge.meets_name_length("Flux")[1]
     end
     @testset "Name does not include \"julia\", start with \"Ju\", or end with \"jl\"" begin
@@ -559,7 +552,7 @@ end
         @test AutoMerge.uuid_passes_sanity_check(UUID("00000000-0000-1000-0000-000000000000"))
 
         # Test invalid UUIDs - wrong variant for non-v1
-        # Version 4 but variant = 0 (should fail)
+        # Version 4 but variant = 0 (should fail; variant 0 is only allowed with version 1)
         @test !AutoMerge.uuid_passes_sanity_check(UUID("550e8400-e29b-41d4-0716-446655440000"))
 
         # Test invalid UUIDs - wrong version
@@ -568,9 +561,6 @@ end
 
         # Version 9 with variant 2 (should fail - version must be 1-8)
         @test !AutoMerge.uuid_passes_sanity_check(UUID("550e8400-e29b-91d4-a716-446655440000"))
-
-        # Test variant = 0 with version != 1 (should fail)
-        @test !AutoMerge.uuid_passes_sanity_check(UUID("550e8400-e29b-41d4-0716-446655440000"))
     end
     @testset "`meets_uuid_sanity_check`" begin
         # Test with compliant UUID - should pass
@@ -640,8 +630,6 @@ end
         @test !AutoMerge.meets_sequential_version_number([v"1.0.3"], v"1.1.1")[1]
         @test !AutoMerge.meets_sequential_version_number([v"1.0.0"], v"2.0.1")[1]
         @test !AutoMerge.meets_sequential_version_number([v"1.0.0"], v"2.1.0")[1]
-        @test !AutoMerge.meets_sequential_version_number([v"1.0.0"], v"2.1.0")[1]
-        @test AutoMerge.meets_sequential_version_number([v"0.0.1"], v"0.0.2")[1]
         @test AutoMerge.meets_sequential_version_number([v"0.0.1"], v"0.1.0")[1]
         @test AutoMerge.meets_sequential_version_number([v"0.0.1"], v"1.0.0")[1]
         @test AutoMerge.meets_sequential_version_number([v"0.0.1", v"0.1.0"], v"0.0.2")[1] # issue #49
@@ -675,7 +663,6 @@ end
         @test !AutoMerge.meets_sequential_version_number([v"1", v"2"], v"0.9")[1]
         @test AutoMerge.meets_sequential_version_number([v"1", v"2"], v"2.0.1")[1]
         @test AutoMerge.meets_sequential_version_number([v"1", v"2"], v"2.1")[1]
-        @test AutoMerge.meets_sequential_version_number([v"1", v"2"], v"3")[1]
         let vers = [v"2", v"1"]
             @test AutoMerge.meets_sequential_version_number(vers, v"3")[1]
             @test vers == [v"2", v"1"] # no mutation
