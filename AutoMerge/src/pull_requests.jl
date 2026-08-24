@@ -179,6 +179,8 @@ function pull_request_build(data::GitHubAutoMergeData; check_license, check_brea
 
     this_pr_can_use_special_jll_exceptions =
         this_is_jll_package && data.authorization == :jll
+    # We have one exception grandfathered in
+    allow_build_metadata = data.pkg == "TZJData"
 
     guidelines = get_automerge_guidelines(
         data.registration_type;
@@ -186,6 +188,7 @@ function pull_request_build(data::GitHubAutoMergeData; check_license, check_brea
         check_breaking_explanation=check_breaking_explanation,
         this_is_jll_package=this_is_jll_package,
         this_pr_can_use_special_jll_exceptions=this_pr_can_use_special_jll_exceptions,
+        allow_build_metadata=allow_build_metadata,
         use_distance_check=perform_distance_check(data.pr.labels),
         package_author_approved=has_package_author_approved_label(data.pr.labels)
     )

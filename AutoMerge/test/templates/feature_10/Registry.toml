@@ -1,0 +1,8 @@
+name = "ExampleRegistry"
+uuid = "4ad491bb-ba2e-4d0a-a074-3ebed9b9859b"
+repo = ""
+
+description = "This is a test registry for the AutoMerge integration tests."
+
+[packages]
+dc5dba14-91b3-4cab-a142-028a31da12f7 = { name = "TZJData", path = "T/TZJData" }
