@@ -12,7 +12,18 @@ env:
   JULIA_PKG_UNPACK_REGISTRY: 'true'
   JULIA_PKG_USE_CLI_GIT: 'true'
 
+permissions:
+  contents: read
+
 jobs:
+
+  typos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: crate-ci/typos@80c8a4945eec0f6d464eaf9e65ed98ef085283d1 # v1.38.1
 
   registryci-unit:
     name: RegistryCI Unit/Julia ${{ matrix.version }}/${{ matrix.os }}/${{ matrix.arch }}
