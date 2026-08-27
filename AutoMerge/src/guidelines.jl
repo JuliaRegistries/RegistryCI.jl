@@ -322,7 +322,7 @@ end
 
 
 const guideline_project_toml_check = Guideline(;
-    info = "Project.toml (or JuliaProject.toml) either does not exist, cannot be parsed, or is not consistent with registration PR.",
+    info = "Project.toml (or JuliaProject.toml) exists, can be parsed, and is consistent with registration PR.",
     docs = "Checks that the package's Project.toml (or JuliaProject.toml) exists, can be parsed, and is consistent with registration PR.",
     check=data -> meets_project_toml_check(data))
 
@@ -890,6 +890,17 @@ const guideline_code_can_be_downloaded = Guideline(;
     check=data -> meets_code_can_be_downloaded(
         data.registry_head,
         data.pkg,
+        data.version;
+        pkg_code_path=data.pkg_code_path,
+        pkg_clone_dir=data.pkg_clone_dir,
+    ),
+)
+
+const guideline_subdir_parameter_is_correct = Guideline(;
+    info="Subdir parameter is correct.",
+    check=data -> meets_subdir_parameter_is_correct(
+        data.registry_head,
+        data.pkg,
         data.version,
         data.pr;
         pkg_code_path=data.pkg_code_path,
@@ -960,7 +971,24 @@ const guideline_src_names_OK = Guideline(;
     check=data -> meets_src_names_ok(data.pkg_code_path),
 )
 
-function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_path, pkg_clone_dir)
+function meets_code_can_be_downloaded(registry_head, pkg, version; pkg_code_path, pkg_clone_dir)
+    uuid, package_repo, subdir, tree_hash_from_toml = parse_registry_pkg_info(
+        registry_head, pkg, version
+    )
+
+    clone_success = load_files_from_url_and_tree_hash(
+        _ -> nothing, pkg_code_path, package_repo, tree_hash_from_toml,
+        pkg_clone_dir
+    )
+
+    if !clone_success
+        return false, "Cloning repository failed."
+    end
+
+    return true, ""
+end
+
+function meets_subdir_parameter_is_correct(registry_head, pkg, version, pr; pkg_code_path, pkg_clone_dir)
     uuid, package_repo, subdir, tree_hash_from_toml = parse_registry_pkg_info(
         registry_head, pkg, version
     )
@@ -1350,6 +1378,7 @@ function get_automerge_guidelines(
         (:update_status, true),
         (guideline_version_can_be_pkg_added, true),
         (guideline_code_can_be_downloaded, true),
+        (guideline_subdir_parameter_is_correct, true),
         # `guideline_version_has_osi_license` must be run
         # after `guideline_code_can_be_downloaded` so
         # that it can use the downloaded code!
@@ -1404,6 +1433,7 @@ function get_automerge_guidelines(
         (:update_status, true),
         (guideline_version_can_be_pkg_added, true),
         (guideline_code_can_be_downloaded, true),
+        (guideline_subdir_parameter_is_correct, true),
         # `guideline_version_has_osi_license` must be run
         # after `guideline_code_can_be_downloaded` so
         # that it can use the downloaded code!
