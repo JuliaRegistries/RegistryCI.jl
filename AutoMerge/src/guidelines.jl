@@ -84,11 +84,14 @@ const guideline_compat_for_all_deps = Guideline(;
     check=data -> meets_compat_for_all_deps(data.registry_head, data.pkg, data.version),
 )
 
-function compat_violation_message(bad_dependencies)
+function compat_violation_message(
+    bad_dependencies; bound_type::String="upper-bounded and only includes a finite number of breaking releases"
+)
     return string(
         "The following dependencies do not have a `[compat]` entry ",
-        "that is upper-bounded and only includes a finite number ",
-        "of breaking releases: ",
+        "that is ",
+        bound_type,
+        ": ",
         join(bad_dependencies, ", "),
         # Note the indentation here is important for the proper formatting within a bulleted list later
         """
@@ -119,6 +122,10 @@ function compat_violation_message(bad_dependencies)
 
 end
 
+function _has_lower_bound(r::Pkg.Types.VersionRange)
+    return r.lower != Pkg.Types.VersionBound("*")
+end
+
 function meets_compat_for_all_deps(working_directory::AbstractString, pkg, version)
     package_relpath = get_package_relpath_in_registry(;
         package_name=pkg, registry_path=working_directory
@@ -128,6 +135,7 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
     # First, we construct a Dict in which the keys are the package's
     # dependencies, and the value is always false.
     dep_has_compat_with_upper_bound = Dict{String,Bool}()
+    dep_has_compat_with_lower_bound = Dict{String,Bool}()
     for version_range in keys(deps)
         if version in Pkg.Types.VersionRange(version_range)
             for name in keys(deps[version_range])
@@ -141,6 +149,7 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
                 if apply_compat_requirement
                     @debug debug_msg
                     dep_has_compat_with_upper_bound[name] = false
+                    dep_has_compat_with_lower_bound[name] = false
                 end
             end
         end
@@ -155,11 +164,18 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
                     if !isempty(value)
                         value_ranges = Pkg.Types.VersionRange.(value)
                         each_range_has_upper_bound = _has_upper_bound.(value_ranges)
+                        each_range_has_lower_bound = _has_lower_bound.(value_ranges)
                         if all(each_range_has_upper_bound)
                             @debug(
                                 "Dependency \"$(name)\" has compat entries that all have upper bounds"
                             )
                             dep_has_compat_with_upper_bound[name] = true
+                        end
+                        if all(each_range_has_lower_bound)
+                            @debug(
+                                "Dependency \"$(name)\" has compat entries that all have lower bounds"
+                            )
+                            dep_has_compat_with_lower_bound[name] = true
                         end
                     end
                 else
@@ -170,25 +186,59 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
                         )
                         dep_has_compat_with_upper_bound[name] = true
                     end
+                    if _has_lower_bound(value_range)
+                        @debug(
+                            "Dependency \"$(name)\" has a compat entry with a lower bound"
+                        )
+                        dep_has_compat_with_lower_bound[name] = true
+                    end
                 end
             end
         end
     end
-    meets_this_guideline = all(values(dep_has_compat_with_upper_bound))
+    meets_this_guideline =
+        all(values(dep_has_compat_with_upper_bound)) &&
+        all(values(dep_has_compat_with_lower_bound))
     if meets_this_guideline
         return true, ""
     else
-        bad_dependencies = Vector{String}()
+        bad_dependencies_missing_upper = String[]
+        bad_dependencies_missing_lower = String[]
         for name in keys(dep_has_compat_with_upper_bound)
-            if !(dep_has_compat_with_upper_bound[name])
+            if !dep_has_compat_with_upper_bound[name]
                 @error(
                     "Dependency \"$(name)\" does not have a compat entry that has an upper bound"
                 )
-                push!(bad_dependencies, name)
+                push!(bad_dependencies_missing_upper, name)
+            end
+            if !dep_has_compat_with_lower_bound[name]
+                @error(
+                    "Dependency \"$(name)\" does not have a compat entry that has a lower bound"
+                )
+                push!(bad_dependencies_missing_lower, name)
             end
         end
-        sort!(bad_dependencies)
-        message = compat_violation_message(bad_dependencies)
+        sort!(bad_dependencies_missing_upper)
+        sort!(bad_dependencies_missing_lower)
+        messages = String[]
+        if !isempty(bad_dependencies_missing_lower)
+            push!(
+                messages,
+                compat_violation_message(
+                    bad_dependencies_missing_lower; bound_type="lower-bounded"
+                ),
+            )
+        end
+        if !isempty(bad_dependencies_missing_upper)
+            push!(
+                messages,
+                compat_violation_message(
+                    bad_dependencies_missing_upper;
+                    bound_type="upper-bounded and only includes a finite number of breaking releases",
+                ),
+            )
+        end
+        message = join(messages, "\n- ")
         return false, message
     end
 end
