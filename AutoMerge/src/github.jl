@@ -10,6 +10,11 @@ function created_at(pull_request::GitHub.PullRequest)
     return result
 end
 
+function created_at(comment::GitHub.Comment)
+    result = time_is_already_in_utc(comment.created_at)
+    return result
+end
+
 function delete_comment!(
     api::GitHub.GitHubAPI,
     repo::GitHub.Repo,
@@ -107,6 +112,23 @@ function get_all_pull_request_comments(
     unique!(all_comments)
     all_comments = all_comments[sortperm([x.created_at for x in all_comments])]
     return all_comments
+end
+
+function get_all_pull_request_timeline_events(
+    api::GitHub.GitHubAPI,
+    repo::GitHub.Repo,
+    pr::GitHub.PullRequest;
+    auth::GitHub.Authorization,
+)
+    path = "/repos/$(GitHub.name(repo))/issues/$(number(pr))/timeline"
+    all_events, _ = GitHub.gh_get_paged_json(
+        api,
+        path;
+        auth=auth,
+        headers=Dict("Accept" => "application/vnd.github.mockingbird-preview+json"),
+        params=Dict("per_page" => 100, "page" => 1),
+    )
+    return all_events
 end
 
 function get_all_pull_requests(
