@@ -478,14 +478,20 @@ function meets_breaking_explanation_check(data::GitHubAutoMergeData)
     # Look up PR here in case the labels are slow to be applied by the Registrator bot
     # which decides whether to add the BREAKING label
     pr = GitHub.pull_request(data.api, data.registry, data.pr.number; auth=data.auth)
-    return meets_breaking_explanation_check(pr.labels, pr.body)
+    return meets_breaking_explanation_check(pr.labels, pr.body; commit_url=commit_url_from_pull_request_body(pr))
 end
 
-function breaking_explanation_message(has_release_notes)
+function breaking_explanation_message(has_release_notes; commit_url=nothing)
+    retrigger_instructions =
+        if commit_url === nothing
+            "If you are using the comment bot `@JuliaRegistrator`, you can add release notes to this registration by re-triggering registration while specifying release notes:"
+        else
+            "If you are using the comment bot `@JuliaRegistrator`, you can add release notes to this registration by re-triggering registration on your [original commit]($(commit_url)) while specifying release notes:"
+        end
     example_detail = """
         <details><summary>Example of adding release notes with breaking notice</summary>
 
-        If you are using the comment bot `@JuliaRegistrator`, you can add release notes to this registration by re-triggering registration while specifying release notes:
+        $(retrigger_instructions)
 
         ```
         @JuliaRegistrator register
@@ -516,14 +522,29 @@ function breaking_explanation_message(has_release_notes)
     end
 end
 
-function meets_breaking_explanation_check(labels::Vector, body::AbstractString)
+function commit_url_from_pull_request_body(pull_request::GitHub.PullRequest)
+    repo_url = repository_from_pull_request_body(pull_request)
+    repo_url === nothing && return nothing
+    owner_repo = extract_github_owner_repo(repo_url)
+    owner_repo === nothing && return nothing
+    commit_sha = commit_from_pull_request_body(pull_request)
+    owner, repo = owner_repo
+    return "https://github.com/$owner/$repo/commit/$commit_sha"
+end
+
+function commit_url_from_pull_request_body(body::AbstractString)
+    pull_request = GitHub.PullRequest(; body=body)
+    return commit_url_from_pull_request_body(pull_request)
+end
+
+function meets_breaking_explanation_check(labels::Vector, body::AbstractString; commit_url=nothing)
     if has_label(labels, BREAKING_LABEL)
         release_notes = get_release_notes(body)
         if release_notes === nothing
-            msg = breaking_explanation_message(false)
+            msg = breaking_explanation_message(false; commit_url=commit_url)
             return false, msg
         elseif !occursin(r"breaking|changelog", lowercase(release_notes))
-            msg = breaking_explanation_message(true)
+            msg = breaking_explanation_message(true; commit_url=commit_url)
             return false, msg
         else
             return true, ""
