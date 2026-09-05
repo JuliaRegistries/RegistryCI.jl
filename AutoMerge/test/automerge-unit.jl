@@ -614,6 +614,46 @@ end
 end
 
 @testset "Guidelines for new versions" begin
+    @testset "Weak dependencies require compat bounds" begin
+        mktempdir() do tmp_registry
+            pkg_dir = joinpath(tmp_registry, "T", "TestPkg")
+            mkpath(pkg_dir)
+
+            write(joinpath(tmp_registry, "Registry.toml"), """
+            [packages]
+            87654321-4321-8765-cba9-987654321cba = { name = "TestPkg", path = "T/TestPkg" }
+            """)
+
+            write(joinpath(pkg_dir, "Package.toml"), """
+            name = "TestPkg"
+            uuid = "87654321-4321-8765-cba9-987654321cba"
+            repo = "https://github.com/test/TestPkg.jl.git"
+            """)
+
+            write(joinpath(pkg_dir, "WeakDeps.toml"), """
+            ["1.0.0"]
+            WeakDep = "7876af07-990d-54b4-ab0e-23690620f79a"
+            """)
+
+            result, message = AutoMerge.meets_compat_for_all_deps(
+                tmp_registry, "TestPkg", v"1.0.0"
+            )
+            @test !result
+            @test occursin("WeakDep", message)
+
+            write(joinpath(pkg_dir, "WeakCompat.toml"), """
+            ["1.0.0"]
+            WeakDep = "1"
+            """)
+
+            result, message = AutoMerge.meets_compat_for_all_deps(
+                tmp_registry, "TestPkg", v"1.0.0"
+            )
+            @test result
+            @test isempty(message)
+        end
+    end
+
     @testset "Sequential version number" begin
         @test AutoMerge.meets_sequential_version_number([v"0.0.1"], v"0.0.2")[1]
         @test AutoMerge.meets_sequential_version_number([v"0.1.0"], v"0.1.1")[1]
