@@ -50,4 +50,7 @@ include("toml.jl")
 include("update_status.jl")
 include("util.jl")
 
+# App.
+include("manual_merge.jl")
+
 end # module
