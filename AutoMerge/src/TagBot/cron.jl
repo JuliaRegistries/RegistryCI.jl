@@ -5,8 +5,8 @@ function handle_cron(event)
     repos_versions = map(pull -> repo_and_version_of_pull_request_body(pull.body), pulls)
     filter!(rv -> first(rv) !== nothing, repos_versions)
     unique!(first, repos_versions)  # Send at most one notification per repo.
-    for (repo, version) in repos_versions
-        maybe_notify(event, repo, version; cron=true)
+    for (repo, version, pkg_name) in repos_versions
+        maybe_notify(event, repo, version, pkg_name; cron=true)
     end
 end
 
