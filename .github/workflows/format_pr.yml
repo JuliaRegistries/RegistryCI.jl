@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: julia-actions/setup-julia@v2
+      - uses: julia-actions/setup-julia@v3
       - uses: julia-actions/cache@v3
       - name: Install the JuliaFormatter package
         run: julia --color=yes -e 'using Pkg; Pkg.add(name = "JuliaFormatter", uuid = "98e50ef6-434e-11e9-1051-2b60c6c9e899")'
