@@ -247,6 +247,60 @@ end
             end
         end
     end
+
+    @testset "check_package_toml_changes" begin
+        # Versions.toml patch from #158607.
+        versions_patch =
+            """
+            @@ -45,3 +45,6 @@ git-tree-sha1 = "f2688afd4eca4609192bba5595bae4a5728396bc"
+             
+             ["0.16.0"]
+             git-tree-sha1 = "07cdfa7961708d19bd016a3f93fd1a41d7c9cd57"
+            +
+            +["0.17.0"]
+            +git-tree-sha1 = "ec5a470161d3c7d14180235c97da219761aa7f94"
+            """
+
+        # Package.toml patch from #158607.
+        package_patch1 =
+            """
+             @@ -1,3 +1,4 @@
+             name = "ADRIA"
+             uuid = "7dc409a7-fbe5-4c9d-b3e2-b0c19a6ba600"
+             repo = "https://github.com/open-AIMS/ADRIA.jl.git"
+            +subdir = "ADRIA"
+            """
+
+        # Modified with a repo change as well.
+        package_patch2 =
+            """
+             @@ -1,3 +1,4 @@
+             name = "ADRIA"
+             uuid = "7dc409a7-fbe5-4c9d-b3e2-b0c19a6ba600"
+            -repo = "https://github.com/open-AIMS/ADRIA.jl.git"
+            +repo = "https://github.com/AIMS/ADRIA.jl.git"
+            +subdir = "ADRIA"
+            """
+
+        files1 = [GitHub.PullRequestFile(filename = "A/ADRIA/Versions.toml";
+                                         patch = versions_patch),
+                  GitHub.PullRequestFile(filename = "A/ADRIA/Package.toml";
+                                         patch = package_patch1)]
+
+        files2 = [GitHub.PullRequestFile(filename = "A/ADRIA/Versions.toml";
+                                         patch = versions_patch),
+                  GitHub.PullRequestFile(filename = "A/ADRIA/Package.toml";
+                                         patch = package_patch2)]
+
+        @test AutoMerge.check_package_toml_changes(AutoMerge.NewPackage(),
+                                                   files1)
+        @test AutoMerge.check_package_toml_changes(AutoMerge.NewPackage(),
+                                                   files2)
+        @test AutoMerge.check_package_toml_changes(AutoMerge.NewVersion(),
+                                                   files1)
+        @test !AutoMerge.check_package_toml_changes(AutoMerge.NewVersion(),
+                                                    files2)
+    end
 end
 
 @testset "juliaup" begin
@@ -1609,4 +1663,31 @@ end
             @test result_with_data == result_no_data
         end
     end
+end
+
+@testset "GitHub" begin
+    # WeakDeps.toml patch from #158607.
+    patch = """
+            @@ -1,4 +1,4 @@
+            -["0.10 - 0"]
+            +["0.10 - 0.16"]
+             Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+             
+             ["0.11"]
+            @@ -7,7 +7,7 @@ SparseArrayKit = "a9a3c162-d163-4c15-8926-b8794fbefed2"
+             ["0.11 - 0"]
+             BlackBoxOptim = "a134a8b2-14d6-55f6-9291-3336d3ab0209"
+             
+            -["0.6 - 0"]
+            +["0.6 - 0.16"]
+             GeoMakie = "db073c08-6b98-4ee5-b6a4-5efafb3259c6"
+             GraphMakie = "1ecd5474-83a3-4783-bb4f-06765db800d2"
+             
+            """
+    file = GitHub.PullRequestFile(; patch)
+    @test length(AutoMerge.get_patch_lines(file)) == 15
+    removed_lines = AutoMerge.get_removed_lines(file)
+    added_lines = AutoMerge.get_added_lines(file)
+    @test removed_lines == ["""["0.10 - 0"]""", """["0.6 - 0"]"""]
+    @test added_lines == ["""["0.10 - 0.16"]""", """["0.6 - 0.16"]"""]
 end
