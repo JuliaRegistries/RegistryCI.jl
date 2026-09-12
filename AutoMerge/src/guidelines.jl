@@ -300,7 +300,7 @@ const guideline_name_match_check = Guideline(;
     docs = "Packages must not match the name of existing package up-to-case, since on case-insensitive filesystems, this will break the registry.",
     check=data -> meets_name_match_check(data.pkg, data.registry_master))
 
-function meets_name_match_check(pkg_name::AbstractString, registry_master::AbstractString)
+function meets_name_match_check(pkg_name::AbstractString, registry_master)
     other_packages = get_all_pkg_names(registry_master)
     return meets_name_match_check(pkg_name, other_packages)
 end
@@ -563,7 +563,7 @@ These checks can be overridden by applying a label `Override AutoMerge: name sim
 )
 
 function meets_distance_check(
-    pkg_name::AbstractString, registry_master::AbstractString; kwargs...
+    pkg_name::AbstractString, registry_master; kwargs...
 )
     other_packages = get_all_pkg_names(registry_master; keep_jll=false)
     return meets_distance_check(pkg_name, other_packages; kwargs...)
