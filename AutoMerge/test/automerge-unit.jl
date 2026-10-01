@@ -291,23 +291,30 @@ end
         @test AutoMerge.meets_name_is_identifier("Hello")[1]
         @test !AutoMerge.meets_name_is_identifier("Hello-GoodBye")[1]
     end
-    @testset "Normal capitalization" begin
-        @test AutoMerge.meets_normal_capitalization("Zygote")[1]  # Regular name
-        @test AutoMerge.meets_normal_capitalization("Zygote")[1]
-        @test AutoMerge.meets_normal_capitalization("HTTP")[1]  # All upper-case (now allowed)
-        @test AutoMerge.meets_normal_capitalization("HTTP")[1]
-        @test AutoMerge.meets_normal_capitalization("ForwardDiff2")[1]  # Ends with a number
-        @test AutoMerge.meets_normal_capitalization("ForwardDiff2")[1]
-        @test AutoMerge.meets_normal_capitalization("JSON2")[1]  # All upper-case and ends with number (now allowed)
-        @test AutoMerge.meets_normal_capitalization("JSON2")[1]
-        @test AutoMerge.meets_normal_capitalization("RegistryCI")[1]  # Ends with upper-case
-        @test AutoMerge.meets_normal_capitalization("RegistryCI")[1]
-    end
-    @testset "Not too short - at least five letters" begin
-        @test AutoMerge.meets_name_length("Zygote")[1]
-        @test AutoMerge.meets_name_length("Zygote")[1]
-        @test !AutoMerge.meets_name_length("Flux")[1]
-        @test !AutoMerge.meets_name_length("Flux")[1]
+    @testset "Package name format" begin
+        @test AutoMerge.meets_name_format("Zygote")[1]  # Regular name
+        @test AutoMerge.meets_name_format("ForwardDiff2")[1]  # Ends with a number
+        @test AutoMerge.meets_name_format("RegistryCI")[1]  # Ends with upper-case
+        @test AutoMerge.meets_name_format("GNLSE")[1]  # All upper-case
+        @test AutoMerge.meets_name_format("PETSc")[1]
+        @test AutoMerge.meets_name_format("JSON2")[1]  # All upper-case, ends with number
+        @test !AutoMerge.meets_name_format("HTTP")[1]  # Only four characters
+        @test !AutoMerge.meets_name_format("Flux")[1]  # Only four characters
+        @test !AutoMerge.meets_name_format("ABC")[1]  # Only three characters
+        @test !AutoMerge.meets_name_format("zygote")[1]  # Starts with lower-case
+        @test !AutoMerge.meets_name_format("2Zygote")[1]  # Starts with a number
+        @test !AutoMerge.meets_name_format("Hello-GoodBye")[1]  # Not an identifier
+        @test !AutoMerge.meets_name_format("Hello_World")[1]  # Underscore
+        @test !AutoMerge.meets_name_format("Zygote_jll")[1]  # Non-JLL registration
+        @test !AutoMerge.meets_name_format("Ábcde")[1]  # Not ASCII
+        @test !AutoMerge.meets_name_format("Zygote\n")[1]  # Trailing newline
+        # The failure message spells out every part of the rule that is violated
+        let (passed, message) = AutoMerge.meets_name_format("ábc")
+            @test !passed
+            @test occursin("upper-case", message)
+            @test occursin("ASCII alphanumeric", message)
+            @test occursin("at least 5 characters", message)
+        end
     end
     @testset "Name does not include \"julia\", start with \"Ju\", or end with \"jl\"" begin
         @test AutoMerge.meets_julia_name_check("Zygote")[1]
