@@ -95,6 +95,16 @@ function comment_block_status_params(blocked::Bool)
     end
 end
 
+# `current_state` is the state of the existing `automerge/comments` status on the
+# commit, or `nothing` if there is none. We don't create a status for a PR that
+# has never been blocked.
+function comment_block_status_needs_update(
+    current_state::Union{Nothing,AbstractString}, blocked::Bool
+)
+    current_state === nothing && return blocked
+    return current_state != comment_block_status_params(blocked).state
+end
+
 function pr_is_old_enough(
     pr_type::Symbol,
     pr_age::Dates.Period;
@@ -317,15 +327,30 @@ function cron_or_api_build(
     # This sets the `automerge/comment` commit status which is distinct from the
     # `automerge/decision` commit status used by the `check_pr` AutoMerge run to
     # communicate with the `merge_prs` cron job (this code!).
-    status_params = comment_block_status_params(blocked)
+    # GitHub limits the number of statuses per commit and context, so we only
+    # write the status when it needs to change. The status is informational
+    # (the merge decision below uses `blocked` directly), so if updating it
+    # fails we log the error and carry on.
     if !registry_config.read_only
-        my_retry(() -> GitHub.create_status(
-            api,
-            registry_repo,
-            pr.head.sha;
-            auth=auth,
-            params=Dict(pairs(status_params)...)
-        ))
+        try
+            all_pr_statuses = _get_all_pr_statuses(api, registry_repo, pr; auth=auth)
+            i = findfirst(s -> s.context == "automerge/comments", all_pr_statuses)
+            current_state = i === nothing ? nothing : all_pr_statuses[i].state
+            if comment_block_status_needs_update(current_state, blocked)
+                GitHub.create_status(
+                    api,
+                    registry_repo,
+                    pr.head.sha;
+                    auth=auth,
+                    params=Dict(pairs(comment_block_status_params(blocked))...)
+                )
+            end
+        catch ex
+            @error(
+                "Pull request: $(pr_number). Failed to update the `automerge/comments` status.",
+                exception = (ex, catch_backtrace())
+            )
+        end
     end
 
     if blocked
