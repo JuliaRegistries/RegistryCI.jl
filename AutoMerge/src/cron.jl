@@ -102,7 +102,9 @@ function comment_block_status_needs_update(
     current_state::Union{Nothing,AbstractString}, blocked::Bool
 )
     current_state === nothing && return blocked
-    return current_state != comment_block_status_params(blocked).state
+    # No status and "success" both mean the commit is not marked as blocked
+    marked_blocked = current_state == "failure"
+    return marked_blocked != blocked
 end
 
 function pr_is_old_enough(
@@ -330,7 +332,7 @@ function cron_or_api_build(
     # GitHub limits the number of statuses per commit and context, so we only
     # write the status when it needs to change. The status is informational
     # (the merge decision below uses `blocked` directly), so if updating it
-    # fails we log the error and carry on.
+    # fails, we log the error and carry on.
     if !registry_config.read_only
         try
             all_pr_statuses = _get_all_pr_statuses(api, registry_repo, pr; auth=auth)
