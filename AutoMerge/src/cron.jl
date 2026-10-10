@@ -95,16 +95,28 @@ function comment_block_status_params(blocked::Bool)
     end
 end
 
-# `current_state` is the state of the existing `automerge/comments` status on the
+# `old_state_str` is the state of the existing `automerge/comments` status on the
 # commit, or `nothing` if there is none. We don't create a status for a PR that
 # has never been blocked.
 function comment_block_status_needs_update(
-    current_state::Union{Nothing,AbstractString}, blocked::Bool
+    old_state_str::Union{Nothing,AbstractString}, new_state::Bool,
 )
-    current_state === nothing && return blocked
-    # No status and "success" both mean the commit is not marked as blocked
-    marked_blocked = current_state == "failure"
-    return marked_blocked != blocked
+    if old_state_str isa Nothing
+        if new_state
+            # old state: [no status]
+            # new state: blocked
+            need_to_update = true
+            return need_to_update
+        else
+            # old state: [no status]
+            # new state: not blocked
+            need_to_update = false
+            return need_to_update
+        end
+    end
+    old_state = old_state_str == "failure"
+    need_to_update = old_state != new_state
+    return need_to_update
 end
 
 function pr_is_old_enough(
