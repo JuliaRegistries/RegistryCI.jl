@@ -380,6 +380,16 @@ end
         @test unblocked_params.context == "automerge/comments"
         @test occursin("No blocking", unblocked_params.description)
     end
+    @testset "comment_block_status_needs_update" begin
+        # No existing status: only write one if blocked
+        @test AutoMerge.comment_block_status_needs_update(nothing, true)
+        @test !AutoMerge.comment_block_status_needs_update(nothing, false)
+        # Existing status: only write if the state changes
+        @test !AutoMerge.comment_block_status_needs_update("failure", true)
+        @test AutoMerge.comment_block_status_needs_update("failure", false)
+        @test AutoMerge.comment_block_status_needs_update("success", true)
+        @test !AutoMerge.comment_block_status_needs_update("success", false)
+    end
     @testset "`get_all_non_jll_package_names`" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
         packages_no_jll = AutoMerge.get_all_pkg_names(registry_path; keep_jll=false)
