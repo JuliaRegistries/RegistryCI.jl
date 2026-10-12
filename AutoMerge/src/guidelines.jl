@@ -242,20 +242,60 @@ end
 
 const _AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH = 5
 
-const guideline_name_length = Guideline(;
-    info="Name not too short",
-    docs="The name is at least $(_AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH) characters long.",
-    check=data -> meets_name_length(data.pkg),
+# A single regular expression that a new (non-JLL) package name has to match.
+# It replaces four separate checks: valid Julia identifier, normal
+# capitalization, minimum length, and ASCII-only.
+#
+# We intentionally do not use `\w` in this regex.
+# `\w` includes underscores, but we don't want to include underscores.
+# So, instead of `\w`, we use `[A-Za-z0-9]`.
+#
+# We anchor with `\A` and `\z` rather than `^` and `$`, because the latter also
+# match around a trailing newline, and we want the *entire* name to match.
+const _AUTOMERGE_NEW_PACKAGE_NAME_REGEX = Regex(
+    "\\A[A-Z][A-Za-z0-9]{$(_AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH - 1),}\\z"
 )
 
-function meets_name_length(pkg)
-    meets_this_guideline = length(pkg) >= _AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH
-    if meets_this_guideline
+const guideline_name_format = Guideline(;
+    info="Name format",
+    docs=string(
+        "The package name matches the regular expression ",
+        "`$(_AUTOMERGE_NEW_PACKAGE_NAME_REGEX.pattern)`; that is, the name starts with ",
+        "an upper-case letter, consists of ASCII alphanumeric characters only, and is ",
+        "at least $(_AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH) characters long.",
+    ),
+    check=data -> meets_name_format(data.pkg),
+)
+
+function meets_name_format(pkg)
+    if occursin(_AUTOMERGE_NEW_PACKAGE_NAME_REGEX, pkg)
         return true, ""
-    else
-        return false,
-        "Name is not at least $(_AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH) characters long"
     end
+    # Spell out every part of the guideline that is violated, so that the author
+    # does not have to discover them one at a time.
+    problems = String[]
+    if !occursin(r"\A[A-Z]", pkg)
+        push!(problems, "it must start with an upper-case ASCII letter (`A-Z`)")
+    end
+    if !occursin(r"\A[A-Za-z0-9]*\z", pkg)
+        push!(
+            problems,
+            "it must consist of ASCII alphanumeric characters only (`A-Z`, `a-z`, `0-9`)",
+        )
+    end
+    if length(pkg) < _AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH
+        push!(
+            problems,
+            "it must be at least $(_AUTOMERGE_NEW_PACKAGE_MINIMUM_NAME_LENGTH) characters long",
+        )
+    end
+    details = isempty(problems) ? "" : string(": ", join(problems, "; "))
+    return false,
+    string(
+        "The package's name ($pkg) does not match the regular expression ",
+        "`$(_AUTOMERGE_NEW_PACKAGE_NAME_REGEX.pattern)`$(details). ",
+        "The package must be renamed to be registered.",
+    )
 end
 
 const guideline_name_ascii = Guideline(;
@@ -688,28 +728,6 @@ function meets_name_is_identifier(pkg)
         return true, ""
     else
         return false, "The package's name ($pkg) is not a valid Julia identifier according to `Base.isidentifier`. Typically this means it contains `-` or other characters that can't be used in defining a variable name or module. The package must be renamed to be registered."
-    end
-end
-
-const guideline_normal_capitalization = Guideline(;
-    info="Normal capitalization",
-    docs=string(
-        "The package name should start with an upper-case letter ",
-        "and contain only ASCII alphanumeric characters.",
-    ),
-    check=data -> meets_normal_capitalization(data.pkg),
-)
-
-function meets_normal_capitalization(pkg)
-    # We intentionally do not use `\w` in this regex.
-    # `\w` includes underscores, but we don't want to include underscores.
-    # So, instead of `\w`, we use `[A-Za-z0-9]`.
-    meets_this_guideline = occursin(r"^[A-Z][A-Za-z0-9]*?$", pkg)
-    if meets_this_guideline
-        return true, ""
-    else
-        return false,
-        "Name does not meet all of the following: starts with an upper-case letter, ASCII alphanumerics only, not all letters are upper-case."
     end
 end
 
@@ -1334,8 +1352,12 @@ function get_automerge_guidelines(
         (guideline_registry_consistency_tests_pass, true),
         (guideline_pr_only_changes_allowed_files, true),
         # (guideline_only_changes_specified_package, true), # not yet implemented
-        (guideline_normal_capitalization, !this_pr_can_use_special_jll_exceptions),
-        (guideline_name_length, !this_pr_can_use_special_jll_exceptions),
+        # `guideline_name_format` subsumes the checks that the name is normally
+        # capitalized, is long enough, and is ASCII-only. JLL package names are
+        # exempt from it (they contain an underscore, and some of them start
+        # with a lower-case letter), so for those the ASCII check below is what
+        # constrains the name.
+        (guideline_name_format, !this_pr_can_use_special_jll_exceptions),
         (guideline_julia_name_check, true),
         (guideline_repo_url_requirement, true),
         (guideline_version_number_no_prerelease, true),
@@ -1346,7 +1368,7 @@ function get_automerge_guidelines(
         (guideline_compat_for_julia, true),
         (guideline_compat_for_all_deps, true),
         (guideline_allowed_jll_nonrecursive_dependencies, this_is_jll_package),
-        (guideline_name_ascii, true),
+        (guideline_name_ascii, this_pr_can_use_special_jll_exceptions),
         (:update_status, true),
         (guideline_version_can_be_pkg_added, true),
         (guideline_code_can_be_downloaded, true),
