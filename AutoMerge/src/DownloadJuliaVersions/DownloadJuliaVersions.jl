@@ -167,8 +167,9 @@ function _ensure_versions_json(; explicitly_requested = false, throw_on_error = 
         dest = _cachepath_versions_json()
         tmpfile = try
             # https://github.com/JuliaLang/VersionsJSONUtil.jl
-            # TODO: Wrap this in a bounded retry loop
-            Downloads.download("https://julialang-s3.julialang.org/bin/versions.json")
+            f = () -> Downloads.download("https://julialang-s3.julialang.org/bin/versions.json")
+            delays = [5, 10, 30]
+            Base.retry(f; delays)
         catch ex
             if throw_on_error || !(ex isa Downloads.RequestError)
                 error("Encountered an error while trying to update `versions.json`")
