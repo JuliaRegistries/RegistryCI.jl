@@ -83,6 +83,7 @@ jobs:
           project: AutoMerge
         env:
           AUTOMERGE_RUN_INTEGRATION_TESTS: "false"
+          JULIA_DEBUG: DownloadJuliaVersions
       - uses: julia-actions/julia-processcoverage@v1
         with:
           directories: AutoMerge/src
