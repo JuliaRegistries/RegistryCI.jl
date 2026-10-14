@@ -165,9 +165,8 @@ function _ensure_versions_json(; explicitly_requested = false, throw_on_error = 
         dest = _cachepath_versions_json()
         tmpfile = try
             # https://github.com/JuliaLang/VersionsJSONUtil.jl
-            # TODO: Switch to the official upstream URL:
-            # https://julialang-s3.julialang.org/bin/versions.json
-            Downloads.download("https://raw.githubusercontent.com/DilumAluthge/test-versions-json/refs/heads/main/versions.json")
+            # TODO: Wrap this in a bounded retry loop
+            Downloads.download("https://julialang-s3.julialang.org/bin/versions.json")
         catch ex
             if throw_on_error || !(ex isa Downloads.RequestError)
                 error("Encountered an error while trying to update `versions.json`")
