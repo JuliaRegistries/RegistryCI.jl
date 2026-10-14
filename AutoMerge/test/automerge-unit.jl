@@ -249,40 +249,53 @@ end
     end
 end
 
-@testset "juliaup" begin
-    # Note: Available versions are platform dependent and on less well
+@testset "Julia versions (via `Versions.json`)" begin
+    # Note: Available versions are platform-dependent, and on less well
     # supported platforms or future platforms these tests might
     # fail. We'll have to revise them if it becomes a problem in
     # practice.
-    compat = [Pkg.Types.VersionRange("1.0-1.8")]
+
+    # 1.7.1 is the earliest Julia version that has a working native build for Apple Silicon
+    # So we picked 1.7.1 as the lower bound for this test, so that the tests can pass
+    # locally on Apple Silicon.
+    compat = [Pkg.Types.VersionRange("1.7.1-1.11")]
     binaries = AutoMerge.get_compatible_julia_binaries(compat, v"1.1")
     @test length(binaries) == 2
     binary1, text1 = binaries[1]
     binary2, text2 = binaries[2]
-    @test readchomp(`$binary1 -e 'print(VERSION)'`) == "1.1.1"
-    @test text1 == "julia 1.1.1 (lowest compatible version)"
-    @test readchomp(`$binary2 -e 'print(VERSION)'`) == "1.8.5"
-    @test text2 == "julia 1.8.5 (highest compatible version)"
+    @test text1 == "Julia 1.7.1 (lowest compatible version)"
+    @test text2 == "Julia 1.11.9 (highest compatible version)"
+    @test success(`$binary1 --version`)
+    @test success(`$binary2 --version`)
+    @test readchomp(`$binary1 -e 'print(VERSION)'`) == "1.7.1"
+    @test readchomp(`$binary2 -e 'print(VERSION)'`) == "1.11.9"
 
     # Verify that a prerelease version can be returned. This is only
     # possible when prereleases are available but the corresponding
     # release has not yet been made. In order to make this stable over
-    # time we tamper with the internal cache of available versions to
-    # simulate the situation when all 1.11 prereleases hade been made
+    # time we tamper with the internal cache of supported tarballs to
+    # simulate the situation when all 1.11 prereleases had been made
     # but 1.11.0 had not yet been released.
-    filter!(<(v"1.11"), AutoMerge.available_julia_versions)
-
     try
+        AutoMerge.DownloadJuliaVersions.update_versions_json()
+        lock(AutoMerge.DownloadJuliaVersions.GLOBAL_LOCK[]) do
+            filter!(pair -> pair[1] < v"1.11", AutoMerge.DownloadJuliaVersions.SUPPORTED_TARBALL_DICT[])
+        end
         compat = [Pkg.Types.VersionRange("1.11.0-1")]
         binaries = AutoMerge.get_compatible_julia_binaries(compat, v"1.1")
         @test length(binaries) == 1
         binary, text = only(binaries)
+        @test text == "Julia 1.11.0-rc4 (only compatible version)"
+        @test success(`$binary --version`)
         @test readchomp(`$binary -e 'print(VERSION)'`) == "1.11.0-rc4"
-        @test text == "julia 1.11.0-rc4 (only compatible version)"
     finally
-        # Untamper the cache of available versions (will be reloaded
-        # when it is empty).
-        empty!(AutoMerge.available_julia_versions)
+        # Untamper the cache of supported tarballs.
+        # And, importantly, also set "did download" to false - this will force a
+        # re-download and re-parse the next time the data are needed.
+        lock(AutoMerge.DownloadJuliaVersions.GLOBAL_LOCK[]) do
+            AutoMerge.DownloadJuliaVersions.DID_DOWNLOAD_VERSIONS_JSON_THIS_SESSION[] = false
+            empty!(AutoMerge.DownloadJuliaVersions.SUPPORTED_TARBALL_DICT[])
+        end
     end
 end
 
