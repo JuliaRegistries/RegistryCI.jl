@@ -145,9 +145,10 @@ end
 function _ensure_artifact_exists_locally(; tree_hash::Base.SHA1, tarball_url::AbstractString, tarball_hash::AbstractString)
     if !Pkg.Artifacts.artifact_exists(tree_hash)
         @info("Artifact did not exist locally, downloading from: $tarball_url")
-        # download_artifact ---> download_verify_unpack ---> download_verify
-        # download_verify has 3 tries
-        return_value = Pkg.Artifacts.download_artifact(tree_hash, tarball_url, tarball_hash; verbose=true)
+        f = () -> Pkg.Artifacts.download_artifact(tree_hash, tarball_url, tarball_hash; verbose=true)
+        delays = [5, 10, 30, 30, 30]
+        retry_function = Base.retry(f; delays)
+        return_value = retry_function()
         if return_value !== true
             (return_value isa Bool) || throw(return_value)
             error("Download was not a success")
@@ -168,8 +169,9 @@ function _ensure_versions_json(; explicitly_requested = false, throw_on_error = 
         tmpfile = try
             # https://github.com/JuliaLang/VersionsJSONUtil.jl
             f = () -> Downloads.download("https://julialang-s3.julialang.org/bin/versions.json")
-            delays = [5, 10, 30]
-            Base.retry(f; delays)
+            delays = [5, 10, 30, 30, 30]
+            retry_function = Base.retry(f; delays)
+            retry_function()
         catch ex
             if throw_on_error || !(ex isa Downloads.RequestError)
                 error("Encountered an error while trying to update `versions.json`")
