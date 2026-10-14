@@ -145,6 +145,8 @@ end
 function _ensure_artifact_exists_locally(; tree_hash::Base.SHA1, tarball_url::AbstractString, tarball_hash::AbstractString)
     if !Pkg.Artifacts.artifact_exists(tree_hash)
         @info("Artifact did not exist locally, downloading from: $tarball_url")
+        # download_artifact ---> download_verify_unpack ---> download_verify
+        # download_verify has 3 tries
         return_value = Pkg.Artifacts.download_artifact(tree_hash, tarball_url, tarball_hash; verbose=true)
         if return_value !== true
             (return_value isa Bool) || throw(return_value)
