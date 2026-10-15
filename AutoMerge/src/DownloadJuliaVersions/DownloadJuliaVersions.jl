@@ -34,7 +34,7 @@ import Tar
 #
 # DownloadJuliaVersions.update_versions_json()
 
-# These three are defined in __init__()
+# These three are initialized in __init__()
 const GLOBAL_LOCK = Ref{ReentrantLock}()
 const DID_DOWNLOAD_VERSIONS_JSON_THIS_SESSION = Ref{Bool}()
 const DOWNLOAD_CACHE = Ref{String}()
