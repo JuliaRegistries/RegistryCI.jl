@@ -48,8 +48,9 @@ jobs:
           version: '1'
           arch: x64
 
-      - uses: julia-actions/cache@v3
-        if: ${{ github.event_name != 'pull_request' }}
+      # We intentionally don't cache
+      # That way, we can test the codepath of downloading Julia release tarballs as artifacts
+      # - uses: julia-actions/cache@v3
 
       - uses: julia-actions/julia-buildpkg@v1
         if: ${{ github.event_name != 'pull_request' }}
