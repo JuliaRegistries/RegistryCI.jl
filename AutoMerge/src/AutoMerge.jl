@@ -25,7 +25,7 @@ if VERSION >= v"1.11"
     """))
 end
 
-include("DownloadJuliaVersions/DownloadJuliaVersions.jl")
+include("DownloadJuliaVersions.jl")
 using .DownloadJuliaVersions: julia_binary_cmd
 
 include("TagBot/TagBot.jl")
