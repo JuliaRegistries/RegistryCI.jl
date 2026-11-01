@@ -268,17 +268,17 @@ end
     # possible when prereleases are available but the corresponding
     # release has not yet been made. In order to make this stable over
     # time we tamper with the internal cache of available versions to
-    # simulate the situation when all 1.11 prereleases hade been made
-    # but 1.11.0 had not yet been released.
-    filter!(<(v"1.11"), AutoMerge.available_julia_versions)
+    # simulate the situation when all 1.12 prereleases hade been made
+    # but 1.12.0 had not yet been released.
+    filter!(<(v"1.12"), AutoMerge.available_julia_versions)
 
     try
-        compat = [Pkg.Types.VersionRange("1.11.0-1")]
+        compat = [Pkg.Types.VersionRange("1.12.0-1")]
         binaries = AutoMerge.get_compatible_julia_binaries(compat, v"1.1")
         @test length(binaries) == 1
         binary, text = only(binaries)
-        @test readchomp(`$binary -e 'print(VERSION)'`) == "1.11.0-rc4"
-        @test text == "julia 1.11.0-rc4 (only compatible version)"
+        @test readchomp(`$binary -e 'print(VERSION)'`) == "1.12.0-rc3"
+        @test text == "julia 1.12.0-rc3 (only compatible version)"
     finally
         # Untamper the cache of available versions (will be reloaded
         # when it is empty).
@@ -294,12 +294,12 @@ end
     @testset "Normal capitalization" begin
         @test AutoMerge.meets_normal_capitalization("Zygote")[1]  # Regular name
         @test AutoMerge.meets_normal_capitalization("Zygote")[1]
-        @test !AutoMerge.meets_normal_capitalization("HTTP")[1]  # All upper-case
-        @test !AutoMerge.meets_normal_capitalization("HTTP")[1]
+        @test AutoMerge.meets_normal_capitalization("HTTP")[1]  # All upper-case (now allowed)
+        @test AutoMerge.meets_normal_capitalization("HTTP")[1]
         @test AutoMerge.meets_normal_capitalization("ForwardDiff2")[1]  # Ends with a number
         @test AutoMerge.meets_normal_capitalization("ForwardDiff2")[1]
-        @test !AutoMerge.meets_normal_capitalization("JSON2")[1]  # All upper-case and ends with number
-        @test !AutoMerge.meets_normal_capitalization("JSON2")[1]
+        @test AutoMerge.meets_normal_capitalization("JSON2")[1]  # All upper-case and ends with number (now allowed)
+        @test AutoMerge.meets_normal_capitalization("JSON2")[1]
         @test AutoMerge.meets_normal_capitalization("RegistryCI")[1]  # Ends with upper-case
         @test AutoMerge.meets_normal_capitalization("RegistryCI")[1]
     end
@@ -379,6 +379,16 @@ end
         @test unblocked_params.state == "success"
         @test unblocked_params.context == "automerge/comments"
         @test occursin("No blocking", unblocked_params.description)
+    end
+    @testset "comment_block_status_needs_update" begin
+        # No existing status: only write one if blocked
+        @test AutoMerge.comment_block_status_needs_update(nothing, true)
+        @test !AutoMerge.comment_block_status_needs_update(nothing, false)
+        # Existing status: only write if the state changes
+        @test !AutoMerge.comment_block_status_needs_update("failure", true)
+        @test AutoMerge.comment_block_status_needs_update("failure", false)
+        @test AutoMerge.comment_block_status_needs_update("success", true)
+        @test !AutoMerge.comment_block_status_needs_update("success", false)
     end
     @testset "`get_all_non_jll_package_names`" begin
         registry_path = joinpath(DEPOT_PATH[1], "registries", "General")
@@ -679,6 +689,17 @@ end
         let vers = [v"2", v"1"]
             @test AutoMerge.meets_sequential_version_number(vers, v"3")[1]
             @test vers == [v"2", v"1"] # no mutation
+        end
+        @testset "Build metadata ignored" begin
+            # `Base.VersionNumber` ordering (unlike strict semver) is affected by build
+            # metadata (e.g. `v"1.2.3" < v"1.2.3+demo"`). A version bump that only adds
+            # build data must not be treated as skipping over the plain next version.
+            @test AutoMerge.meets_sequential_version_number([v"1.2.3+demo"], v"1.2.4+demo")[1]
+            @test AutoMerge.meets_sequential_version_number([v"1.0.0+a"], v"1.0.1+b")[1]
+            @test AutoMerge.meets_sequential_version_number([v"1.0.0+a"], v"1.1.0+b")[1]
+            @test AutoMerge.meets_sequential_version_number([v"1.0.0+a"], v"2.0.0+b")[1]
+            @test !AutoMerge.meets_sequential_version_number([v"1.0.0+a"], v"1.2.0+b")[1]
+            @test !AutoMerge.meets_sequential_version_number([v"1.0.0+a"], v"3.0.0+b")[1]
         end
     end
     @testset "Patch releases cannot narrow Julia compat" begin

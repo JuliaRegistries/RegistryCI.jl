@@ -694,9 +694,8 @@ end
 const guideline_normal_capitalization = Guideline(;
     info="Normal capitalization",
     docs=string(
-        "The package name should start with an upper-case letter, ",
-        "contain only ASCII alphanumeric characters, ",
-        "and contain at least one lowercase letter.",
+        "The package name should start with an upper-case letter ",
+        "and contain only ASCII alphanumeric characters.",
     ),
     check=data -> meets_normal_capitalization(data.pkg),
 )
@@ -705,7 +704,7 @@ function meets_normal_capitalization(pkg)
     # We intentionally do not use `\w` in this regex.
     # `\w` includes underscores, but we don't want to include underscores.
     # So, instead of `\w`, we use `[A-Za-z0-9]`.
-    meets_this_guideline = occursin(r"^[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*[0-9]?$", pkg)
+    meets_this_guideline = occursin(r"^[A-Z][A-Za-z0-9]*?$", pkg)
     if meets_this_guideline
         return true, ""
     else
@@ -813,7 +812,17 @@ function meets_sequential_version_number(
     else
         nextpatch(prv)
     end
-    ver <= nxt || return _invalid_sequential_version("version $ver skips over $nxt")
+
+    # Strip build metadata from `ver` as those fields should be ignored during this
+    # comparison. Without this versions which include build metadata will appear to
+    # skip over `nxt`.
+    #
+    # Note: We have a separate guideline for "non-JLL packages should not have
+    # build metadata". That's a separate guideline from this one. So it's okay for
+    # this guideline to strip metadata when doing the version comparison.
+    clean_ver = VersionNumber(ver.major, ver.minor, ver.patch, ver.prerelease)
+
+    clean_ver <= nxt || return _invalid_sequential_version("version $ver skips over $nxt")
     return _valid_change(prv, ver)
 end
 
@@ -1312,6 +1321,7 @@ function get_automerge_guidelines(
     check_license::Bool,
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
+    allow_build_metadata::Bool=false,
     use_distance_check::Bool,
     package_author_approved::Bool, # currently unused for new packages
     check_breaking_explanation::Bool # not valid for new packages
@@ -1329,7 +1339,10 @@ function get_automerge_guidelines(
         (guideline_julia_name_check, true),
         (guideline_repo_url_requirement, true),
         (guideline_version_number_no_prerelease, true),
-        (guideline_version_number_no_build, !this_pr_can_use_special_jll_exceptions),
+        (
+            guideline_version_number_no_build,
+            !this_pr_can_use_special_jll_exceptions && !allow_build_metadata,
+        ),
         (guideline_compat_for_julia, true),
         (guideline_compat_for_all_deps, true),
         (guideline_allowed_jll_nonrecursive_dependencies, this_is_jll_package),
@@ -1368,6 +1381,7 @@ function get_automerge_guidelines(
     check_breaking_explanation::Bool,
     this_is_jll_package::Bool,
     this_pr_can_use_special_jll_exceptions::Bool,
+    allow_build_metadata::Bool=false,
     use_distance_check::Bool, # unused for new versions
     package_author_approved::Bool,
 )
@@ -1376,7 +1390,10 @@ function get_automerge_guidelines(
         (guideline_pr_only_changes_allowed_files, true),
         (guideline_sequential_version_number, !this_pr_can_use_special_jll_exceptions && !package_author_approved),
         (guideline_version_number_no_prerelease, true),
-        (guideline_version_number_no_build, !this_pr_can_use_special_jll_exceptions),
+        (
+            guideline_version_number_no_build,
+            !this_pr_can_use_special_jll_exceptions && !allow_build_metadata,
+        ),
         (guideline_compat_for_julia, true),
         (guideline_compat_for_all_deps, true),
         (

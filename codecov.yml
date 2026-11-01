@@ -10,3 +10,5 @@ coverage:
         # target: "85%"
         # target: "90%"
         # target: "95%"
+
+comment: false
