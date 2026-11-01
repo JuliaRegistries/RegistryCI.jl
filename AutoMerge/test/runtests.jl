@@ -16,6 +16,26 @@ using UUIDs
 # disable the Pkg server.
 ENV["JULIA_PKG_SERVER"] = ""
 
+function ensure_unpacked_general_registry()
+    registry_dir = joinpath(DEPOT_PATH[1], "registries", "General")
+    registry_toml = joinpath(registry_dir, "Registry.toml")
+    isfile(registry_toml) && return
+
+    packed_registry = joinpath(DEPOT_PATH[1], "registries", "General.toml")
+    if isfile(packed_registry)
+        try
+            Pkg.Registry.rm("General")
+        catch err
+            @info "Ignoring failure while removing packed General registry during test setup" err
+        end
+    end
+
+    Pkg.Registry.add("General")
+    isfile(registry_toml) || error("AutoMerge tests require an unpacked General registry at $registry_dir.")
+end
+
+ensure_unpacked_general_registry()
+
 @static if v"1.6-" <= Base.VERSION < v"1.11-"
     # BrokenRecord fails to precompile on Julia 1.11
     let
