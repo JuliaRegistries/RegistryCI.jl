@@ -219,6 +219,9 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                 # Compat.toml testing
                 compatfile = abspath(data["path"], "Compat.toml")
                 if isfile(compatfile)
+                    # If Compat.toml exists, Deps.toml must exist.
+                    Test.@test isfile(depsfile)
+
                     compat = Pkg.TOML.parsefile(compatfile)
 
                     # Test that all names with compat is a dependency
@@ -263,6 +266,22 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                     @test _spacify_hyphens(mapvalues(f_outer, compressed)) == _spacify_hyphens(mapvalues(f_outer, compat))
                 else
                     @debug "Compat.toml file does not exist" compatfile
+                end
+
+                # https://github.com/JuliaRegistries/RegistryCI.jl/issues/522
+                # For every version, each compat entry has a corresponding deps entry.
+                if isfile(compatfile)
+                    compat_uncompressed = RegistryTools.Compress.load(compatfile)
+                    deps_uncompressed = isfile(depsfile) ? RegistryTools.Compress.load(depsfile) : Dict()
+                    for v in keys(vers)
+                        compat_for_this_v = get(compat_uncompressed, v, Dict())
+                        deps_for_this_v = get(deps_uncompressed, v, Dict())
+                        Test.@test compat_for_this_v isa AbstractDict
+                        Test.@test deps_for_this_v isa AbstractDict
+                        for compat_pkgname in keys(compat_for_this_v)
+                            @test haskey(deps_for_this_v, compat_pkgname)
+                        end
+                    end
                 end
             end
             # For an empty registry the `maximum` call errors unless
