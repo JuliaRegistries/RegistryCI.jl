@@ -135,6 +135,49 @@ function load_compat(compatfile, versions)
     return r
 end
 
+function check_compat_entries_have_matching_deps(
+    vnums::Vector{VersionNumber},
+    deps_by_version::Dict{VersionNumber,Dict{String,Base.UUID}},
+    compat_by_version::Dict{VersionNumber,Dict{String,Pkg.Types.VersionSpec}},
+)
+    for version in vnums
+        compat_names = Set(keys(get(compat_by_version, version, Dict{String,Pkg.Types.VersionSpec}())))
+        dep_names = Set(keys(get(deps_by_version, version, Dict{String,Base.UUID}())))
+        push!(dep_names, "julia") # All packages have an implicit dependency on julia
+        if !(compat_names ⊆ dep_names)
+            invalid_names = sort!(collect(setdiff(compat_names, dep_names)))
+            throw(
+                ErrorException(
+                    "Compat entries must match active dependencies for version $(version). " *
+                    "Invalid compat entries: $(join(invalid_names, ", "))."
+                ),
+            )
+        end
+    end
+    return nothing
+end
+
+function load_package_data_if_present(::Type{T}, path::String, versions::Vector{VersionNumber}) where {T}
+    if isfile(path)
+        return load_package_data(T, path, versions)
+    end
+    return Dict{VersionNumber,Dict{String,T}}()
+end
+
+function merge_dep_data(
+    deps_by_version::Dict{VersionNumber,Dict{String,Base.UUID}},
+    weakdeps_by_version::Dict{VersionNumber,Dict{String,Base.UUID}},
+)
+    merged = copy(deps_by_version)
+    for (version, weakdeps) in weakdeps_by_version
+        version_deps = get!(() -> Dict{String,Base.UUID}(), merged, version)
+        merge!(version_deps, weakdeps)
+    end
+    return merged
+end
+
+is_jll_package(name::AbstractString) = endswith(name, "_jll")
+
 """
     test(path)
 
@@ -147,7 +190,10 @@ If your registry has packages that have dependencies that are registered in othe
 registries elsewhere, then you may provide the github urls for those registries
 using the `registry_deps` parameter.
 """
-function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
+function test(
+    path=pwd();
+    registry_deps::Vector{<:AbstractString}=String[],
+)
     @testset "(Registry|Package|Versions|Deps|Compat).toml" begin
         cd(path) do
             reg = Pkg.TOML.parsefile("Registry.toml")
@@ -221,23 +267,6 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                 if isfile(compatfile)
                     compat = Pkg.TOML.parsefile(compatfile)
 
-                    # Test that all names with compat is a dependency
-                    compatnames = Set{String}(x for (_, d) in compat for (x, _) in d)
-                    if !(
-                        isempty(compatnames) ||
-                        (length(compatnames) == 1 && "julia" in compatnames)
-                    )
-                        depnames = Set{String}(
-                            x for (_, d) in Pkg.TOML.parsefile(depsfile) for (x, _) in d
-                        )
-                        push!(depnames, "julia") # All packages has an implicit dependency on julia
-                        if !(compatnames ⊆ depnames)
-                            throw(
-                                ErrorException("Assertion failed: compatnames ⊆ depnames")
-                            )
-                        end
-                    end
-
                     # Make sure that each compat spec is a valid registry compat spec.
                     # https://github.com/JuliaRegistries/General/issues/104849
                     for (versionrange, compatinfo) in pairs(compat)
@@ -251,6 +280,22 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
 
                     # Test that the way Pkg loads this data works
                     @test load_compat(compatfile, vnums)
+                    if !is_jll_package(pkg["name"])
+                        deps_by_version = load_package_data_if_present(
+                            Base.UUID, depsfile, vnums
+                        )
+                        weakdeps_by_version = load_package_data_if_present(
+                            Base.UUID, abspath(data["path"], "WeakDeps.toml"), vnums
+                        )
+                        compat_by_version = load_package_data(
+                            Pkg.Types.VersionSpec, compatfile, vnums
+                        )
+                        check_compat_entries_have_matching_deps(
+                            vnums,
+                            merge_dep_data(deps_by_version, weakdeps_by_version),
+                            compat_by_version,
+                        )
+                    end
                     # Make sure the content roundtrips through decompression/compression.
                     # However, before we check for equality, we change the compat ranges
                     # from `String`s to `VersionRanges`.
