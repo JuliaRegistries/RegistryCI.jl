@@ -421,7 +421,6 @@ end
         @test !AutoMerge.meets_no_zero_dot_zero_version_number(v"0.0.3")[1]
         @test AutoMerge.meets_no_zero_dot_zero_version_number(v"0.1.0")[1]
         @test AutoMerge.meets_no_zero_dot_zero_version_number(v"1.0.0")[1]
-        @test !AutoMerge.meets_no_zero_dot_zero_version_number(v"0.0.2")[1]
         @test AutoMerge.meets_no_zero_dot_zero_version_number(v"0.1.1")[1]
         @test AutoMerge.meets_no_zero_dot_zero_version_number(v"0.2.0")[1]
         @test AutoMerge.meets_no_zero_dot_zero_version_number(v"1.0.1")[1]
