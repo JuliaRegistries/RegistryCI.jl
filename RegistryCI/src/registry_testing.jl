@@ -16,7 +16,7 @@ end
 
 is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str))
 
-@static if Base.VERSION >= "1.2" # hasproperty() requires Julia 1.2+
+@static if Base.VERSION >= v"1.2" # hasproperty() requires Julia 1.2+
     hasproperty(x, s::Symbol) = s in propertynames(x)
 else
     const hasproperty = Base.hasproperty
