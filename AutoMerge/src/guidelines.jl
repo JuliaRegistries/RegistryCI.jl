@@ -123,24 +123,36 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
     package_relpath = get_package_relpath_in_registry(;
         package_name=pkg, registry_path=working_directory
     )
-    compat = parse_registry_toml(working_directory, package_relpath, "Compat.toml"; allow_missing = true)
-    deps = parse_registry_toml(working_directory, package_relpath, "Deps.toml"; allow_missing = true)
+    compat = parse_registry_toml(
+        working_directory, package_relpath, "Compat.toml"; allow_missing=true
+    )
+    deps = parse_registry_toml(
+        working_directory, package_relpath, "Deps.toml"; allow_missing=true
+    )
+    weakcompat = parse_registry_toml(
+        working_directory, package_relpath, "WeakCompat.toml"; allow_missing=true
+    )
+    weakdeps = parse_registry_toml(
+        working_directory, package_relpath, "WeakDeps.toml"; allow_missing=true
+    )
     # First, we construct a Dict in which the keys are the package's
     # dependencies, and the value is always false.
     dep_has_compat_with_upper_bound = Dict{String,Bool}()
-    for version_range in keys(deps)
-        if version in Pkg.Types.VersionRange(version_range)
-            for name in keys(deps[version_range])
-                if _AUTOMERGE_REQUIRE_STDLIB_COMPAT
-                    debug_msg = "Found a new (non-JLL) dependency: $(name)"
-                    apply_compat_requirement = !is_jll_name(name)
-                else
-                    debug_msg = "Found a new (non-stdlib non-JLL) dependency: $(name)"
-                    apply_compat_requirement = !is_jll_name(name) && !is_julia_stdlib(name)
-                end
-                if apply_compat_requirement
-                    @debug debug_msg
-                    dep_has_compat_with_upper_bound[name] = false
+    for dep_dict in (deps, weakdeps)
+        for version_range in keys(dep_dict)
+            if version in Pkg.Types.VersionRange(version_range)
+                for name in keys(dep_dict[version_range])
+                    if _AUTOMERGE_REQUIRE_STDLIB_COMPAT
+                        debug_msg = "Found a new (non-JLL) dependency: $(name)"
+                        apply_compat_requirement = !is_jll_name(name)
+                    else
+                        debug_msg = "Found a new (non-stdlib non-JLL) dependency: $(name)"
+                        apply_compat_requirement = !is_jll_name(name) && !is_julia_stdlib(name)
+                    end
+                    if apply_compat_requirement
+                        @debug debug_msg
+                        dep_has_compat_with_upper_bound[name] = false
+                    end
                 end
             end
         end
@@ -148,27 +160,29 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
     # Now, we go through all the compat entries. If a dependency has a compat
     # entry with an upper bound, we change the corresponding value in the Dict
     # to true.
-    for version_range in keys(compat)
-        if version in Pkg.Types.VersionRange(version_range)
-            for (name, value) in compat[version_range]
-                if value isa Vector
-                    if !isempty(value)
-                        value_ranges = Pkg.Types.VersionRange.(value)
-                        each_range_has_upper_bound = _has_upper_bound.(value_ranges)
-                        if all(each_range_has_upper_bound)
+    for compat_dict in (compat, weakcompat)
+        for version_range in keys(compat_dict)
+            if version in Pkg.Types.VersionRange(version_range)
+                for (name, value) in compat_dict[version_range]
+                    if value isa Vector
+                        if !isempty(value)
+                            value_ranges = Pkg.Types.VersionRange.(value)
+                            each_range_has_upper_bound = _has_upper_bound.(value_ranges)
+                            if all(each_range_has_upper_bound)
+                                @debug(
+                                    "Dependency \"$(name)\" has compat entries that all have upper bounds"
+                                )
+                                dep_has_compat_with_upper_bound[name] = true
+                            end
+                        end
+                    else
+                        value_range = Pkg.Types.VersionRange(value)
+                        if _has_upper_bound(value_range)
                             @debug(
-                                "Dependency \"$(name)\" has compat entries that all have upper bounds"
+                                "Dependency \"$(name)\" has a compat entry with an upper bound"
                             )
                             dep_has_compat_with_upper_bound[name] = true
                         end
-                    end
-                else
-                    value_range = Pkg.Types.VersionRange(value)
-                    if _has_upper_bound(value_range)
-                        @debug(
-                            "Dependency \"$(name)\" has a compat entry with an upper bound"
-                        )
-                        dep_has_compat_with_upper_bound[name] = true
                     end
                 end
             end
