@@ -296,7 +296,9 @@ function _normalize_deps_roundtrip(dict::AbstractDict, versions::AbstractVector{
         )
         for version in versions
             version in vrange || continue
-            normalized[version] = typed_entries
+            # A version can be covered by more than one section, so merge the entries
+            # from every section that covers it instead of keeping only the last one.
+            merge!(get!(Dict{String, Base.UUID}, normalized, version), typed_entries)
         end
     end
     return normalized
@@ -311,7 +313,9 @@ function _normalize_compat_roundtrip(dict::AbstractDict, versions::AbstractVecto
         )
         for version in versions
             version in vrange || continue
-            normalized[version] = typed_entries
+            # A version can be covered by more than one section, so merge the entries
+            # from every section that covers it instead of keeping only the last one.
+            merge!(get!(Dict{String, Pkg.Types.VersionSpec}, normalized, version), typed_entries)
         end
     end
     return normalized
