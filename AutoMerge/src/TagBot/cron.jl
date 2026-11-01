@@ -5,8 +5,22 @@ function handle_cron(event)
     repos_versions = map(pull -> repo_and_version_of_pull_request_body(pull.body), pulls)
     filter!(rv -> first(rv) !== nothing, repos_versions)
     unique!(first, repos_versions)  # Send at most one notification per repo.
+    at_least_one_exception_was_thrown = false
     for (repo, version) in repos_versions
-        maybe_notify(event, repo, version; cron=true)
+        try
+            maybe_notify(event, repo, version; cron=true)
+        catch ex
+            at_least_one_exception_was_thrown = true
+            @error "Error while processing TagBot cron notification" repo version exception =
+                (ex, catch_backtrace())
+        end
+    end
+    if at_least_one_exception_was_thrown
+        throw(
+            ErrorException(
+                "At least one exception was thrown while processing TagBot cron notifications. Check the logs for details.",
+            ),
+        )
     end
 end
 
