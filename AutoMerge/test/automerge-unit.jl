@@ -270,10 +270,6 @@ end
     # time we tamper with the internal cache of available versions to
     # simulate the situation when all 1.12 prereleases hade been made
     # but 1.12.0 had not yet been released.
-    #
-    # Note: 1.11 prereleases must not be used here, since their bundled
-    # libopenlibm requires an executable stack, which glibc >= 2.41
-    # refuses to load ("cannot enable executable stack").
     filter!(<(v"1.12"), AutoMerge.available_julia_versions)
 
     try
