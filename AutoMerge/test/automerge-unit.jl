@@ -268,17 +268,17 @@ end
     # possible when prereleases are available but the corresponding
     # release has not yet been made. In order to make this stable over
     # time we tamper with the internal cache of available versions to
-    # simulate the situation when all 1.11 prereleases hade been made
-    # but 1.11.0 had not yet been released.
-    filter!(<(v"1.11"), AutoMerge.available_julia_versions)
+    # simulate the situation when all 1.12 prereleases hade been made
+    # but 1.12.0 had not yet been released.
+    filter!(<(v"1.12"), AutoMerge.available_julia_versions)
 
     try
-        compat = [Pkg.Types.VersionRange("1.11.0-1")]
+        compat = [Pkg.Types.VersionRange("1.12.0-1")]
         binaries = AutoMerge.get_compatible_julia_binaries(compat, v"1.1")
         @test length(binaries) == 1
         binary, text = only(binaries)
-        @test readchomp(`$binary -e 'print(VERSION)'`) == "1.11.0-rc4"
-        @test text == "julia 1.11.0-rc4 (only compatible version)"
+        @test readchomp(`$binary -e 'print(VERSION)'`) == "1.12.0-rc3"
+        @test text == "julia 1.12.0-rc3 (only compatible version)"
     finally
         # Untamper the cache of available versions (will be reloaded
         # when it is empty).
