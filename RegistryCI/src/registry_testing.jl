@@ -282,7 +282,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                         end
                         compat_uncompressed = RegistryTools.Compress.load(compatfile)
                         deps_uncompressed = isfile(depsfile) ? RegistryTools.Compress.load(depsfile) : Dict()
-                        for v in keys(vers)
+                        for v in vnums
                             compat_for_this_v = get(compat_uncompressed, v, Dict())
                             deps_for_this_v = get(deps_uncompressed, v, Dict())
                             Test.@test compat_for_this_v isa AbstractDict
