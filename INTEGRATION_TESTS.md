@@ -1,5 +1,21 @@
 # Integration tests for RegistryCI.jl
 
+## Why the integration tests use a global lock
+
+The AutoMerge integration tests perform real GitHub operations such as creating pull requests and comments. Those "create content" operations are subject to GitHub rate limits and abuse-prevention throttling.
+
+As documented in [issue #589](https://github.com/JuliaRegistries/RegistryCI.jl/issues/589), running multiple integration-test jobs at the same time makes those throttles much more likely. The current workflow therefore serializes the real integration-test runs with a shared concurrency group so only one job uses the test registry at a time.
+
+PR [#654](https://github.com/JuliaRegistries/RegistryCI.jl/pull/654) tried removing that concurrency group after a `GitHub.jl` upgrade improved retry handling. In practice, that still led to rate limits being hit so quickly that GitHub asked the jobs to wait 20 to 30 minutes. The conclusion from [the latest comment on issue #589](https://github.com/JuliaRegistries/RegistryCI.jl/issues/589#issuecomment-4094808230) is that we still need to keep the global lock.
+
+The current CI policy in `.github/workflows/ci_integration.yml` is:
+
+1. `pull_request` runs are placeholders only, so the required check can be green without running the real integration tests on every PR build.
+2. The real integration tests run only on `merge_group`, `push` to `master`, and `workflow_dispatch`.
+3. Those real runs share the `integration-tests-global-lock` concurrency group.
+
+If an integration-test job appears to be stuck, it may simply be waiting for the shared lock instead of failing.
+
 ## How to run the integration tests on your local machine
 
 You may find it helpful to set up your own test repo and run the integration tests on your local machine. Here are the steps:
