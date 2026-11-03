@@ -8,8 +8,6 @@ using SHA: sha1
 using GitHub: GitHub
 using JSON: JSON
 
-import ..AutoMerge
-
 VERSION >= v"1.11" && eval(Meta.parse("public main"))
 
 const GH = GitHub
@@ -121,10 +119,15 @@ function notify(repo, issue, body)
     return GH.create_comment(repo, issue, :issue; auth=AUTH[], params=(; body=body))
 end
 
-function tag_exists(repo, version; subdir="")
-    tag_name = isempty(subdir) ? version : "$subdir-$version"
+function tag_exists(repo, version, pkg_name=nothing)
+    # TagBot tags subdirectory packages as `<package name>-vX.Y.Z`.
+    names = pkg_name === nothing ? [version] : [version, "$pkg_name-$version"]
+    return any(name -> tag_name_exists(repo, name), names)
+end
+
+function tag_name_exists(repo, name)
     return try
-        GH.tag(repo, tag_name; auth=AUTH[])
+        GH.tag(repo, name; auth=AUTH[])
         true
     catch e
         if !occursin("404", e.msg)
@@ -140,19 +143,8 @@ function maybe_notify(event, repo, version, pkg_name=nothing; cron=false)
         @info "TagBot is not enabled on $repo"
         return nothing
     end
-    # Subdir packages are tagged `<subdir>-vX.Y.Z`; look up the package's
-    # `subdir` from the registry checked out at the working directory and
-    # fall back to the bare-version tag check on any failure.
-    subdir = ""
-    if pkg_name !== nothing
-        try
-            subdir = AutoMerge.parse_registry_pkg_info(pwd(), pkg_name).subdir
-        catch e
-            @warn "Failed to look up subdir for $pkg_name in $(pwd())" ex = (e, catch_backtrace())
-        end
-    end
-    if cron && tag_exists(repo, version; subdir=subdir)
-        @info "Tag $version already exists for $repo"
+    if cron && tag_exists(repo, version, pkg_name)
+        @info "Tag for version $version already exists for $repo"
         return nothing
     end
     issue = get_repo_notification_issue(repo)
