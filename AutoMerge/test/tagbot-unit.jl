@@ -62,6 +62,22 @@ end
         @test occursin("SciML/.github/.github/workflows/tagbot.yml", contents)
         @test TB.tagbot_file("SciML/CurveFit.jl"; issue_comments=true) === nothing
     end
+
+    workflow_path = ".github/workflows/Julia TagBot.yml"
+    encoded_path = ".github/workflows/Julia%20TagBot.yml"
+    workflow_file = GH.Content(Dict("typ" => "file", "path" => workflow_path))
+    body = "uses: JuliaRegistries/TagBot@v1\n"
+    fetched_file = GH.Content(Dict("content" => base64encode(body), "encoding" => "base64"))
+    mock(
+        GH.directory => Mock(([workflow_file], Dict())),
+        GH.file => Mock(fetched_file),
+    ) do directory, file
+        path, contents = TB.tagbot_file("repo")
+        @test called_with(directory, "repo", ".github/workflows")
+        @test called_with(file, "repo", encoded_path)
+        @test path == workflow_path
+        @test contents == body
+    end
 end
 
 @testset "get_repo_notification_issue" begin
