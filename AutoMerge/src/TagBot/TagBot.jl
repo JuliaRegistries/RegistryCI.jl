@@ -49,17 +49,19 @@ end
 function repo_and_version_of_pull_request_body(body)
     # Return immediately if the pull request's description is empty. In this
     # case no further information can be obtained about a registration
-    isnothing(body) && return (nothing, nothing)
+    isnothing(body) && return (nothing, nothing, nothing)
     if occursin("JLL package", body)
         @info "Skipping JLL package registration"
-        return nothing, nothing
+        return nothing, nothing, nothing
     end
     m = match(r"Repository: .*github\.com[:/](.*)", body)
     repo = m === nothing ? nothing : strip(m[1])
     repo !== nothing && endswith(repo, ".git") && (repo = repo[1:(end - 4)])
     m = match(r"Version: (.*)", body)
     version = m === nothing ? nothing : strip(m[1])
-    return repo, version
+    m = match(r"Registering package: (.*)", body)
+    pkg_name = m === nothing ? nothing : strip(m[1])
+    return repo, version, pkg_name
 end
 
 function tagbot_file(repo; issue_comments=false)
@@ -117,9 +119,15 @@ function notify(repo, issue, body)
     return GH.create_comment(repo, issue, :issue; auth=AUTH[], params=(; body=body))
 end
 
-function tag_exists(repo, version)
+function tag_exists(repo, version, pkg_name=nothing)
+    # TagBot tags subdirectory packages as `<package name>-vX.Y.Z`.
+    names = pkg_name === nothing ? [version] : [version, "$pkg_name-$version"]
+    return any(name -> tag_name_exists(repo, name), names)
+end
+
+function tag_name_exists(repo, name)
     return try
-        GH.tag(repo, version; auth=AUTH[])
+        GH.tag(repo, name; auth=AUTH[])
         true
     catch e
         if !occursin("404", e.msg)
@@ -129,14 +137,14 @@ function tag_exists(repo, version)
     end
 end
 
-function maybe_notify(event, repo, version; cron=false)
+function maybe_notify(event, repo, version, pkg_name=nothing; cron=false)
     @info "Processing version $version of $repo"
     if tagbot_file(repo) === nothing
         @info "TagBot is not enabled on $repo"
         return nothing
     end
-    if cron && tag_exists(repo, version)
-        @info "Tag $version already exists for $repo"
+    if cron && tag_exists(repo, version, pkg_name)
+        @info "Tag for version $version already exists for $repo"
         return nothing
     end
     issue = get_repo_notification_issue(repo)
