@@ -300,14 +300,21 @@ function get_version_diff_info(data)
     end
 
     # Find the previous version
-    previous_version = find_previous_semver_version(data.pkg, data.version, data.registry_master)
-    if previous_version === nothing
+    # (a lower version added by the same pull request counts as a previous version)
+    preceding_versions = filter(
+        <(data.version),
+        versions_preceding_in_pr(data.pkg, data.version; data.registry_master, data.registry_head),
+    )
+    if isempty(preceding_versions)
         return nothing
     end
+    previous_version = maximum(preceding_versions)
+    previous_version_registry = previous_version in registered_versions(data.pkg, data.registry_master) ?
+        data.registry_master : data.registry_head
 
     # Get package repository info
     current_pkg_info = parse_registry_pkg_info(data.registry_head, data.pkg, data.version)
-    previous_pkg_info = parse_registry_pkg_info(data.registry_master, data.pkg, previous_version)
+    previous_pkg_info = parse_registry_pkg_info(previous_version_registry, data.pkg, previous_version)
 
     # Get code diff stats
     diff_stats = get_diff_stats(previous_pkg_info.tree_hash, current_pkg_info.tree_hash; clone_dir=data.pkg_clone_dir)
@@ -331,7 +338,11 @@ function get_github_diff_link(data, previous_pkg_info, current_pkg_info)
     end
 
     # Get current commit SHA from PR
-    current_commit_sha = commit_from_pull_request_body(data.pr)
+    current_commit_sha = try
+        commit_from_pull_request_body(data.pr, data.version)
+    catch
+        return nothing
+    end
 
     # Convert previous tree SHA to commit SHA
     previous_commit_sha = tree_sha_to_commit_sha(

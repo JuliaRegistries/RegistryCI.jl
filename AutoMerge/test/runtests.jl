@@ -42,6 +42,9 @@ end
     @testset "AutoMerge.jl unit tests" begin
         @info("Running the AutoMerge.jl unit tests")
         include("automerge-unit.jl")
+        @testset "Pull requests that register several versions" begin
+            include("automerge-multi-version.jl")
+        end
     end
 
     AUTOMERGE_RUN_INTEGRATION_TESTS =

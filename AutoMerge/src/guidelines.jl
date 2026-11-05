@@ -206,12 +206,15 @@ const guideline_patch_release_does_not_narrow_julia_compat = Guideline(;
 function meets_patch_release_does_not_narrow_julia_compat(
     pkg::String, new_version::VersionNumber; registry_head::String, registry_master::String
 )
-    old_version = latest_version(pkg, registry_master)
+    existing_versions = versions_preceding_in_pr(pkg, new_version; registry_master, registry_head)
+    isempty(existing_versions) && return true, ""
+    old_version = maximum(existing_versions)
     if old_version.major != new_version.major || old_version.minor != new_version.minor
         # Not a patch release.
         return true, ""
     end
-    julia_compats_for_old_version = julia_compat(pkg, old_version, registry_master)
+    old_version_registry = old_version in all_versions(pkg, registry_master) ? registry_master : registry_head
+    julia_compats_for_old_version = julia_compat(pkg, old_version, old_version_registry)
     julia_compats_for_new_version = julia_compat(pkg, new_version, registry_head)
     if Set(julia_compats_for_old_version) == Set(julia_compats_for_new_version)
         return true, ""
@@ -829,7 +832,9 @@ end
 function meets_sequential_version_number(
     pkg::String, new_version::VersionNumber; registry_head::String, registry_master::String
 )
-    _all_versions = all_versions(pkg, registry_master)
+    _all_versions = versions_preceding_in_pr(pkg, new_version; registry_master, registry_head)
+    # A new package's lowest version has nothing to be sequential to.
+    isempty(_all_versions) && return true, ""
     return meets_sequential_version_number(_all_versions, new_version)
 end
 
@@ -969,7 +974,12 @@ function meets_code_can_be_downloaded(registry_head, pkg, version, pr; pkg_code_
     # 1. By the commit hash in the PR body and the subdir parameter
     # 2. By the tree hash in the Versions.toml
 
-    commit_hash = commit_from_pull_request_body(pr)
+    commit_hash = try
+        commit_from_pull_request_body(pr, version)
+    catch e
+        @error e
+        return false, "Could not find the commit for version v$(version) in the pull request body."
+    end
 
     local tree_hash_from_commit, tree_hash_from_commit_success
     clone_success = load_files_from_url_and_tree_hash(
@@ -1323,8 +1333,9 @@ function get_automerge_guidelines(
     this_pr_can_use_special_jll_exceptions::Bool,
     allow_build_metadata::Bool=false,
     use_distance_check::Bool,
-    package_author_approved::Bool, # currently unused for new packages
-    check_breaking_explanation::Bool # not valid for new packages
+    package_author_approved::Bool,
+    check_breaking_explanation::Bool, # not valid for new packages
+    later_version_in_pr::Bool=false,
 )
     guidelines = [
         # We first verify the name is a valid Julia identifier.
@@ -1333,7 +1344,14 @@ function get_automerge_guidelines(
         (:early_exit_if_failed, true),
         (guideline_registry_consistency_tests_pass, true),
         (guideline_pr_only_changes_allowed_files, true),
+        (guideline_registry_changes_match_title, true),
         # (guideline_only_changes_specified_package, true), # not yet implemented
+        # When a new package is registered with several versions at once, each version
+        # after the lowest must follow on from the ones before it.
+        (
+            guideline_sequential_version_number,
+            later_version_in_pr && !this_pr_can_use_special_jll_exceptions && !package_author_approved,
+        ),
         (guideline_normal_capitalization, !this_pr_can_use_special_jll_exceptions),
         (guideline_name_length, !this_pr_can_use_special_jll_exceptions),
         (guideline_julia_name_check, true),
@@ -1384,10 +1402,12 @@ function get_automerge_guidelines(
     allow_build_metadata::Bool=false,
     use_distance_check::Bool, # unused for new versions
     package_author_approved::Bool,
+    later_version_in_pr::Bool=false, # unused for new versions
 )
     guidelines = [
         (guideline_registry_consistency_tests_pass, true),
         (guideline_pr_only_changes_allowed_files, true),
+        (guideline_registry_changes_match_title, true),
         (guideline_sequential_version_number, !this_pr_can_use_special_jll_exceptions && !package_author_approved),
         (guideline_version_number_no_prerelease, true),
         (

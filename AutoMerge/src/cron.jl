@@ -392,10 +392,10 @@ function cron_or_api_build(
 
     if is_new_package(pr) # it is a new package
         pr_type = :NewPackage
-        pkg, version = parse_pull_request_title(NewPackage(), pr)
+        pkg, _ = parse_pull_request_title_versions(NewPackage(), pr)
     else # it is a new version
         pr_type = :NewVersion
-        pkg, version = parse_pull_request_title(NewVersion(), pr)
+        pkg, _ = parse_pull_request_title_versions(NewVersion(), pr)
     end
     pr_age = time_since_pr_creation(pr)
     this_pr_is_old_enough = pr_is_old_enough(

@@ -149,6 +149,28 @@ Note that these automerge guidelines are deliberately conservative: it is
 very possible for a perfectly good name to not pass the automatic checks. They simply exist to provide a fast path so that
 manual review is not required for every new package. False positives can be overridden with a PR label after manual review.
 
+### Registering several versions in one pull request
+
+A registration pull request may add several versions of a single package at once. Its
+title then lists every added version in ascending order, separated by `, `:
+
+```
+New versions: Foo_jll v1.0.0, v1.1.0, v2.0.0
+New package: Foo_jll v1.0.0, v1.1.0
+```
+
+and its body pairs each version with the commit it was registered from, a `Version: vX.Y.Z`
+line followed by a `Commit: <sha>` line for each version.
+
+AutoMerge derives the added versions from the registry diff (the `Versions.toml` entries the
+pull request adds) and checks that they are exactly the versions in the title, that they all
+belong to the package named in the title, and that no existing registry entry (including the
+`Deps.toml`/`Compat.toml` data of existing versions) is changed. Every added version then goes
+through all of the guidelines above; version-number guidelines compare each version with the
+existing versions plus the lower versions added by the same pull request. The pull request is
+only merged if every version meets every guideline. Pull requests that add versions of more than
+one package are not merged automatically.
+
 ### Providing and updating release notes
 
 When invoking a registration with the `@JuliaRegister` bot, release notes can be added in the form
