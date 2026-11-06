@@ -74,7 +74,9 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - uses: julia-actions/cache@v3
+      # We intentionally don't cache
+      # That way, we can test the codepath of downloading Julia release tarballs as artifacts
+      # - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
         with:
           project: AutoMerge
@@ -83,6 +85,7 @@ jobs:
           project: AutoMerge
         env:
           AUTOMERGE_RUN_INTEGRATION_TESTS: "false"
+          JULIA_DEBUG: DownloadJuliaVersions
       - uses: julia-actions/julia-processcoverage@v1
         with:
           directories: AutoMerge/src
