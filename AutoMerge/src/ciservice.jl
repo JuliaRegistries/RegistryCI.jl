@@ -39,11 +39,9 @@ end
 ####################
 ## GitHub Actions ##
 ####################
-struct GitHubActions <: CIService
-    enable_cron_builds::Bool
-    function GitHubActions(; enable_cron_builds=true)
-        return new(enable_cron_builds)
-    end
+Base.@kwdef struct GitHubActions <: CIService
+    enable_cron_builds::Bool = true
+    username::String = "github-actions[bot]"
 end
 
 function conditions_met_for_pr_build(cfg::GitHubActions; env=ENV, kwargs...)
@@ -80,11 +78,7 @@ end
 function directory_of_cloned_registry(cfg::GitHubActions; env=ENV, kwargs...)
     return get(env, "GITHUB_WORKSPACE", nothing)
 end
-function username(api::GitHub.GitHubAPI, cfg::GitHubActions; auth)
-    # /user endpoint of GitHub API not available
-    # with the GITHUB_TOKEN authentication
-    return "github-actions[bot]"
-end
+username(::GitHub.GitHubAPI, cfg::GitHubActions; auth) = cfg.username
 
 ##############
 ## TeamCity ##
