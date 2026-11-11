@@ -119,6 +119,19 @@ function compat_violation_message(bad_dependencies)
 
 end
 
+function requires_delimitedfiles_compat(compat, version)
+    pre_delimitedfiles_pkg_julia = Pkg.Types.VersionSpec("1 - 1.8")
+    for version_range in keys(compat)
+        if version in Pkg.Types.VersionRange(version_range) && haskey(compat[version_range], "julia")
+            julia_compat = Pkg.Types.VersionSpec(compat[version_range]["julia"])
+            if !isempty(intersect(julia_compat, pre_delimitedfiles_pkg_julia))
+                return true
+            end
+        end
+    end
+    return false
+end
+
 function meets_compat_for_all_deps(working_directory::AbstractString, pkg, version)
     package_relpath = get_package_relpath_in_registry(;
         package_name=pkg, registry_path=working_directory
@@ -128,6 +141,7 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
     # First, we construct a Dict in which the keys are the package's
     # dependencies, and the value is always false.
     dep_has_compat_with_upper_bound = Dict{String,Bool}()
+    delimitedfiles_requires_compat = requires_delimitedfiles_compat(compat, version)
     for version_range in keys(deps)
         if version in Pkg.Types.VersionRange(version_range)
             for name in keys(deps[version_range])
@@ -136,7 +150,12 @@ function meets_compat_for_all_deps(working_directory::AbstractString, pkg, versi
                     apply_compat_requirement = !is_jll_name(name)
                 else
                     debug_msg = "Found a new (non-stdlib non-JLL) dependency: $(name)"
-                    apply_compat_requirement = !is_jll_name(name) && !is_julia_stdlib(name)
+                    apply_compat_requirement =
+                        !is_jll_name(name) &&
+                        (
+                            !is_julia_stdlib(name) ||
+                            (name == "DelimitedFiles" && delimitedfiles_requires_compat)
+                        )
                 end
                 if apply_compat_requirement
                     @debug debug_msg
