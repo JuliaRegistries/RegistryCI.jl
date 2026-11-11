@@ -62,6 +62,12 @@ function commit_from_pull_request_body(pull_request::GitHub.PullRequest)
     return commit
 end
 
+function repository_from_pull_request_body(pull_request::GitHub.PullRequest)
+    pr_body = body(pull_request)
+    m = match(r"Repository: (.*)", pr_body)
+    return m === nothing ? nothing : convert(String, strip(m.captures[1]))
+end
+
 function parse_pull_request_title(::NewPackage, pull_request::GitHub.PullRequest)
     m = match(new_package_title_regex, title(pull_request))
     pkg = convert(String, m.captures[1])::String
