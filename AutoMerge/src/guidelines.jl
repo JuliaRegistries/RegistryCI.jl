@@ -1263,6 +1263,11 @@ function _run_pkg_commands(
     #    Python.
     # 8. R_HOME. We set R_HOME to "*".
     # 9. HOME. Lots of things need HOME.
+    # 10. GLIBC_TUNABLES. On Linux we set GLIBC_TUNABLES to allow executable stacks.
+    #     glibc 2.41 and later refuse to `dlopen()` a library that requests one,
+    #     and the `libopenlibm` bundled with Julia v1.9 does, so Julia v1.9
+    #     cannot start without this. Ref:
+    #     <https://github.com/JuliaLang/julia/issues/57250#issuecomment-2834911167>.
     #
     # If registry maintainers need additional environment variables to be passed
     # to the child process, they can do so by configuring `environment_variables_to_pass`
@@ -1277,6 +1282,9 @@ function _run_pkg_commands(
         "PYTHON" => "",
         "R_HOME" => "*",
     )
+    if Sys.islinux()
+        env["GLIBC_TUNABLES"] = "glibc.rtld.execstack=2"
+    end
     default_environment_variables_to_pass = [
         "HOME",
         "JULIA_PKG_SERVER",
