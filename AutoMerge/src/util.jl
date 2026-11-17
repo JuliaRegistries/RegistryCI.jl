@@ -372,6 +372,10 @@ function _new_package_section(n)
     "[package naming guidelines](https://pkgdocs.julialang.org/dev/creating-packages/#Package-naming-guidelines).\n\n")
 end
 
+function _new_package_welcome()
+    return "Welcome to the General registry, and thanks for sharing your work.\n\n"
+end
+
 function _what_next_if_fail(n; point_to_slack=false)
     msg = """
     ## $n. *Needs action*: here's what to do next
@@ -467,6 +471,7 @@ function comment_text_pass(
         result = string(
             _comment_bot_intro(),
             _automerge_guidelines_passed_section_title(1),
+            _new_package_welcome(),
             "Your new `_jll` package registration met all of the ",
             "guidelines for auto-merging and is scheduled to ",
             "be merged in the next round (~20 minutes).\n\n",
@@ -480,6 +485,7 @@ function comment_text_pass(
         result = string(
             _comment_bot_intro(),
             _new_package_section(1),
+            _new_package_welcome(),
             _automerge_guidelines_passed_section_title(2),
             "Your new package registration met all of the ",
             "guidelines for auto-merging and is scheduled to ",
@@ -507,6 +513,7 @@ function comment_text_fail(
     result = string(
         _comment_bot_intro(),
         _new_package_section(1),
+        _new_package_welcome(),
         _automerge_guidelines_failed_section_title(2),
         reasons_formatted,
         _what_next_if_fail(3; point_to_slack=point_to_slack),
