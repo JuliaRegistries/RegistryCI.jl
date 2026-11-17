@@ -17,9 +17,9 @@ function collect_pulls(repo)
         :page_limit => 1,
         :params => (; state="closed", sort="updated", direction="desc", per_page=100),
     )
+    pulls, pages = get_initial_pulls(repo; kwargs...)
     done = false
-    while !done
-        pulls, pages = get_pulls(repo; kwargs...)
+    while true
         for pull in pulls
             pull.merged_at === nothing && continue
             if now(UTC) - pull.merged_at < Day(3)
@@ -31,17 +31,30 @@ function collect_pulls(repo)
         if haskey(pages, "next")
             delete!(kwargs, :params)
             kwargs[:start_page] = pages["next"]
+            pulls, pages = get_pulls(repo; kwargs...)
         else
             done = true
         end
+        done && break
     end
     return acc
 end
 
-function get_pulls(args...; kwargs...)
+is_server_error(e) = hasproperty(e, :msg) && occursin("Server error", e.msg)
+
+function get_initial_pulls(
+    args...;
+    retry_check=is_server_error,
+    retry_delays=ExponentialBackOff(; n=10, first_delay=1, factor=2),
+    kwargs...,
+)
     return retry(
-        () -> GH.pull_requests(args...; kwargs...);
-        check=(s, e) -> occursin("Server error", e.msg),
-        delays=ExponentialBackOff(; n=5, first_delay=1, factor=2),
+        () -> get_pulls(args...; kwargs...);
+        check=(state, exception) -> retry_check(exception),
+        delays=retry_delays,
     )()
+end
+
+function get_pulls(args...; kwargs...)
+    return GH.pull_requests(args...; kwargs...)
 end
