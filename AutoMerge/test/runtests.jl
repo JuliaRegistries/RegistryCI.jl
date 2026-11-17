@@ -53,3 +53,8 @@ end
         end
     end
 end
+
+@testset "Apps" begin
+    @info("Running app tests")
+    include("apps.jl")
+end

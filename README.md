@@ -29,3 +29,23 @@ This repository contains two Julia packages:
 Starting with RegistryCI v11.0, the automerge and TagBot functionality has been moved to the separate AutoMerge.jl package. RegistryCI.jl now focuses solely on registry testing.
 
 Please see the [documentation](https://JuliaRegistries.github.io/RegistryCI.jl/stable) for both packages.
+
+## Locally Check if a Package Name Passes Automerge Name Checks.
+
+AutoMerge has a number of checks related to the name of a new package,
+including a name similarity check to already registered packages. With
+Julia 1.12 and later, you can run those yourself through a command
+line tool.
+
+Install it with
+
+```
+using Pkg
+Pkg.Apps.add("AutoMerge")
+```
+
+and run it from the terminal with
+
+```
+general_name_check <Package Name>
+```
