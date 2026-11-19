@@ -62,7 +62,7 @@ function get_julia_binary(version, kind)
     # installation. Otherwise libraries may mismatch.
     cmd = `$(julia(adjust_LIBPATH = false)) +$(version)`
     text = "julia $(version) ($kind compatible version)"
-    return cmd, text
+    return cmd, text, version
 end
 
 function get_compatible_julia_binaries(julia_compat, min_version)
@@ -73,7 +73,7 @@ function get_compatible_julia_binaries(julia_compat, min_version)
 
     all_compatible_versions = filter(v -> any(in.(v, julia_compat)), all_versions)
     all_compatible_releases = filter(v -> any(in.(v, julia_compat)), all_releases)
-    binaries = Tuple{Cmd, String}[]
+    binaries = Tuple{Cmd, String, VersionNumber}[]
 
     if isempty(all_compatible_versions)
         return binaries
