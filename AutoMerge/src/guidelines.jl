@@ -12,19 +12,57 @@ const guideline_registry_consistency_tests_pass = Guideline(;
     info="Registry consistency tests",
     docs=nothing,
     check=data ->
-        meets_registry_consistency_tests_pass(data.registry_head, data.registry_deps),
+        meets_registry_consistency_tests_pass(
+            data.registry_head,
+            data.registry_master,
+            data.pkg;
+            registry_deps=data.registry_deps,
+        ),
 )
 
 function meets_registry_consistency_tests_pass(
-    registry_head::String, registry_deps::Vector{String}
+    registry_head::String,
+    registry_master::String,
+    pkg::String;
+    registry_deps::Vector{String},
 )
     try
         RegistryCI.test(registry_head; registry_deps=registry_deps)
+        no_version_hashes_changed(registry_head, registry_master, pkg)
         return true, ""
     catch ex
         @error "" exception = (ex, catch_backtrace())
     end
     return false, "The registry consistency tests failed"
+end
+
+function no_version_hashes_changed(
+    registry_head::String, registry_master::String, pkg::String,
+)
+    package_relpath = get_package_relpath_in_registry(;
+        package_name=pkg, registry_path=registry_master,
+    )
+    versions_master_file = joinpath(registry_master, package_relpath, "Versions.toml")
+    versions_head_file = joinpath(registry_head, package_relpath, "Versions.toml")
+    versions_master = parse_registry_toml(
+        registry_master, package_relpath, "Versions.toml"; allow_missing=true
+    )
+    versions_head = parse_registry_toml(
+        registry_head, package_relpath, "Versions.toml"; allow_missing=true
+    )
+
+    if !isfile(versions_master_file) || !isfile(versions_head_file)
+        return nothing
+    end
+
+    for (version, old_data) in versions_master
+        haskey(versions_head, version) || error("Existing version $(version) was removed from Versions.toml.")
+        new_data = versions_head[version]
+        if get(old_data, "git-tree-sha1", nothing) != get(new_data, "git-tree-sha1", nothing)
+            error("Existing version $(version) changed its git-tree-sha1 in Versions.toml.")
+        end
+    end
+    return nothing
 end
 
 const guideline_compat_for_julia = Guideline(;
