@@ -16,6 +16,12 @@ end
 
 is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str))
 
+@static if Base.VERSION >= v"1.2" # Base.hasproperty() requires Julia 1.2+
+    const hasproperty = Base.hasproperty
+else
+    hasproperty(x, s::Symbol) = s in propertynames(x)
+end
+
 function _include_this_registry(
     registry_spec, registry_deps_names::Vector{<:AbstractString}
 )
