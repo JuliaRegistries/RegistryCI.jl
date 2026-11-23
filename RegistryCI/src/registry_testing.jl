@@ -73,6 +73,30 @@ function load_registry_dep_uuids(registry_deps_names::Vector{<:AbstractString}=S
     end
 end
 
+function load_registry_dep_package_names(
+    registry_deps_names::Vector{<:AbstractString}=String[],
+)
+    return with_temp_depot() do
+        for repo_spec in registry_deps_names
+            if is_valid_url(repo_spec)
+                Pkg.Registry.add(Pkg.RegistrySpec(; url=repo_spec))
+            else
+                Pkg.Registry.add(repo_spec)
+            end
+        end
+        extranames = Set{String}()
+        for spec in collect_registries()
+            if _include_this_registry(spec, registry_deps_names)
+                reg = Pkg.TOML.parsefile(joinpath(spec.path, "Registry.toml"))
+                for (_, data) in reg["packages"]
+                    push!(extranames, data["name"])
+                end
+            end
+        end
+        return extranames
+    end
+end
+
 #########################
 # Testing of registries #
 #########################
@@ -152,9 +176,13 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
         cd(path) do
             reg = Pkg.TOML.parsefile("Registry.toml")
             reguuids = Set{Base.UUID}(Base.UUID(x) for x in keys(reg["packages"]))
+            regnames = Set{String}(data["name"] for (_, data) in reg["packages"])
             stdlibuuids = gather_stdlib_uuids()
+            stdlibnames = Set{String}(name for (_, (name, _)) in RegistryTools.stdlibs())
             registry_dep_uuids = load_registry_dep_uuids(registry_deps)
+            registry_dep_names = load_registry_dep_package_names(registry_deps)
             alluuids = reguuids ∪ stdlibuuids ∪ registry_dep_uuids
+            allnames = regnames ∪ stdlibnames ∪ registry_dep_names
 
             # Test that each entry in Registry.toml has a corresponding Package.toml
             # at the expected path with the correct uuid and name
@@ -237,6 +265,7 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                             )
                         end
                     end
+                    @test compatnames ⊆ (allnames ∪ Set(["julia"]))
 
                     # Make sure that each compat spec is a valid registry compat spec.
                     # https://github.com/JuliaRegistries/General/issues/104849
