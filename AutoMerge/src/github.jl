@@ -128,13 +128,22 @@ function get_all_pull_requests(
     return all_pull_requests
 end
 
+function get_changed_files(
+    api::GitHub.GitHubAPI,
+    repo::GitHub.Repo,
+    pull_request::GitHub.PullRequest;
+    auth::GitHub.Authorization,
+)
+    return GitHub.pull_request_files(api, repo, pull_request; auth=auth)
+end
+
 function get_changed_filenames(
     api::GitHub.GitHubAPI,
     repo::GitHub.Repo,
     pull_request::GitHub.PullRequest;
     auth::GitHub.Authorization,
 )
-    files = GitHub.pull_request_files(api, repo, pull_request; auth=auth)
+    files = get_changed_files(api, repo, pull_request; auth)
     return [file.filename for file in files]
 end
 
@@ -225,4 +234,21 @@ title(pull_request::GitHub.PullRequest) = pull_request.title
 function username(api::GitHub.GitHubAPI, auth::GitHub.Authorization)
     user_information = GitHub.gh_get_json(api, "/user"; auth=auth)
     return user_information["login"]::String
+end
+
+# Lines in the patch, starting with " " for unchanged lines, "-" for
+# removed lines, "+" for added lines, and "@@" for position
+# information.
+function get_patch_lines(file::GitHub.PullRequestFile)
+    return split(file.patch, "\n"; keepempty = false)
+end
+
+# Added lines only, without leading "+".
+function get_added_lines(file::GitHub.PullRequestFile)
+    return chopprefix.(filter(startswith("+"), get_patch_lines(file)), "+")
+end
+
+# Removed lines only, without leading "-".
+function get_removed_lines(file::GitHub.PullRequestFile)
+    return chopprefix.(filter(startswith("-"), get_patch_lines(file)), "-")
 end
