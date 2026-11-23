@@ -4,6 +4,7 @@ using Documenter
 
 makedocs(;
     modules=[RegistryCI, AutoMerge],
+    checkdocs_ignored_modules=[AutoMerge.DownloadJuliaVersions],
     authors="Dilum Aluthge <dilum@aluthge.com>, Fredrik Ekre <ekrefredrik@gmail.com>, contributors",
     repo=Remotes.GitHub("JuliaRegistries", "RegistryCI.jl"),
     sitename="RegistryCI.jl",
