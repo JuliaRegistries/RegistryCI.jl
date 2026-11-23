@@ -16,6 +16,10 @@ end
 
 is_valid_url(str::AbstractString) = !isempty(HTTP.URI(str).scheme) && isvalid(HTTP.URI(str))
 
+function is_sourcehut_repo(repo_url::AbstractString)
+    return lowercase(HTTP.URI(repo_url).host) == "git.sr.ht"
+end
+
 function _include_this_registry(
     registry_spec, registry_deps_names::Vector{<:AbstractString}
 )
@@ -165,6 +169,13 @@ function test(path=pwd(); registry_deps::Vector{<:AbstractString}=String[])
                 @test data["name"] == pkg["name"]
                 @test Base.isidentifier(data["name"])
                 @test haskey(pkg, "repo")
+                if !is_sourcehut_repo(pkg["repo"])
+                    # Sourcehut does not seem to support the URL form that ends in `.git`
+                    # So we have to skip Sourcehut repos for this check
+                    #
+                    # For all non-Sourcehut repo, we require that the repo URL ends in `.git`
+                    @test endswith(pkg["repo"], ".git")
+                end
 
                 # Versions.toml testing
                 vers = Pkg.TOML.parsefile(abspath(data["path"], "Versions.toml"))
