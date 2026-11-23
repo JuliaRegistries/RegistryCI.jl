@@ -257,12 +257,14 @@ end
     compat = [Pkg.Types.VersionRange("1.0-1.8")]
     binaries = AutoMerge.get_compatible_julia_binaries(compat, v"1.1")
     @test length(binaries) == 2
-    binary1, text1 = binaries[1]
-    binary2, text2 = binaries[2]
+    binary1, text1, version1 = binaries[1]
+    binary2, text2, version2 = binaries[2]
     @test readchomp(`$binary1 -e 'print(VERSION)'`) == "1.1.1"
     @test text1 == "julia 1.1.1 (lowest compatible version)"
+    @test version1 == v"1.1.1"
     @test readchomp(`$binary2 -e 'print(VERSION)'`) == "1.8.5"
     @test text2 == "julia 1.8.5 (highest compatible version)"
+    @test version2 == v"1.8.5"
 
     # Verify that a prerelease version can be returned. This is only
     # possible when prereleases are available but the corresponding
@@ -276,14 +278,24 @@ end
         compat = [Pkg.Types.VersionRange("1.12.0-1")]
         binaries = AutoMerge.get_compatible_julia_binaries(compat, v"1.1")
         @test length(binaries) == 1
-        binary, text = only(binaries)
+        binary, text, version = only(binaries)
         @test readchomp(`$binary -e 'print(VERSION)'`) == "1.12.0-rc3"
         @test text == "julia 1.12.0-rc3 (only compatible version)"
+        @test version == v"1.12.0-rc3"
     finally
         # Untamper the cache of available versions (will be reloaded
         # when it is empty).
         empty!(AutoMerge.available_julia_versions)
     end
+end
+
+@testset "_needs_execstack_tunable" begin
+    @test AutoMerge._needs_execstack_tunable(v"1.9.4") == Sys.islinux()
+    @test AutoMerge._needs_execstack_tunable(v"1.9.0-rc1") == Sys.islinux()
+    @test !AutoMerge._needs_execstack_tunable(v"1.8.5")
+    @test !AutoMerge._needs_execstack_tunable(v"1.10.0")
+    @test !AutoMerge._needs_execstack_tunable(v"1.12.0-rc3")
+    @test !AutoMerge._needs_execstack_tunable(nothing)
 end
 
 @testset "Guidelines for new packages" begin

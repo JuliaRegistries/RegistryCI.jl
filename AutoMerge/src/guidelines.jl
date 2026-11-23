@@ -1210,12 +1210,13 @@ function meets_version_can_be_added_or_imported(
         @error "Was not able to find a compatible Julia version. julia_compat: $(jl_compat)"
         return false, "I was not able to find a compatible Julia version. See the AutoMerge logs for details."
     end
-    for (binary, version_text) in julia_binaries
+    for (binary, version_text, julia_version) in julia_binaries
         cmd_ran_successfully = _run_pkg_commands(
             working_directory,
             pkg,
             version;
             binary=binary,
+            julia_version=julia_version,
             code=code,
             before_message="Attempting to `$(action)` the package on $(version_text)",
             environment_variables_to_pass=environment_variables_to_pass,
@@ -1231,15 +1232,27 @@ function meets_version_can_be_added_or_imported(
     return true, ""
 end
 
+# Whether `julia_version` (the version of the Julia binary being run) needs
+# `GLIBC_TUNABLES=glibc.rtld.execstack=2` to start on this platform.
+function _needs_execstack_tunable(julia_version::Union{VersionNumber,Nothing})
+    isnothing(julia_version) && return false
+    return Sys.islinux() && julia_version.major == 1 && julia_version.minor == 9
+end
+
 function _run_pkg_commands(
     working_directory::String,
     pkg::String,
     version::VersionNumber;
     binary=nothing,
+    julia_version::Union{VersionNumber,Nothing}=nothing,
     code,
     before_message,
     environment_variables_to_pass::Vector{String},
 )
+    if isnothing(binary)
+        binary = Base.julia_cmd()
+        julia_version = VERSION
+    end
     original_directory = pwd()
     tmp_dir_1 = mktempdir()
     atexit(() -> rm(tmp_dir_1; force=true, recursive=true))
@@ -1263,10 +1276,10 @@ function _run_pkg_commands(
     #    Python.
     # 8. R_HOME. We set R_HOME to "*".
     # 9. HOME. Lots of things need HOME.
-    # 10. GLIBC_TUNABLES. On Linux we set GLIBC_TUNABLES to allow executable stacks.
-    #     glibc 2.41 and later refuse to `dlopen()` a library that requests one,
-    #     and the `libopenlibm` bundled with Julia v1.9 does, so Julia v1.9
-    #     cannot start without this. Ref:
+    # 10. GLIBC_TUNABLES. When running Julia v1.9 on Linux, we set GLIBC_TUNABLES
+    #     to allow executable stacks. glibc 2.41 and later refuse to `dlopen()` a
+    #     library that requests one, and the `libopenlibm` bundled with Julia v1.9
+    #     does, so Julia v1.9 cannot start without this. Ref:
     #     <https://github.com/JuliaLang/julia/issues/57250#issuecomment-2834911167>.
     #
     # If registry maintainers need additional environment variables to be passed
@@ -1282,7 +1295,7 @@ function _run_pkg_commands(
         "PYTHON" => "",
         "R_HOME" => "*",
     )
-    if Sys.islinux()
+    if _needs_execstack_tunable(julia_version)
         env["GLIBC_TUNABLES"] = "glibc.rtld.execstack=2"
     end
     default_environment_variables_to_pass = [
@@ -1302,9 +1315,6 @@ function _run_pkg_commands(
         end
     end
 
-    if isnothing(binary)
-        binary = Base.julia_cmd()
-    end
     cmd = Cmd(`$(binary) -e $(code)`; env=env)
 
     # GUI toolkits may need a display just to load the package
